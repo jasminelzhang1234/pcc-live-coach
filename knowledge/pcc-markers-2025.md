@@ -600,6 +600,8 @@ Coach asks questions to help the client explore beyond current thinking, feeling
 **判定要点**
 这条是能力 7 与能力 8 的桥梁：**先朝向结果做认知层面的探索（7.4），
 再进入设计与承诺（8.x）**。抱怨型客户的对话最容易丢这条。
+【本土增量·本土督导】提问需"至少上三层"——从事件到模式，从模式到身份 / 价值观，
+否则只是平移而非超越。
 
 ---
 
@@ -624,6 +626,8 @@ Coach shares – with no attachment – observations, intuitions, comments, thou
 **判定要点**
 关键词是 **with no attachment（无附着）**。
 判定的最佳证据点：**客户不接受时教练的反应**。
+【本土增量·本土督导】"不执著于自己是对的"——分享前先降权重（"我有个感觉，不一定对"），
+分享后立即交出去（"这个说法对你来说贴切吗？"）。
 只要出现"再推一次"，本条立即 ✘，且很可能同时丢 4.4。
 
 ---
@@ -691,6 +695,8 @@ Coach allows the client to do most of the talking.
 **判定要点**
 **可量化判定**：统计双方字数比。低于 60% 判 ✘，60–70% 判 △，≥70% 判 ✔。
 判定时应在报告中给出实际比例数字。
+【本土增量·本土督导】**硬指标：教练说话占比 ≥40% 直接判 ✘**——对应 30% / 70% 的更严
+本土标准（教练 <30%，客户 >70%），与下方 failure-patterns.md 模式 10 一致。
 
 ---
 
@@ -786,6 +792,8 @@ Coach invites the client to consider how they will use new learning from this co
 **判定要点**
 本条是**学习与行动之间的桥梁**：必须能指出"哪个学习"要被"怎么用"。
 只问"接下来你打算做什么"，两头都不挂 → 判 ✘。
+【本土增量·本土督导】标志性提问：「这次约谈所收获到的，会为你的未来创造什么？」
+——把"学习"与"未来"挂钩，避免停在当下的行动。
 
 ---
 
@@ -809,6 +817,8 @@ Coach partners with the client to design post-session thinking, reflection or ac
 **判定要点**
 关键词 **partners（伙伴式）+ design（设计）**。
 注意行动**不必是外部动作**——思考和反思同样成立，这一点常被误解为"必须定出行动计划"。
+【本土增量·本土督导】标志性提问：「约谈后你的行动是什么？有哪些新的思考？」
+——把"行动"与"思考"并列，避免漏掉反思设计。
 **本条为必命中项。**
 
 ---
