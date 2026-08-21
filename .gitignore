@@ -21,3 +21,6 @@ Thumbs.db
 # transcripts/  转写稿（即便匿名化也本地存）
 # assessments/  评估报告（含个人分析）
 sessions/
+
+# 校准案例（真实对话记录 + 督导点评，仅本地使用）
+knowledge/校准案例/
