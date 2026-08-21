@@ -15,3 +15,9 @@ Thumbs.db
 .~lock.*
 *.tmp
 *.crdownload
+
+# Coach session artifacts — never commit
+# raw/      真实客户原始音频
+# transcripts/  转写稿（即便匿名化也本地存）
+# assessments/  评估报告（含个人分析）
+sessions/
