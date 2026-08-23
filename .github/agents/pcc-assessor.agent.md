@@ -136,7 +136,7 @@ tools: ['read', 'glob']
 
 ## C. 全评模式(用户说"全评三档""详细评估")
 
-输出 HTML 报告到 `sessions/assessments/{文件名}.html`,包含:
+输出 HTML 报告到 `practice-logs/{文件名}.html`,包含:
 - 对话元信息(时长、参与方)
 - 必命中项大表(✔ 绿 / △ 黄 / ✘ 红)
 - 37 条 markers 全表

@@ -37,7 +37,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SESSIONS_DIR = PROJECT_ROOT / "sessions"
 TRANSCRIPTS_DIR = SESSIONS_DIR / "transcripts"
-ASSESSMENTS_DIR = SESSIONS_DIR / "assessments"
+PRACTICE_LOGS_DIR = PROJECT_ROOT / "practice-logs"
+# 历史:sessions/assessments/ 在 2026-08-23 之前是 pcc-assessor 报告的默认落点,
+# 但已被 practice-logs/ 取代 — practice-logs/ 是权威详细报告的唯一位置。
+ASSESSMENTS_DIR = PRACTICE_LOGS_DIR
 T11_PATH = PROJECT_ROOT / "progress" / "T11-冒烟测试.md"
 
 # T11 表格的列定义(L2 跑分记录区);新增 row 严格对齐
@@ -222,7 +225,7 @@ def main() -> None:
     if not args.no_t11_update:
         archive_path = (
             f"[transcripts/{dst_transcript.name}](../sessions/transcripts/{dst_transcript.name}) · "
-            f"[assessments/{dst_assessment.name}](../sessions/assessments/{dst_assessment.name})"
+            f"[practice-logs/{dst_assessment.name}](../practice-logs/{dst_assessment.name})"
         )
         append_t11_row(
             date=args.date,
