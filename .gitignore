@@ -18,12 +18,15 @@ Thumbs.db
 
 # Coach session artifacts — never commit
 # raw/      真实客户原始音频
-# transcripts/  转写稿（即便匿名化也本地存）
-# assessments/  评估报告（含个人分析）
+# transcripts/  转写稿(即便匿名化也本地存)
+# assessments/  评估报告(含个人分析)
 sessions/
 
-# 校准案例（真实对话记录 + 督导点评，仅本地使用）
+# 校准案例(真实对话记录 + 督导点评,仅本地使用)
 knowledge/校准案例/
 
-# 个人陪练实践日志（本地工作日志，不入版本控制）
+# 个人陪练实践日志(本地工作日志,不入版本控制)
 practice-logs/
+
+# 校准锚点 csv(真人督导判定,不入版本控制)
+progress/calibration-bench.csv
