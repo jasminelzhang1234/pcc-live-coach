@@ -3,8 +3,11 @@
 
 读 progress/tracker.csv,生成 markdown 报告到 progress/tracker-analysis-{date}.md。
 
-输入:tracker.csv (87 列,37 markers × Claude + DeepSeek + metadata)
-输出:能力维度命中率 / 反复失守 marker / 反复 △ marker / 必命中项 / 真人锚点对比 / 下一步派单
+输入:tracker.csv (91 列,含 conversation_date / conversation_time / reeval_of / 37 markers × Claude + DeepSeek + metadata)
+输出:能力维度命中率 / 反复失守 marker / 反复 △ marker / 必命中项 / 重评 lineage / 每场 summary
+
+排序:按 (conversation_date, conversation_time) 升序(实际对话时间);
+同 datetime 保留 CSV 原顺序(stable sort);conversation_time 缺失时回退到 CSV 顺序。
 
 用法:
     python3 scripts/analyze_tracker.py                          # 用默认路径
@@ -48,9 +51,21 @@ MARKER_NAMES = {
 
 
 def load_rows(csv_path: Path) -> list[dict]:
-    """读 tracker.csv,跳过 header,转成 dict 列表。"""
+    """读 tracker.csv,跳过 header,转成 dict 列表。
+
+    按 (conversation_date, conversation_time) 升序排序;同 datetime 保留 CSV 原顺序
+    (stable sort)。conversation_date 缺失则回退到 date;conversation_time 缺失则视为空串。
+    """
     with csv_path.open(newline="") as f:
-        return list(csv.DictReader(f))
+        rows = list(csv.DictReader(f))
+
+    def sort_key(r):
+        cd = r.get("conversation_date", "") or r.get("date", "")
+        ct = r.get("conversation_time", "") or ""
+        return (cd, ct)
+
+    rows.sort(key=sort_key)
+    return rows
 
 
 def marker_judgments(rows: list[dict]) -> dict[str, list[str]]:
@@ -195,25 +210,52 @@ def render_report(rows: list[dict], date: str) -> str:
         "",
         "---",
         "",
-        "## 📋 每场 summary",
+        "## 📋 每场 summary(按 (conversation_date, conversation_time) 升序)",
         "",
-        "| session_id | persona | 难度 | ✔ | △ | ✘ | 必命中 ✘ | 评估者 |",
-        "|---|---|---|---|---|---|---|---|",
+        "| # | session_id | 对话日期时间 | 评估日期 | persona | 难度 | ✔ | △ | ✘ | 必命中 ✘ | 评估者 |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
-    for row in rows:
+    for i, row in enumerate(rows, 1):
+        cd = row.get("conversation_date", "") or row.get("date", "")
+        ct = row.get("conversation_time", "")
+        dt = f"{cd} {ct}".strip() if ct else cd
         md.append(
-            f"| {row['session_id']} | {row['persona']} | {row['difficulty']} "
+            f"| {i} | {row['session_id']} | {dt} | {row['date']} "
+            f"| {row['persona']} | {row['difficulty']} "
             f"| {row['claude_total_✔']} | {row['claude_total_△']} "
             f"| {row['claude_total_✘']} | {row['must_hit_✘_count']} "
             f"| {row['judge_main']} |"
         )
+
+    # 重评 lineage
+    reevals = [r for r in rows if r.get("reeval_of", "").strip()]
+    if reevals:
+        md += [
+            "",
+            "---",
+            "",
+            "## 🔁 重评 lineage",
+            "",
+            "| 当前 session_id | 重评自 | 对话日期时间 | 评估日期 | 备注 |",
+            "|---|---|---|---|---|",
+        ]
+        for r in reevals:
+            cd = r.get("conversation_date", "")
+            ct = r.get("conversation_time", "")
+            dt = f"{cd} {ct}".strip() if ct else cd
+            note = f"同次对话用新版评估规则重跑"
+            md.append(
+                f"| {r['session_id']} | {r['reeval_of']} "
+                f"| {dt} | {r['date']} | {note} |"
+            )
 
     md += [
         "",
         "---",
         "",
         f"**生成时间**:{date}",
-        f"**输入**:tracker.csv({n} 行)",
+        f"**输入**:tracker.csv({n} 行,91 列)",
+        f"**排序**:按 (conversation_date, conversation_time),同 datetime 保留 CSV 原顺序",
     ]
     return "\n".join(md) + "\n"
 
