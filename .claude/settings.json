@@ -1,0 +1,39 @@
+{
+  "_comment_hooks": "PCC 工作区 hooks:① PreToolUse 防越权 ② PostToolUse tracker.csv 写入后自动 regen ③ Stop session 结束自动落 token-usage.csv。详见 scripts/hook_guard_writes.py + scripts/hook_regen_chart.py + scripts/hook_token_usage.py。",
+  "_comment_settings_location": "本 settings.json 是工作区级别(覆盖用户全局),仅在该工作区生效。",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_guard_writes.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_regen_chart.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/hook_token_usage.py"
+          }
+        ]
+      }
+    ]
+  }
+}
