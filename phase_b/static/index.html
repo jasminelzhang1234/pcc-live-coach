@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PCC Live Coach</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<!-- Page 1: entry -->
+<section id="page-entry" class="page active">
+  <header>
+    <h1>PCC Live Coach</h1>
+    <p class="subtitle">实时语音练习 · 5.5 / 6.6 / 7.6</p>
+  </header>
+  <div class="form">
+    <label>
+      <span>选择人格</span>
+      <select id="persona-select"><option value="">加载中…</option></select>
+    </label>
+    <label>
+      <span>难度</span>
+      <select id="difficulty-select">
+        <option value="1">1 · 低</option>
+        <option value="2" selected>2 · 中</option>
+        <option value="3">3 · 高</option>
+      </select>
+    </label>
+    <label>
+      <span>议题(可选)</span>
+      <input id="topic-input" type="text" placeholder="例如:业绩下滑 / 团队推不动" />
+    </label>
+    <button id="btn-start" class="primary">开始</button>
+    <p class="disclaimer">本工具未经 ICF 认证 · 仅供节奏练习 · <a href="DISCLAIMER.html">免责声明</a></p>
+  </div>
+</section>
+
+<!-- Page 2: session -->
+<section id="page-session" class="page">
+  <header>
+    <h1 id="session-title">对话中…</h1>
+    <p class="status" id="session-status">点击麦克风开始说话</p>
+  </header>
+  <div class="stage">
+    <div class="audio-orbit">
+      <button id="btn-mic" class="mic" aria-label="麦克风">🎙</button>
+    </div>
+    <div class="latency" id="latency-readout">— ms</div>
+  </div>
+  <div class="transcript" id="transcript"></div>
+  <div class="actions">
+    <button id="btn-speak" class="primary">说</button>
+    <button id="btn-end" class="secondary">结束</button>
+  </div>
+</section>
+
+<!-- Page 3: dashboard -->
+<section id="page-dashboard" class="page">
+  <header>
+    <h1>本场节奏指标</h1>
+    <p class="status" id="dashboard-session-id"></p>
+  </header>
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-value" id="kpi-cpm">—</div><div class="kpi-label">平均 CPM</div></div>
+    <div class="kpi"><div class="kpi-value" id="kpi-silence">—</div><div class="kpi-label">5.5 沉默命中</div></div>
+    <div class="kpi"><div class="kpi-value" id="kpi-barge">—</div><div class="kpi-label">6.6 打断事件</div></div>
+  </div>
+  <h2>逐句特征</h2>
+  <table class="turn-table" id="turn-table">
+    <thead><tr><th>#</th><th>角色</th><th>CPM</th><th>前沉默 ms</th><th>5.5 ✔?</th><th>6.6 打断</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <button id="btn-back" class="secondary">返回首页</button>
+</section>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
