@@ -36,3 +36,9 @@ progress/calibration-bench.csv
 .env.local
 .venv-funasr-spike/
 .funasr-spike-tmp/
+
+# Local Claude Code MCP config (contains absolute paths)
+.mcp.json
+
+# Runtime logs
+logs/
