@@ -132,7 +132,7 @@ def must_hit_status(rows: list[dict]) -> dict[str, list[str]]:
     return out
 
 
-def render_report(rows: list[dict], date: str) -> str:
+def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") -> str:
     """生成 markdown 报告"""
     n = len(rows)
     judgments = marker_judgments(rows)
@@ -145,7 +145,7 @@ def render_report(rows: list[dict], date: str) -> str:
     md = [
         f"# Tracker 分析报告 — {date}(自动生成,{n} 场)",
         "",
-        "> 来源:[progress/tracker.csv](tracker.csv)",
+        f"> 来源:[progress/{csv_name}]({csv_name})",
         "> 生成器:`scripts/analyze_tracker.py`",
         "",
         "## 📊 能力维度命中率",
@@ -254,7 +254,7 @@ def render_report(rows: list[dict], date: str) -> str:
         "---",
         "",
         f"**生成时间**:{date}",
-        f"**输入**:tracker.csv({n} 行,91 列)",
+        f"**输入**:{csv_name}({n} 行,{len(rows[0]) if rows else 0} 列)",
         f"**排序**:按 (conversation_date, conversation_time),同 datetime 保留 CSV 原顺序",
     ]
     return "\n".join(md) + "\n"
@@ -279,7 +279,8 @@ def main() -> int:
         return 1
 
     today = datetime.now().strftime("%Y-%m-%d")
-    report = render_report(rows, today)
+    csv_name = args.csv.name
+    report = render_report(rows, today, csv_name=csv_name)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(report, encoding="utf-8")
