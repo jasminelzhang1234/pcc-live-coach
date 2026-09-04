@@ -247,10 +247,12 @@ def build_html(
     narrative = (
         f"真人练习 N={n} 场 · 加权平均 {real_avg:.1f}%"
         + (f" · 比 AI persona 高 {real_avg - ai_avg_pct:+.1f}pp" if ai_avg else "")
+        + (f" · ⚠️ n<3,尚不构成 trend,只展示单点能力维度" if n < 3 else "")
     )
 
     html = HTML_TEMPLATE.format(
         n=n,
+        n_trend_note=" · ⚠️ 暂不构成 trend" if n < 3 else "",
         today=today,
         real_avg=f"{real_avg:.1f}",
         peak_html=peak_html,
@@ -351,7 +353,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
   <div class="container">
     <header>
-      <h1>🤝 真人练习 PCC 趋势 · {n} 场数据</h1>
+      <h1>🤝 真人练习 PCC 趋势 · {n} 场数据{n_trend_note}</h1>
       <div class="subtitle">独立于 AI persona · 按 (conversation_date, conversation_time) 排序 · 双击可看 · 从 <code>tracker-real-sessions.csv</code> 生成</div>
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-label">平均命中率</div><div class="kpi-value">{real_avg}%</div><div class="kpi-sub">{n} 场真人加权</div></div>
@@ -561,8 +563,8 @@ def main() -> int:
     parser.add_argument(
         "--out",
         type=Path,
-        default=PROGRESS / f"trending-chart-real-{datetime.now():%Y-%m-%d}.html",
-        help="输出 HTML 路径",
+        default=PROGRESS / "trending-chart-real.html",
+        help="输出 HTML 路径(默认:progress/trending-chart-real.html,覆盖式)",
     )
     parser.add_argument("--print", action="store_true", help="同时打印会话摘要到 stdout")
     args = parser.parse_args()

@@ -529,7 +529,7 @@ def main() -> int:
         print("ERROR: tracker.csv 没有数据行", file=sys.stderr)
         return 1
     today = datetime.now().strftime("%Y-%m-%d")
-    out = PROGRESS / f"trending-chart-{today}.html"
+    out = PROGRESS / "trending-chart.html"
     html = build_html(sessions, today)
     out.write_text(html, encoding="utf-8")
     avg = sum(s["hit"] for s in sessions) / len(sessions)

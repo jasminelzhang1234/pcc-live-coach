@@ -28,12 +28,15 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TRACKER_REL = "progress/tracker.csv"
+REAL_CSV_REL = "progress/tracker-real-sessions.csv"
 ANALYZE_SCRIPT = ROOT / "scripts" / "analyze_tracker.py"
 GEN_SCRIPT = ROOT / "scripts" / "gen_trending_chart.py"
+GEN_REAL_SCRIPT = ROOT / "scripts" / "gen_trending_chart_real.py"
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 
@@ -63,8 +66,29 @@ def main() -> int:
 
     file_path_raw = data.get("tool_input", {}).get("file_path", "")
     file_path = normalize_path(file_path_raw)
-    if file_path != TRACKER_REL:
-        return 0  # 不是 tracker.csv,跳过
+
+    # 分支:tracker.csv(AI)→ 跑 AI 版;tracker-real-sessions.csv(真人)→ 跑真人版
+    if file_path == TRACKER_REL:
+        # AI:analyze_tracker.py(默认 tracker.csv)+ gen_trending_chart.py
+        plan = [
+            ("analyze_tracker.py", ["python3", str(ANALYZE_SCRIPT)], ROOT / "progress" / f"tracker-analysis-{datetime.now():%Y-%m-%d}.md"),
+            ("gen_trending_chart.py", ["python3", str(GEN_SCRIPT)], ROOT / "progress" / "trending-chart.html"),
+        ]
+        pipeline_label = "AI persona pipeline"
+    elif file_path == REAL_CSV_REL:
+        # 真人:analyze_tracker.py --csv real --out tracker-analysis-real-{date}.md + gen_trending_chart_real.py
+        real_analysis_out = ROOT / "progress" / f"tracker-analysis-real-{datetime.now():%Y-%m-%d}.md"
+        plan = [
+            (
+                "analyze_tracker.py (real)",
+                ["python3", str(ANALYZE_SCRIPT), "--csv", str(ROOT / REAL_CSV_REL), "--out", str(real_analysis_out)],
+                real_analysis_out,
+            ),
+            ("gen_trending_chart_real.py", ["python3", str(GEN_REAL_SCRIPT)], ROOT / "progress" / "trending-chart-real.html"),
+        ]
+        pipeline_label = "real sessions pipeline"
+    else:
+        return 0  # 不是 AI 也不是真人 csv,跳过
 
     dry_run = os.environ.get("HOOK_REGEN_DRY_RUN") == "1"
 
@@ -75,25 +99,26 @@ def main() -> int:
         return 0
 
     if dry_run:
-        print(f"[hook DRY-RUN] 会跑:", file=sys.stderr)
-        print(f"  python3 scripts/analyze_tracker.py", file=sys.stderr)
-        print(f"  python3 scripts/gen_trending_chart.py", file=sys.stderr)
+        print(f"[hook DRY-RUN] {pipeline_label} 会跑:", file=sys.stderr)
+        for label, cmd, _ in plan:
+            print(f"  {' '.join(cmd)}", file=sys.stderr)
         return 0
 
-    # 跑 analyze_tracker.py
-    print(f"[hook] tracker.csv 已更新,开始重生成...", file=sys.stderr)
+    print(f"[hook] {file_path} 已更新,跑 {pipeline_label}...", file=sys.stderr)
     results = []
-    for label, script in [("analyze_tracker.py", ANALYZE_SCRIPT), ("gen_trending_chart.py", GEN_SCRIPT)]:
+    for label, cmd, expected_out in plan:
         try:
             result = subprocess.run(
-                ["python3", str(script)],
+                cmd,
                 cwd=ROOT,
                 capture_output=True,
                 text=True,
                 timeout=60,
             )
             if result.returncode == 0:
-                results.append((label, True, result.stdout.strip()))
+                # 确认产物存在(覆盖式文件必然存在,但保险起见)
+                produced = expected_out.exists() if expected_out else True
+                results.append((label, produced, result.stdout.strip()))
             else:
                 results.append((label, False, result.stderr.strip() or result.stdout.strip()))
         except subprocess.TimeoutExpired:
@@ -101,7 +126,6 @@ def main() -> int:
         except Exception as e:
             results.append((label, False, f"exception: {e}"))
 
-    # 输出汇总
     for label, ok, msg in results:
         icon = "✅" if ok else "❌"
         first_line = msg.splitlines()[0] if msg else ""
