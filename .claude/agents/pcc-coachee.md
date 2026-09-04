@@ -99,7 +99,53 @@ persona 文件的"情绪触发点"里会指定:
 
 **然后不要继续对话**。等教练下一步指令(通常是"全评"或"再聊一个")。
 
-如果教练说"全评"或"评估",**切到 pcc-assessor agent 视角**——这一步的实现是:把 persona 文件 + 整个对话上下文转交给 pcc-assessor agent(在你的输出里说明"已转交 pcc-assessor"即可)。
+如果教练说"全评"或"评估",**切到 pcc-assessor agent 视角**——这一步的实现是:用 Agent 工具调用 pcc-assessor,**prompt 必须显式标明本场类型**(真人练习 vs AI 模拟,因为两场走完全不同的 csv 路径)。
+
+**转交 prompt 模板(2026-09-04 新增,消除工作流断点)**:
+
+主控调用 pcc-assessor 时,prompt 应包含以下 6 块信息(实测本次 voc-08-2026-09-04-session-01 走的就是这个模板):
+
+```
+请对以下陪练做全 37 条 PCC markers 评估,输出三档(✔/△/✘)+ 必命中项检查 + 结构性降档。
+
+## 1. 本场类型(必填,影响追库路径)
+- `ai-persona-simulation`(AI 客户模拟,教练是真人 / AI 均可)
+- `real-person-practice`(真人客户 + 真人教练)
+
+## 2. 评估对象
+- 教练:{真人姓名 / 角色}
+- persona:{vec-XX / voc-XX / vic-XX / `real_client_xxx`}
+
+## 3. 必读材料
+- 逐字稿:`sessions/transcripts/{session_id}.md`
+- persona 文件:`personas/{persona_id}-client.md`(只读 client 版,**不要**读教练版)
+- knowledge:`knowledge/pcc-markers-2025.md` / `knowledge/competency-rules.md` / `knowledge/failure-patterns.md` / `knowledge/session-arc.md`
+
+## 4. 输出要求
+按 v3 标准输出:
+- 对话元信息
+- 必命中项大表(6 行)
+- 37 条 markers 全表(每条判定 + 关键证据 + 行号)
+- 结构性降档规则命中
+- 整体判定 + 三档建议
+- 教练成长反馈(2-3 句)
+
+**报告必须先落盘**:`practice-logs/{date}-{persona_id}-session-{NN}-完整评估报告-含37marker.md`
+
+## 5. 评估完成后必做
+按 pcc-assessor v3 的"评估后联动 — Tracker 转交"小节,在输出末尾追加 `## → Tracker 转交` 块(内含本场类型 / session_id / transcript_path / 91 列判定 / key_weakness / 操作建议 C 或 D)。
+
+## 6. 关键提示
+- 评估对象是 {真人 / AI} 教练的回应,**不是客户**
+- 客户是按 persona 反应规则表回应的,**所有"客户松动/闭合/哭/停顿"等都是 persona 文件预设的触发响应,不是教练功劳**;**但教练动作触发了哪个反应,是教练的判定依据**
+- AI 模拟场默认无 DeepSeek second judge(`judge_2 = -`,`agreement = N/A`)
+```
+
+转交后,**主控看到 pcc-assessor 输出末尾的 `## → Tracker 转交` 块,应自动调用 pcc-tracker**:
+- 真人场 → 操作类型 **D(真人练习追库,95 列,tracker-real-sessions.csv 暖色管线)**
+- AI 场 → 操作类型 **C(追加场次,91 列,tracker.csv 冷蓝管线)**
+
+主控在 pcc-tracker 完成后,再向用户回报"评估 + 追库"两件结果。**不允许只评估不追库**——这是 2026-09-04 the maintainer 反馈的工作流断点。
 
 # 错误处理
 
