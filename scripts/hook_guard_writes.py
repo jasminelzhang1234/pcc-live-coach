@@ -3,9 +3,13 @@
 PreToolUse hook: 防止 PCC 三 agent 越权写到其他 agent 的领域。
 
 每个 agent 只能写自己的归档位置(其余目录视为越权):
-- pcc-coachee  → sessions/transcripts/vec-XX-{date}-session-NN.md
+- pcc-coachee  → practice-logs/vec-XX-{YYYY-MM-DD}-session-NN.md (vec persona transcript)
+                 + practice-logs/voc-XX-{YYYY-MM-DD}-session-NN.md (voc persona transcript)
+                 + progress/real-sessions/<date>-session-XX/01-<topic>.md (real session transcript)
 - pcc-assessor → practice-logs/{date}-vec-XX-session-NN-*.md
+                 + progress/real-sessions/<date>-session-XX/02-评估.md
 - pcc-tracker  → progress/tracker.csv + progress/tracker-analysis-{date}.md
+                 + progress/tracker-real-sessions.csv + progress/tracker-analysis-real-{date}.md
 
 其他 agent(非 PCC 三件套)或未识别 agent:不做限制,放行。
 
@@ -44,16 +48,20 @@ from pathlib import Path
 # 每个 PCC agent 允许的写路径正则(相对于工作区根)
 AGENT_ALLOWED_PATTERNS: dict[str, list[str]] = {
     "pcc-coachee": [
-        r"^sessions/transcripts/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
-        r"^sessions/transcripts/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
+        r"^practice-logs/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
+        r"^practice-logs/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
+        r"^progress/real-sessions/\d{4}-\d{2}-\d{2}-session-\d+/01-.+\.md$",
     ],
     "pcc-assessor": [
         r"^practice-logs/\d{4}-\d{2}-\d{2}-vec-\d{2}-session-\d{2}-.+\.md$",
         r"^practice-logs/\d{4}-\d{2}-\d{2}-voc-\d{2}-session-\d{2}-.+\.md$",
+        r"^progress/real-sessions/\d{4}-\d{2}-\d{2}-session-\d+/02-评估\.md$",
     ],
     "pcc-tracker": [
         r"^progress/tracker\.csv$",
         r"^progress/tracker-analysis-\d{4}-\d{2}-\d{2}\.md$",
+        r"^progress/tracker-real-sessions\.csv$",
+        r"^progress/tracker-analysis-real-\d{4}-\d{2}-\d{2}\.md$",
     ],
 }
 

@@ -27,7 +27,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 1. 用户说"全评""评估""看看我这场"或类似的话。
 2. **第一步**:确认输入:
-   - 逐字稿路径(默认 `sessions/transcripts/` 下最新一份)
+   - 逐字稿路径(默认 `practice-logs/vec-XX-{YYYY-MM-DD}-session-NN.md` 下最新一份)
    - 档位(单条 marker / 整场 / 全评三档之一)
 3. **第二步**:用 Read 工具读必读材料:
    - [knowledge/pcc-markers-2025.md](../../knowledge/pcc-markers-2025.md) — 37 条判定要点
@@ -246,7 +246,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
    - 默认全评:`完整评估报告-含37marker`
    - 新细读规则重跑老场:`新细读规则评估报告`
    - 早期精简版(已废弃,保留兼容):`-coaching-practice`
-3. **NN 自动递增**:扫 `sessions/transcripts/`,取 vec-XX-{date}-session-NN 的最大 N + 1
+3. **NN 自动递增**:扫 `practice-logs/vec-XX-{date}-session-NN.md`,取 vec-XX-{date}-session-NN 的最大 N + 1
 4. **文件已存在**(覆盖风险)→ 自动追加 `-v2` / `-v3`(避免覆盖历史)
 5. **写完 → Glob 验证**:`practice-logs/{date}-vec-XX-*` 必须有匹配
 6. **Glob 验证无匹配 → 视为本次评估失败,不许交付用户**
@@ -315,7 +315,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 **本场类型**:`real-person-practice` | `ai-persona-simulation`
 **session_id**:`{session_id}`(例:`voc-08-2026-09-04-session-01`)
-**transcript_path**:`{相对路径}`(例:`sessions/transcripts/voc-08-2026-09-04-session-01.md`)
+**transcript_path**:`{相对路径}`(例:`practice-logs/voc-08-2026-09-04-session-01.md`)
 **transcript 已落盘验证**:✔ / ✘
 **persona**:`{persona ID}`(真人场填 `real_client_<代号>` 自由标识)
 **judge_main**:`Claude v3` / `真人督导(姓名)`(本场主要判定者)

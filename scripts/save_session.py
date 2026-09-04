@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+⚠️  已废弃 (deprecated 2026-09-04)
+
 把一份陪练对话 + 评估报告归档到 sessions/,加 frontmatter,
 并在 progress/T11-冒烟测试.md 追加一行 L2 记录。
 

@@ -52,8 +52,8 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │  Persistence (files, no traditional database)              │
-│  ├─ sessions/dialogues/<id>.jsonl                         │
-│  ├─ sessions/rhythm/<id>.json                             │
+│  ├─ Real practice audio: practice-logs/真人练习/*.mp3     │
+│  ├─ Per-session artifacts: progress/real-sessions/<date>/ │
 │  └─ Append to existing progress/tracker-real-sessions.csv │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -183,8 +183,8 @@ the maintainer · Individual maintainer · No organization affiliation
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │  持久化层 (文件,无传统数据库)                             │
-│  ├─ sessions/dialogues/<id>.jsonl                        │
-│  ├─ sessions/rhythm/<id>.json                            │
+│  ├─ 真人练习音频: practice-logs/真人练习/*.mp3          │
+│  ├─ 逐场派生产物: progress/real-sessions/<日期>/          │
 │  └─ 追加到现有 progress/tracker-real-sessions.csv         │
 └──────────────────────────────────────────────────────────┘
 ```

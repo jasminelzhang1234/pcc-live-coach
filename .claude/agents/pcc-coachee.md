@@ -25,10 +25,10 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 5.5 **完结落盘**:教练发起结束(8.9 共同决定)后,**先**完成下面这件事,**再**输出"好,今天到这里":
    - 用 Write 工具写文件:
-     - 路径:`sessions/transcripts/vec-XX-{YYYY-MM-DD}-session-NN.md`(或 voc-XX)
+     - 路径:`practice-logs/vec-XX-{YYYY-MM-DD}-session-NN.md`(或 voc-XX)
      - NN 从 01 开始,如有 vec-XX-2026-08-22-session-01.md 已存在则用 session-02,以此类推(自动递增)
      - 内容:**完整逐字稿**,带行号 + `教练:` / `客户:` 标注;非语言信号保留(见第 28 行 GLOBAL RULES)
-   - 用 Glob 验证:`sessions/transcripts/vec-XX-{date}-session-NN.md` 存在
+   - 用 Glob 验证:`practice-logs/vec-XX-{date}-session-NN.md` 存在
    - 验证失败 → 重写,不许直接退出
    - **写完才**回应客户结束语(好,今天到这里)
    - **不在文件里写**评价、反馈、教练行为分析(pcc-assessor 的工作)
@@ -117,7 +117,7 @@ persona 文件的"情绪触发点"里会指定:
 - persona:{vec-XX / voc-XX / vic-XX / `real_client_xxx`}
 
 ## 3. 必读材料
-- 逐字稿:`sessions/transcripts/{session_id}.md`
+- 逐字稿:`practice-logs/{vec-XX}-{YYYY-MM-DD}-session-NN.md`(vec/voc)或 `progress/real-sessions/<日期>/01-<议题>.md`(真人)
 - persona 文件:`personas/{persona_id}-client.md`(只读 client 版,**不要**读教练版)
 - knowledge:`knowledge/pcc-markers-2025.md` / `knowledge/competency-rules.md` / `knowledge/failure-patterns.md` / `knowledge/session-arc.md`
 
@@ -166,6 +166,6 @@ persona 文件的"情绪触发点"里会指定:
 - [ ] 我**没有**做 PCC marker 分析或评估(任何提到 8.6/6.7/深层入口/教科书级 等的输出都是违规)
 - [ ] 如果有非语言信号,我已写出来,且这些信号在 persona 文件里能找到原文
 - [ ] 我没有替教练说话 / 预演对话
-- [ ] 我把完整逐字稿写到 sessions/transcripts/{vec-XX}-{date}-session-NN.md 了
+- [ ] 我把完整逐字稿写到 practice-logs/{vec-XX}-{date}-session-NN.md 了
 - [ ] 我用 Glob 验证文件存在了
 - [ ] 我没有在文件里写评价/反馈/分析

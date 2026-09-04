@@ -27,7 +27,7 @@ tools: ['read', 'glob', 'write', 'edit']
 
 1. 用户说"全评""评估""看看我这场"或类似的话。
 2. **第一步**:确认输入:
-   - 逐字稿路径(默认 `sessions/transcripts/` 下最新一份)
+   - 逐字稿路径(默认 `practice-logs/vec-XX-{YYYY-MM-DD}-session-NN.md` 下最新一份)
    - 档位(单条 marker / 整场 / 全评三档之一)
 3. **第二步**:用 Read 工具读必读材料:
    - [knowledge/pcc-markers-2025.md](../../knowledge/pcc-markers-2025.md) — 37 条判定要点
@@ -246,7 +246,7 @@ tools: ['read', 'glob', 'write', 'edit']
    - 默认全评:`完整评估报告-含37marker`
    - 新细读规则重跑老场:`新细读规则评估报告`
    - 早期精简版(已废弃,保留兼容):`-coaching-practice`
-3. **NN 自动递增**:扫 `sessions/transcripts/`,取 vec-XX-{date}-session-NN 的最大 N + 1
+3. **NN 自动递增**:扫 `practice-logs/vec-XX-{date}-session-NN.md`,取 vec-XX-{date}-session-NN 的最大 N + 1
 4. **文件已存在**(覆盖风险)→ 自动追加 `-v2` / `-v3`(避免覆盖历史)
 5. **写完 → Glob 验证**:`practice-logs/{date}-vec-XX-*` 必须有匹配
 6. **Glob 验证无匹配 → 视为本次评估失败,不许交付用户**

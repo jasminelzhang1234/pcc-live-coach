@@ -107,7 +107,7 @@ python3 scripts/analyze_tracker.py --print
    - 列 91:eval_version
 
    **conversation_date / conversation_time 来源**:
-   - 优先从 `sessions/transcripts/{sid}.md` 的文件 mtime 读(精确到分钟)
+   - 优先从 `practice-logs/{vec-XX}-{date}-session-NN.md` 的文件 mtime 读(精确到分钟)
    - 如果 transcript 不存在,fallback 用 `date` 字段,time 留空
    - 重评估(同对话用新规则跑):`reeval_of` 填原 session_id,`conversation_date/time` 用**原对话**的时间,不是重评时间
 
