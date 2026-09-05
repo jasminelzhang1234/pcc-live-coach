@@ -65,6 +65,7 @@ from phase_b.session.manager import get_manager
 
 
 logger = logging.getLogger(__name__)
+AUTO_SUBMIT_DELAY_S = 0.4
 
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -280,6 +281,13 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     last_text_holder = [""]  # most recent ASR partial text (mirrored from pump_asr)
     last_auto_submit_key = [None]
     audio_diag_bytes = [0]  # rolling byte counter for the audio-level diagnostic log
+    pending_auto_task: Optional[asyncio.Task] = None
+
+    def is_plausible_auto_text(text: str) -> bool:
+        compact = "".join((text or "").split())
+        if len(compact) < 3:
+            return False
+        return not any(char in compact for char in "佢唔喺嚟系嗰咩")
 
     async def cancel_task(task: Optional[asyncio.Task]) -> None:
         if task is None:
@@ -393,10 +401,32 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         active_turn_task = asyncio.create_task(run_one_turn(), name=f"turn-{session_id}-{turn_count}")
         return True
 
+    async def cancel_pending_auto() -> None:
+        nonlocal pending_auto_task
+        task = pending_auto_task
+        pending_auto_task = None
+        await cancel_task(task)
+
+    async def submit_stable_auto(event: dict) -> None:
+        nonlocal pending_auto_task
+        try:
+            await asyncio.sleep(AUTO_SUBMIT_DELAY_S)
+            if closing:
+                return
+            text = last_text_holder[0] or event.get("text", "")
+            if is_plausible_auto_text(text):
+                await submit_turn(text, auto_event=event)
+        except asyncio.CancelledError:
+            raise
+        finally:
+            if pending_auto_task is asyncio.current_task():
+                pending_auto_task = None
+
     async def pump_asr() -> None:
         """Forward ASRWorker events to the browser as JSON, and mirror the
         latest partial text into ``last_text_holder`` so the speak handler can
         read it without racing the partial pump."""
+        nonlocal pending_auto_task
         try:
             async for ev in worker.events():
                 if closing:
@@ -413,11 +443,15 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                     ev.get("event") == "partial"
                     and ev.get("is_utterance_end") is True
                     and (ev.get("text") or "").strip()
+                    and is_plausible_auto_text(ev.get("text", ""))
                 ):
-                    await submit_turn(
-                        ev.get("text", ""),
-                        auto_event=ev,
-                    )
+                    await cancel_pending_auto()
+                    if AUTO_SUBMIT_DELAY_S == 0:
+                        await submit_stable_auto(ev)
+                    else:
+                        pending_auto_task = asyncio.create_task(
+                            submit_stable_auto(ev), name=f"auto-submit-{session_id}"
+                        )
         except asyncio.CancelledError:
             raise
         except Exception:

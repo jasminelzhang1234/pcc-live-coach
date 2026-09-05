@@ -126,6 +126,7 @@ async def _run_ws(monkeypatch, messages, run_turn_impl, worker_cls=_Worker):
     monkeypatch.setattr(router, "ASRWorker", worker_cls)
     monkeypatch.setattr(router, "run_turn", run_turn_impl)
     monkeypatch.setattr("phase_b.config.get_settings", lambda: _Settings())
+    monkeypatch.setattr(router, "AUTO_SUBMIT_DELAY_S", 0.0)
     task = asyncio.create_task(router._ws_session_impl(websocket, "session-1"))
     while not _Worker.instances:
         await asyncio.sleep(0)
@@ -140,6 +141,7 @@ async def _run_disconnecting_ws(monkeypatch, run_turn_impl):
     monkeypatch.setattr(router, "ASRWorker", _Worker)
     monkeypatch.setattr(router, "run_turn", run_turn_impl)
     monkeypatch.setattr("phase_b.config.get_settings", lambda: _Settings())
+    monkeypatch.setattr(router, "AUTO_SUBMIT_DELAY_S", 0.0)
     task = asyncio.create_task(router._ws_session_impl(websocket, "session-1"))
     while not _Worker.instances:
         await asyncio.sleep(0)
@@ -182,6 +184,7 @@ def test_utterance_end_auto_commits_once_and_max_duration_does_not(monkeypatch):
         await worker.events_queue.put(
             {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": True}
         )
+        await asyncio.sleep(0)
         await websocket.inbound.put({"cmd": "end"})
         await task
         return websocket, manager
@@ -190,6 +193,90 @@ def test_utterance_end_auto_commits_once_and_max_duration_does_not(monkeypatch):
     utterances = [x for x in manager.state.recorder.dialogue if x.get("event") == "utterance"]
     assert [x["text"] for x in utterances] == ["持续说话"]
     assert not any(x.get("event") == "warn" for x in websocket.sent)
+
+
+def test_short_cantonese_hallucination_is_not_auto_committed(monkeypatch):
+    async def scenario():
+        calls = []
+
+        async def record_turn(**kwargs):
+            calls.append(kwargs["client_text"])
+            yield {"kind": "reply_end"}
+
+        task, websocket, _manager, worker = await _run_ws(monkeypatch, [], record_turn)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "佢啦", "audio_ms": 2400, "is_utterance_end": True}
+        )
+        for _ in range(10):
+            await asyncio.sleep(0)
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return calls
+
+    assert asyncio.run(scenario()) == []
+
+
+def test_partial_after_auto_candidate_does_not_start_second_turn(monkeypatch):
+    async def scenario():
+        release = asyncio.Event()
+        calls = []
+
+        async def blocking_turn(**kwargs):
+            calls.append(kwargs["client_text"])
+            await release.wait()
+            if False:
+                yield {}
+
+        task, websocket, _manager, worker = await _run_ws(monkeypatch, [], blocking_turn)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "第一句完整话", "audio_ms": 2400, "is_utterance_end": True}
+        )
+        await asyncio.sleep(0.45)
+        assert calls == ["第一句完整话"]
+        await worker.events_queue.put(
+            {"event": "partial", "text": "第二句残留", "audio_ms": 800, "is_utterance_end": True}
+        )
+        await asyncio.sleep(0.05)
+        assert calls == ["第一句完整话"]
+        release.set()
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+
+    asyncio.run(scenario())
+
+def test_stable_window_submits_latest_longer_partial(monkeypatch):
+    async def scenario():
+        calls = []
+
+        async def record_turn(**kwargs):
+            calls.append(kwargs["client_text"])
+            yield {"kind": "reply_end"}
+
+        task, websocket, _manager, worker = await _run_ws(monkeypatch, [], record_turn)
+        monkeypatch.setattr(router, "AUTO_SUBMIT_DELAY_S", 0.05)
+        await worker.events_queue.put(
+            {
+                "event": "partial",
+                "text": "你想在四十五分钟里拿到一个",
+                "audio_ms": 2400,
+                "is_utterance_end": True,
+            }
+        )
+        await asyncio.sleep(0.01)
+        await worker.events_queue.put(
+            {
+                "event": "partial",
+                "text": "你想在四十五分钟里拿到一个什么样的成果",
+                "audio_ms": 2800,
+                "is_utterance_end": False,
+            }
+        )
+        await asyncio.sleep(0.08)
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return calls
+
+    assert asyncio.run(scenario()) == ["你想在四十五分钟里拿到一个什么样的成果"]
 
 
 def test_identical_utterances_from_separate_asr_events_commit_twice(monkeypatch):

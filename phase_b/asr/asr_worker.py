@@ -125,7 +125,7 @@ class ASRWorker:
     MAX_AUDIO_MS = 8000        # hard cap → flush even without silence
     MAX_PENDING_AUDIO_BYTES = 32000  # bound audio received while model loads
     MAX_RUNTIME_AUDIO_BYTES = 256000  # bound audio received during a slow decode
-    SILENCE_MS = 1200          # trailing silence needed to trigger flush (was 800 — too eager; users were committed mid-thought)
+    SILENCE_MS = 1800          # allow natural Chinese pauses without committing mid-sentence
     OVERLAP_MS = 1500          # keep last 1.5s as VAD context for next round
     SILENCE_RMS_THRESHOLD = 200  # int16 RMS below this counts as silence
 
@@ -134,7 +134,7 @@ class ASRWorker:
         model: str = "iic/SenseVoiceSmall",
         sample_rate: int = 16000,
         chunk_ms: int = 100,    # poll interval (was 1000); decode triggers are separate
-        language: str = "auto",
+        language: str = "zh",
     ) -> None:
         self._model_name = model
         self._sample_rate = sample_rate

@@ -74,15 +74,15 @@ class Settings:
     asr_model: str = "iic/SenseVoiceSmall"
     asr_vad_model: str = "fsmn-vad"
     asr_punc_model: str = "ct-punc"
-    asr_chunk_ms: int = 1000  # how often to flush a partial decode
-    asr_language: str = "auto"
+    asr_chunk_ms: int = 100  # poll interval for ASR flush checks (decoupled from decode triggers)
+    asr_language: str = "zh"
 
     # LLM (MiniMax by default; switchable to local OpenAI-compatible)
     llm_base_url: str = "https://api.minimaxi.com/v1"
     llm_api_key: str = ""
     llm_model: str = "MiniMax-M3"
-    llm_timeout_s: float = 30.0
-    llm_max_tokens: int = 200
+    llm_timeout_s: float = 90.0  # M3 with reasoning_split often runs 30-60s on persona prompts
+    llm_max_tokens: int = 1000  # M3 spends ~200 tokens on reasoning; need headroom for the actual reply
     llm_temperature: float = 0.6
 
     # TTS (MiniMax T2A)
@@ -108,7 +108,7 @@ class Settings:
 
     # Paths
     personas_dir: str = "personas"
-    sessions_dir: str = "sessions"
+    sessions_dir: str = "practice-logs/真人练习"
     tracker_csv: str = "progress/tracker-real-sessions.csv"
 
 
@@ -122,13 +122,13 @@ def get_settings() -> Settings:
         asr_model=_env("FUNASR_MODEL", "iic/SenseVoiceSmall"),
         asr_vad_model=_env("FUNASR_VAD_MODEL", "fsmn-vad"),
         asr_punc_model=_env("FUNASR_PUNC_MODEL", "ct-punc"),
-        asr_chunk_ms=_env_int("ASR_CHUNK_MS", 1000),
-        asr_language=_env("ASR_LANGUAGE", "auto"),
+        asr_chunk_ms=_env_int("ASR_CHUNK_MS", 100),
+        asr_language=_env("ASR_LANGUAGE", "zh"),
         llm_base_url=_env("LLM_BASE_URL", "https://api.minimaxi.com/v1"),
         llm_api_key=_env("LLM_API_KEY", ""),
         llm_model=_env("LLM_MODEL", "MiniMax-M3"),
-        llm_timeout_s=float(_env("LLM_TIMEOUT_S", "30")),
-        llm_max_tokens=_env_int("LLM_MAX_TOKENS", 200),
+        llm_timeout_s=float(_env("LLM_TIMEOUT_S", "90")),
+        llm_max_tokens=_env_int("LLM_MAX_TOKENS", 1000),
         llm_temperature=float(_env("LLM_TEMPERATURE", "0.6")),
         tts_ws_url=_env("TTS_WS_URL", "wss://api.minimaxi.com/ws/v1/t2a_v2"),
         tts_api_key=_env("TTS_API_KEY", ""),
@@ -146,7 +146,7 @@ def get_settings() -> Settings:
         cpm_fast=_env_int("CPM_FAST", 280),
         barge_in_debounce_ms=_env_int("BARGE_IN_DEBOUNCE_MS", 500),
         personas_dir=_env("PERSONAS_DIR", "personas"),
-        sessions_dir=_env("SESSIONS_DIR", "sessions"),
+        sessions_dir=_env("SESSIONS_DIR", "practice-logs/真人练习"),
         tracker_csv=_env("TRACKER_CSV", "progress/tracker-real-sessions.csv"),
     )
     # Safety: refuse 0.0.0.0 unless allow_lan

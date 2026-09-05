@@ -122,6 +122,22 @@ def test_silence_trigger_emits_partial(fast_trigger):
     assert ev["is_utterance_end"] is True
 
 
+def test_normal_pause_does_not_end_utterance_too_early(monkeypatch):
+    monkeypatch.setattr(aw.ASRWorker, "MIN_AUDIO_MS", 1500)
+    monkeypatch.setattr(aw.ASRWorker, "SILENCE_MS", 1800)
+    fake = _FakeModel([[{"text": "你想怎么来", "start": 0, "end": 1500}]])
+    worker = _make_worker(fake)
+    worker.feed(_tone_pcm(1800))
+    worker.feed(_silence_pcm(1200))
+    assert worker._should_flush() is False
+    worker.feed(_silence_pcm(700))
+    assert worker._should_flush() is True
+
+
+def test_default_asr_language_is_chinese():
+    assert aw.ASRWorker()._language == "zh"
+
+
 # ---- minimum buffer guard --------------------------------------------------
 
 
