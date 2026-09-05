@@ -46,6 +46,7 @@ The LLM endpoint is **fully configurable** via three environment variables (`LLM
 |---|---|---|
 | **MiniMax API** (default) | MiniMax cloud | Set `LLM_API_KEY` |
 | **OpenAI** | OpenAI cloud | Set `LLM_API_KEY` |
+| **DeepSeek** | DeepSeek cloud | Set `LLM_API_KEY` |
 | **Azure OpenAI** | Azure cloud | Use Azure-specific auth |
 | **Ollama** (local) | **Stays on your machine** | Run Ollama on `localhost:11434` |
 | **LM Studio** (local) | **Stays on your machine** | Run LM Studio on `localhost:1234` |
@@ -158,6 +159,7 @@ LLM 端点**完全可配置**,通过三个环境变量(`LLM_BASE_URL`、`LLM_API
 |---|---|---|
 | **MiniMax API**(默认) | MiniMax 云端 | 设置 `LLM_API_KEY` |
 | **OpenAI** | OpenAI 云端 | 设置 `LLM_API_KEY` |
+| **DeepSeek** | DeepSeek 云端 | 设置 `LLM_API_KEY` |
 | **Azure OpenAI** | Azure 云端 | 使用 Azure 专用认证 |
 | **Ollama**(本地) | **保留在你的机器上** | 在 `localhost:11434` 运行 Ollama |
 | **LM Studio**(本地) | **保留在你的机器上** | 在 `localhost:1234` 运行 LM Studio |

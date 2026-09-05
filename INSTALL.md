@@ -158,6 +158,7 @@ The LLM client uses the standard OpenAI Chat Completions API (`POST /chat/comple
 |---|---|---|---|
 | **MiniMax API** (default) | `https://api.minimaxi.com/v1` | `MiniMax-M3` | Cloud — text sent to MiniMax |
 | **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` | Cloud — text sent to OpenAI |
+| **DeepSeek** | `https://api.deepseek.com/v1` | `deepseek-chat` | Cloud — text sent to DeepSeek |
 | **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<dep>` | `<deployment-name>` | Cloud — text sent to Azure |
 | **Ollama** (local) | `http://127.0.0.1:11434/v1` | `qwen2.5:14b` | **Fully offline** |
 | **LM Studio** (local) | `http://127.0.0.1:1234/v1` | any local model | **Fully offline**, GUI-based |
@@ -419,6 +420,7 @@ LLM 客户端使用标准 OpenAI Chat Completions API(`POST /chat/completions` +
 |---|---|---|---|
 | **MiniMax API**(默认) | `https://api.minimaxi.com/v1` | `MiniMax-M3` | 云端 —— 文本发往 MiniMax |
 | **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` | 云端 —— 文本发往 OpenAI |
+| **DeepSeek** | `https://api.deepseek.com/v1` | `deepseek-chat` | 云端 —— 文本发往 DeepSeek |
 | **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<dep>` | `<deployment-name>` | 云端 —— 文本发往 Azure |
 | **Ollama**(本地) | `http://127.0.0.1:11434/v1` | `qwen2.5:14b` | **完全离线** |
 | **LM Studio**(本地) | `http://127.0.0.1:1234/v1` | 任意本地模型 | **完全离线**,基于 GUI |
