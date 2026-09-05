@@ -302,6 +302,9 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
             active_turn_task = None
         return was_active
 
+    def utterance_identity(event: dict) -> tuple:
+        return tuple(event.get(field) for field in ("text", "audio_ms", "is_final", "is_utterance_end"))
+
     async def submit_turn(text: str, auto_event=None) -> bool:
         nonlocal active_turn_task, turn_count
         if closing:
@@ -314,7 +317,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
             await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
             return False
         if auto_event is not None:
-            auto_event_key = json.dumps(auto_event, sort_keys=True, default=str)
+            auto_event_key = utterance_identity(auto_event)
             if last_auto_submit_key[0] == auto_event_key:
                 return False
             last_auto_submit_key[0] = auto_event_key

@@ -169,6 +169,42 @@ def test_identical_utterances_from_separate_asr_events_commit_once(monkeypatch):
     assert [x["text"] for x in utterances] == ["重复内容"]
 
 
+def test_utterance_end_with_different_latency_commits_once(monkeypatch):
+    async def scenario():
+        calls = []
+
+        async def record_turn(**kwargs):
+            calls.append(kwargs["client_text"])
+            yield {"kind": "reply_end"}
+
+        task, websocket, manager, worker = await _run_ws(monkeypatch, [], record_turn)
+        first = {
+            "event": "partial",
+            "text": "延迟变化",
+            "audio_ms": 800,
+            "latency_ms": 101,
+            "is_final": False,
+            "is_utterance_end": True,
+        }
+        second = {**first, "latency_ms": 202}
+        await worker.events_queue.put(first)
+        for _ in range(10):
+            await asyncio.sleep(0)
+            if calls == ["延迟变化"]:
+                break
+        await worker.events_queue.put(second)
+        for _ in range(10):
+            await asyncio.sleep(0)
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return calls, manager
+
+    calls, manager = asyncio.run(scenario())
+    utterances = [x for x in manager.state.recorder.dialogue if x.get("event") == "utterance"]
+    assert calls == ["延迟变化"]
+    assert [x["text"] for x in utterances] == ["延迟变化"]
+
+
 def test_end_closes_asr_submission_and_suppresses_late_turn_output(monkeypatch):
     async def scenario():
         calls = []
