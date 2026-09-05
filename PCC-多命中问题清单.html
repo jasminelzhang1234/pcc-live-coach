@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>PCC 多命中问题清单 · 教练对话流程版</title>
+<style>
+  /* ===== 打印友好的基础排版（与肌肉记忆卡同源）===== */
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm 14mm;
+  }
+
+  :root {
+    --ink: #1f2933;
+    --ink-soft: #4a5568;
+    --ink-mute: #7b8794;
+    --line: #d9dde2;
+    --line-soft: #ebeef2;
+    --bg-soft: #f7f5f0;
+    --bg-card: #fbfaf6;
+    --accent: #c8553d;        /* 朱砂红——必命中项 */
+    --accent-soft: #fbeeea;
+    --deep: #2c3e50;
+    --time: #3d5a80;          /* 深海蓝——时段标题 */
+    --must: #b91c1c;          /* 深红——必中标记 */
+    --ok: #4d7c5f;            /* 苔绿——姿态/支持 */
+    --gold: #b8862b;          /* 琥珀金——多命中高亮 */
+    --gold-soft: #fbf2dc;
+    --gold-deep: #8a6611;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    color: var(--ink);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+                 "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    background: #fff;
+  }
+
+  /* ===== 标题区 ===== */
+  header.cover {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 8pt;
+    margin-bottom: 14pt;
+  }
+  header.cover h1 {
+    margin: 0 0 2pt 0;
+    font-size: 20pt;
+    font-weight: 700;
+    letter-spacing: 0.5pt;
+    color: var(--deep);
+  }
+  header.cover .sub {
+    font-size: 10pt;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+  header.cover .meta {
+    font-size: 8.5pt;
+    color: var(--ink-mute);
+    margin-top: 4pt;
+  }
+
+  /* ===== 草稿状态 banner ===== */
+  .draft-banner {
+    background: #fff4e0;
+    border: 1.5pt solid #d97706;
+    border-left: 5pt solid #d97706;
+    padding: 8pt 12pt;
+    margin: 0 0 10pt 0;
+    font-size: 9.5pt;
+    color: #5a3500;
+    page-break-inside: avoid;
+  }
+  .draft-banner b {
+    color: #b04a00;
+    font-size: 10.5pt;
+  }
+  .draft-banner ul {
+    margin: 3pt 0 0 0;
+    padding-left: 18pt;
+    font-size: 9pt;
+  }
+  .draft-banner li { margin-bottom: 1pt; }
+
+  h2 {
+    font-size: 13pt;
+    font-weight: 700;
+    color: var(--deep);
+    margin: 16pt 0 6pt 0;
+    padding-left: 8pt;
+    border-left: 4pt solid var(--accent);
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--time);
+    margin: 10pt 0 4pt 0;
+    page-break-after: avoid;
+  }
+  h4 {
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--gold-deep);
+    margin: 8pt 0 3pt 0;
+    padding-left: 6pt;
+    border-left: 3pt solid var(--gold);
+    page-break-after: avoid;
+  }
+
+  /* ===== 设计原则块 ===== */
+  .principle {
+    background: var(--bg-soft);
+    border-left: 3pt solid var(--accent);
+    padding: 8pt 12pt;
+    margin: 6pt 0;
+    font-size: 9.5pt;
+  }
+  .principle b { color: var(--must); }
+
+  /* ===== 必命中项速查卡 ===== */
+  table.must-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6pt 0 8pt 0;
+    page-break-inside: avoid;
+  }
+  table.must-table th, table.must-table td {
+    border: 1px solid var(--line);
+    padding: 5pt 7pt;
+    font-size: 9.5pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.must-table th {
+    background: var(--accent-soft);
+    color: var(--must);
+    font-weight: 700;
+  }
+  table.must-table td.code {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    color: var(--must);
+    font-weight: 700;
+    text-align: center;
+    width: 12%;
+  }
+  table.must-table td.q {
+    background: var(--bg-card);
+    font-weight: 600;
+    width: 32%;
+  }
+  table.must-table td.tag {
+    width: 18%;
+    font-weight: 600;
+    color: var(--must);
+  }
+
+  /* ===== 时段分隔 ===== */
+  .phase-label {
+    background: var(--time);
+    color: #fff;
+    padding: 4pt 10pt;
+    font-size: 9.5pt;
+    font-weight: 700;
+    letter-spacing: 0.5pt;
+    margin: 10pt 0 4pt 0;
+    page-break-after: avoid;
+  }
+
+  /* ===== 多命中问题卡片 ===== */
+  .question-card {
+    border: 1px solid var(--line);
+    border-left: 4pt solid var(--gold);
+    background: var(--bg-card);
+    padding: 6pt 10pt 8pt 10pt;
+    margin: 6pt 0;
+    page-break-inside: avoid;
+  }
+  .question-card.must {
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .question-card .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4pt;
+    gap: 8pt;
+  }
+  .question-card .category {
+    font-weight: 700;
+    color: var(--gold-deep);
+    font-size: 9.5pt;
+  }
+  .question-card.must .category {
+    color: var(--must);
+  }
+  .question-card .hit-count {
+    font-size: 8pt;
+    color: var(--gold-deep);
+    background: var(--gold-soft);
+    padding: 1pt 5pt;
+    border-radius: 2pt;
+    font-weight: 700;
+    white-space: nowrap;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  }
+  .question-card.must .hit-count {
+    color: var(--must);
+    background: #fff;
+    border: 1px solid var(--accent);
+  }
+
+  .question-card .variants {
+    margin: 3pt 0 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: variant;
+  }
+  .question-card .variants li {
+    counter-increment: variant;
+    position: relative;
+    padding: 2pt 0 2pt 20pt;
+    font-size: 9pt;
+    color: var(--ink);
+  }
+  .question-card .variants li::before {
+    content: "问" counter(variant);
+    position: absolute;
+    left: 0;
+    top: 2pt;
+    font-weight: 700;
+    color: var(--gold-deep);
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: 8pt;
+  }
+  .question-card.must .variants li::before { color: var(--must); }
+
+  .question-card .variants li .var-text {
+    display: block;
+    margin-bottom: 1pt;
+  }
+  .question-card .variants li .var-note {
+    display: block;
+    color: var(--ink-mute);
+    font-size: 8pt;
+    margin-top: 1pt;
+  }
+
+  /* marker 标签 */
+  .marker-tag {
+    display: inline-block;
+    background: #eef2f7;
+    color: var(--ink-soft);
+    padding: 1pt 4pt;
+    border-radius: 2pt;
+    font-size: 8pt;
+    margin: 0 2pt 0 0;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  }
+  .marker-tag.gold {
+    background: var(--gold-soft);
+    color: var(--gold-deep);
+  }
+  .marker-tag.must {
+    background: var(--accent-soft);
+    color: var(--must);
+    font-weight: 700;
+  }
+  .marker-tag.ok {
+    background: #ecf2ed;
+    color: var(--ok);
+  }
+  .marker-line {
+    margin-top: 4pt;
+    padding-top: 4pt;
+    border-top: 1pt dashed var(--line);
+    font-size: 8.5pt;
+  }
+  .marker-line b {
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 8pt;
+  }
+
+  /* ===== TOP 10 多命中表 ===== */
+  table.top {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 4pt 0 8pt 0;
+  }
+  table.top th, table.top td {
+    border: 1px solid var(--line);
+    padding: 4pt 6pt;
+    vertical-align: top;
+  }
+  table.top th {
+    background: var(--gold-soft);
+    color: var(--gold-deep);
+    font-weight: 700;
+    text-align: left;
+    font-size: 9pt;
+  }
+  table.top td.rank {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-weight: 700;
+    color: var(--gold-deep);
+    text-align: center;
+    width: 7%;
+    background: var(--gold-soft);
+  }
+  table.top td.name {
+    width: 22%;
+    font-weight: 700;
+    color: var(--deep);
+  }
+  table.top td.q {
+    width: 36%;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: 8.5pt;
+    background: var(--bg-card);
+  }
+  table.top td.markers {
+    width: 35%;
+    font-size: 8.5pt;
+  }
+
+  /* ===== 套餐表 ===== */
+  table.kit {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 4pt 0 8pt 0;
+  }
+  table.kit th, table.kit td {
+    border: 1px solid var(--line);
+    padding: 4pt 6pt;
+    vertical-align: top;
+  }
+  table.kit th {
+    background: var(--bg-soft);
+    color: var(--deep);
+    font-weight: 700;
+    text-align: left;
+    font-size: 9pt;
+  }
+  table.kit td.num {
+    text-align: center;
+    font-weight: 700;
+    color: var(--time);
+    width: 6%;
+  }
+  table.kit td.q {
+    width: 50%;
+    background: var(--bg-card);
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: 8.5pt;
+  }
+  table.kit td.markers { width: 30%; font-size: 8.5pt; }
+  table.kit td.time { width: 12%; color: var(--time); font-weight: 600; text-align: center; }
+
+  /* ===== 雷区 ===== */
+  .minefield {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    padding: 6pt 10pt;
+    margin: 6pt 0;
+    page-break-inside: avoid;
+  }
+  .minefield h4 {
+    color: var(--must);
+    border-left-color: var(--must);
+    margin: 0 0 4pt 0;
+  }
+  .minefield ol {
+    margin: 2pt 0 0 0;
+    padding-left: 18pt;
+    font-size: 9pt;
+  }
+  .minefield li { margin-bottom: 3pt; }
+  .minefield li b { color: var(--must); }
+
+  /* ===== 一句话总结 ===== */
+  .one-liner {
+    border: 2px solid var(--deep);
+    background: var(--deep);
+    color: #fff;
+    padding: 8pt 12pt;
+    margin: 10pt 0 4pt 0;
+    font-size: 10.5pt;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.5pt;
+    page-break-inside: avoid;
+  }
+  .one-liner b { color: #fbe1a4; }
+
+  /* 段落说明 */
+  .note {
+    font-size: 8.5pt;
+    color: var(--ink-mute);
+    margin: 0 0 4pt 0;
+  }
+
+  @media print {
+    body { font-size: 9.5pt; }
+    h2 { margin-top: 10pt; }
+    table.top, table.kit { font-size: 8pt; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <h1>PCC 多命中问题清单</h1>
+  <p class="sub">按教练对话流程组织 · 一问多命中 · 每类 3–5 种问法</p>
+  <p class="meta">ICF 2025 版 37 条 markers · 配套肌肉记忆卡 PCC-45min-muscle-memory.html · 2026-09-04</p>
+</header>
+
+<div class="draft-banner">
+  <b>⚠️ v2 跨案校准 · 03/04/05 三案 56 节点</b>
+  <ul>
+    <li><b>已验证层：</b>37 条 marker 定义、6 必命中项、6 时段时间分布、12 失败模式、问法变体中来自 KB 原文的部分（如肌肉记忆卡的 18 问口诀）——均可溯源至 <code>knowledge/</code> 目录</li>
+    <li><b>v2 跨案校准层：</b>03（P1 入门/20 节点）+ 04（P2 生死/14 节点）+ 05（P2 身份+价值+意义/22 节点）= 56 节点（见第七节 7.5/7.6/7.7）——<b>N=3 仍小，但 P1+P2 多档议题层级覆盖</b></li>
+    <li><b>仍属理论推论：</b>TOP 10 排序、套餐"10 问全保 37 条"算账、问法变体中我自创的部分——3 案数据不够升级到 v3</li>
+    <li><b>7.2 / 7.3 特别提示：</b>KB 明确这两条"必须等客户出现'我没这么想过'才算真命中"——所以"问句命中 7.2"仅指"结构判据被满足"，不等于"问出后该 marker 自动升 ✔"</li>
+    <li><b>议题层级差异警示：</b>04/05 是 P2 75 分钟案例，03 是 P1 45 分钟。PCC 考试 45 分钟标准场，<b>必命中项命中率会显著低于 04/05</b>。v2 矩阵数据是"上限参考"而非"考试基线"。</li>
+  </ul>
+</div>
+
+<!-- ========== 设计原则 ========== -->
+<h2>一、设计原则</h2>
+<div class="principle">
+  <b>多命中思维：</b>与其问 18 句各打 1 个 marker，不如用 <b>10 句</b>每句打 2–4 个 marker。
+  同一时段内，一个精心设计的并置句 = 一句话同时唤醒 6.1 / 6.7 / 7.3 / 4.4 四条 marker。
+</div>
+<div class="principle">
+  <b>6 个必命中项</b>（3.1 / 3.4 / 6.7 / 7.2 或 7.3 / 8.5 / 8.9）各需至少一道专属问句保底——其他 marker 由多命中问题顺带拿到。
+</div>
+<div class="principle">
+  <b>11 条整场型 marker</b>（4.1 / 4.3 / 4.4 / 5.1 / 5.2 / 5.3 / 5.4 / 6.1 / 6.6 / 7.6 / 7.7 / 7.8）靠问法本身拿到——用"客户原词 + 一次一个 + 不替客户定义"自动命中。
+</div>
+
+<!-- ========== 必命中项速查 ========== -->
+<h2>二、必命中项速查（考前 30 秒扫一眼）</h2>
+<table class="must-table">
+  <thead>
+    <tr>
+      <th>Marker</th>
+      <th>保底问句</th>
+      <th>背诵口诀</th>
+      <th>为什么是否决点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="code">3.1</td>
+      <td class="q">「今天这 45 分钟，你最想带走的是什么？」</td>
+      <td class="tag">"45 分钟最想带走"</td>
+      <td>无目标则 5.2、8.1 连锁失效</td>
+    </tr>
+    <tr>
+      <td class="code">3.4</td>
+      <td class="q">「要走到那儿，眼下最需要先弄清哪一块？」</td>
+      <td class="tag">"先弄清哪一块"</td>
+      <td>最常被跳过，直接决定探索是否有着力点</td>
+    </tr>
+    <tr>
+      <td class="code">6.7</td>
+      <td class="q">「我听到的是___，这样对吗？」</td>
+      <td class="tag">"我听到的是___"</td>
+      <td>PCC 对话不可能一次有效反映都没有</td>
+    </tr>
+    <tr>
+      <td class="code">7.2 / 7.3</td>
+      <td class="q">「你说 A 又说 B，放一起看到什么？」<br>或：「你说'必须___'，这个'必须'从哪儿来？」</td>
+      <td class="tag">"放一起 / 必须从哪来"</td>
+      <td>PCC 与 ACC 的分水岭，二选一即可</td>
+    </tr>
+    <tr>
+      <td class="code">8.5</td>
+      <td class="q">「接下来一周你想做点什么或想点什么？」</td>
+      <td class="tag">"做点什么或想点什么"</td>
+      <td>无设计则整场停留在探索层</td>
+    </tr>
+    <tr>
+      <td class="code">8.9</td>
+      <td class="q">「我们还有五分钟，你希望怎么用它收尾？」</td>
+      <td class="tag">"还有五分钟怎么收尾"</td>
+      <td>判定极明确，补救成本极低</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ========== TOP 10 多命中 ========== -->
+<h2>三、TOP 10 多命中问题（性价比之王）</h2>
+<p class="note">按"问一句理论上能触达几条 marker"排序。下表是单句版，详细问法见第四节 6 时段清单。<br>
+<b>⚠️ 多命中组合未经实战校准</b>——本表是按 KB 判据做的理论推论；7.2/7.3 必须客户出现认知位移才算真命中，其余 marker 也需客户配合。"理论上可触达"≠"问出后自动升 ✔"。</p>
+
+<table class="top">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>类型</th>
+      <th>单句模板</th>
+      <th>理论上可触达（★=必命中 · 7.2/7.3 需客户认知位移）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="rank">1</td>
+      <td class="name">并置唤醒型</td>
+      <td class="q">「你刚才说 A，又说 B——放一起，你看到什么？」</td>
+      <td class="markers">
+        <span class="marker-tag gold">6.1</span>
+        <span class="marker-tag gold">6.7</span>
+        <span class="marker-tag must">★7.3</span>
+        <span class="marker-tag gold">4.4</span>
+        <span class="marker-tag gold">7.1</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">2</td>
+      <td class="name">低权重分享型</td>
+      <td class="q">「我有个感觉不一定对——___，对你来说是什么？」</td>
+      <td class="markers">
+        <span class="marker-tag gold">6.1</span>
+        <span class="marker-tag gold">7.5</span>
+        <span class="marker-tag gold">4.4</span>
+        <span class="marker-tag gold">5.4</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">3</td>
+      <td class="name">原词追溯型</td>
+      <td class="q">「你说'必须___'，这个'必须'从哪儿来？」</td>
+      <td class="markers">
+        <span class="marker-tag gold">6.2</span>
+        <span class="marker-tag gold">7.1</span>
+        <span class="marker-tag must">★7.2</span>
+        <span class="marker-tag gold">5.4</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">4</td>
+      <td class="name">简洁反映型</td>
+      <td class="q">「我听到的是___，这样对吗？」</td>
+      <td class="markers">
+        <span class="marker-tag must">★6.7</span>
+        <span class="marker-tag gold">4.4</span>
+        <span class="marker-tag gold">7.6</span>
+        <span class="marker-tag gold">6.1</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">5</td>
+      <td class="name">身份位移型</td>
+      <td class="q">「如果不做那个'必须___的人'，你会是谁？」</td>
+      <td class="markers">
+        <span class="marker-tag must">★7.2</span>
+        <span class="marker-tag gold">5.1</span>
+        <span class="marker-tag gold">5.4</span>
+        <span class="marker-tag gold">7.1</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">6</td>
+      <td class="name">情绪承接型</td>
+      <td class="q">「说到这儿，你心里什么感觉？」</td>
+      <td class="markers">
+        <span class="marker-tag gold">6.3</span>
+        <span class="marker-tag gold">4.3</span>
+        <span class="marker-tag gold">5.4</span>
+        <span class="marker-tag gold">7.1</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">7</td>
+      <td class="name">意义探寻型</td>
+      <td class="q">「如果这件事成了，对你意味着什么？」</td>
+      <td class="markers">
+        <span class="marker-tag gold">3.3</span>
+        <span class="marker-tag gold">6.5</span>
+        <span class="marker-tag gold">7.1</span>
+        <span class="marker-tag gold">5.1</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">8</td>
+      <td class="name">行动 + 反思型</td>
+      <td class="q">「接下来一周你想做点什么或想点什么？」</td>
+      <td class="markers">
+        <span class="marker-tag must">★8.5</span>
+        <span class="marker-tag gold">8.4</span>
+        <span class="marker-tag gold">5.3</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">9</td>
+      <td class="name">自我学习型</td>
+      <td class="q">「今天关于你自己，你看到了什么？」</td>
+      <td class="markers">
+        <span class="marker-tag gold">8.2</span>
+        <span class="marker-tag gold">7.1</span>
+        <span class="marker-tag gold">5.1</span>
+        <span class="marker-tag gold">8.8</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="rank">10</td>
+      <td class="name">共同收尾型</td>
+      <td class="q">「我们还有五分钟，你希望怎么用它收尾？」</td>
+      <td class="markers">
+        <span class="marker-tag must">★8.9</span>
+        <span class="marker-tag gold">5.3</span>
+        <span class="marker-tag gold">8.8</span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ========== 6 时段清单 ========== -->
+<h2>四、6 时段完整清单（按教练对话流程）</h2>
+<p class="note">每个时段列出<b>问题类别</b>，每类给出 3–5 种问法变体 + 理论上可触达的 marker。每时段问 2–3 个类别即可覆盖本时段所有 marker。<br>
+<b>⚠️ 变体来源说明：</b>每个类别下变体 1（标准版）多数直接引用 KB 里的 ✔ 例子或肌肉记忆卡 18 问口诀，可溯源；变体 2–5 一部分来自 <code>failure-patterns.md</code> 替代话术段（可溯源），一部分是按 KB 模式仿造（<b>未经独立验证</b>，可能与 KB 判据不完全吻合）。看时优先用标准版。</p>
+
+<!-- 0–2 分 -->
+<div class="phase-label">0–2 分　连接与许可</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 1 · 关心当下型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「今天状态还好吗？」（一句话连接，1 分钟内必须转入议题建立）</span>
+      <span class="var-note">连接完直接接 3.1 的开场问，不寒暄不延展（防模式 11）</span>
+    </li>
+    <li>
+      <span class="var-text">「走进这间之前，你今天过得怎么样？」</span>
+      <span class="var-note">比"状态还好吗"更具体，4.2 + 5.4（好奇心）</span>
+    </li>
+    <li>
+      <span class="var-text">「谢谢你今天来。开始之前我想先问一句——此刻的你，是一个什么状态？」</span>
+      <span class="var-note">把 4.2（关心）和 5.1（回应完整的人）合并，4.4（邀请回应）也带上</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">4.2</span>
+    <span class="marker-tag">5.1</span>
+    <span class="marker-tag gold">5.4</span>
+    <span class="marker-tag gold">4.4</span>
+    <b>注意：</b>这一段不拿分也无所谓，挤时间才是关键
+  </div>
+</div>
+
+<!-- 2–10 分 -->
+<div class="phase-label">2–10 分　议题建立（必命中 3.1 / 3.4）</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 1 · 目标锁定型</span>
+    <span class="hit-count">★必中 · 理论上触达 3–5 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「今天这 45 分钟，你最想带走的是什么？」</span>
+      <span class="var-note">最经典问法；客户答宽泛领域（如"聊聊团队"）必须继续收敛，否则 3.1 降 △</span>
+    </li>
+    <li>
+      <span class="var-text">「今天这 45 分钟里，你最想弄清楚的是什么？」</span>
+      <span class="var-note">适合客户"想搞明白一件事"的取向</span>
+    </li>
+    <li>
+      <span class="var-text">「45 分钟结束的时候，你想带着什么走出去？」</span>
+      <span class="var-note">比"最想带走"更聚焦"成果感"，3.1 + 8.1 闭环</span>
+    </li>
+    <li>
+      <span class="var-text">「假设 45 分钟后一切顺利，你觉得发生了什么，让你觉得今天值了？」</span>
+      <span class="var-note">一句话同时锁定 3.1（目标）+ 3.2（成功标准）——但要确认客户理解"假设"只是修辞而非真建议</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★3.1</span>
+    <span class="marker-tag">3.2</span>
+    <span class="marker-tag gold">8.1</span>
+    <span class="marker-tag gold">5.3</span>
+    <b>雷区：</b>客户答完不收敛 = 3.1 失守
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 2 · 成功标准型</span>
+    <span class="hit-count">理论上触达 1–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「聊完什么样你会觉得值了？」</span>
+      <span class="var-note">标准版；紧跟 3.1 之后分两句问，不能合并</span>
+    </li>
+    <li>
+      <span class="var-text">「你希望 45 分钟后，手里多了什么？」</span>
+      <span class="var-note">隐喻版；客户不爱说"值不值"时改用</span>
+    </li>
+    <li>
+      <span class="var-text">「结束的时候，你希望自己处在一种什么状态？」</span>
+      <span class="var-note">状态版；适合情绪/能量类议题</span>
+    </li>
+    <li>
+      <span class="var-text">「什么算做到了？你怎么知道你真的拿到了？」</span>
+      <span class="var-note">最直接的"标准"问法</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">3.2</span>
+    <span class="marker-tag gold">8.7</span>
+    <span class="marker-tag gold">5.3</span>
+  </div>
+</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 3 · 意义探寻型</span>
+    <span class="hit-count">理论上触达 3–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「如果这件事成了，对你意味着什么？」</span>
+      <span class="var-note">标准版；锚点是"对你"，不是"对公司"</span>
+    </li>
+    <li>
+      <span class="var-text">「为什么是现在？为什么这件事对你重要？」</span>
+      <span class="var-note">把"为什么现在做"和"对你意义"打包问</span>
+    </li>
+    <li>
+      <span class="var-text">「解决了之后，你会变得有什么不一样？」</span>
+      <span class="var-note">位移版；命中 6.5（自我感知）+ 7.1（就客户提问）</span>
+    </li>
+    <li>
+      <span class="var-text">「如果不解决，会怎样？解决了，又会怎样？」</span>
+      <span class="var-note">对照版；同时探意义（3.3）和代价（3.4）</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">3.3</span>
+    <span class="marker-tag gold">6.5</span>
+    <span class="marker-tag gold">7.1</span>
+    <span class="marker-tag gold">5.1</span>
+  </div>
+</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 4 · 着力点定义型</span>
+    <span class="hit-count">★必中 · 理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「要走到那儿，眼下最需要先弄清哪一块？」</span>
+      <span class="var-note">最经典问法；判断权必须在客户手里</span>
+    </li>
+    <li>
+      <span class="var-text">「你觉得眼下挡在中间的是哪一块？」</span>
+      <span class="var-note">障碍版；适合客户感觉"卡住了"</span>
+    </li>
+    <li>
+      <span class="var-text">「如果我们今天只解决一件事，你会选哪一件？」</span>
+      <span class="var-note">强迫收敛版；当客户议题散乱时用</span>
+    </li>
+    <li>
+      <span class="var-text">「你已经试过哪些？哪一块最想有人陪你想清楚？」</span>
+      <span class="var-note">背景版；同时摸清现状和优先级</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★3.4</span>
+    <span class="marker-tag gold">5.3</span>
+    <span class="marker-tag gold">6.1</span>
+    <b>雷区：</b>教练自己判断要处理什么 = 3.4 直接 ✘
+  </div>
+</div>
+
+<!-- 10–20 分 -->
+<div class="phase-label">10–20 分　探索现状（必命中 6.7）</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 1 · 客户原词探索型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「你刚才说'___'，对你来说是什么感觉？」</span>
+      <span class="var-note">标准版；必须是客户的原词，教练替客户换词直接失分</span>
+    </li>
+    <li>
+      <span class="var-text">「你刚才用的那个词'___'——它对你来说，意味着什么？」</span>
+      <span class="var-note">意义版；客户不爱聊感受时改问"意义"</span>
+    </li>
+    <li>
+      <span class="var-text">「你说'撑'，这个'撑'——具体是什么样的一种撑？」</span>
+      <span class="var-note">具象版；适合隐喻词（撑、扛、堵、漂）</span>
+    </li>
+    <li>
+      <span class="var-text">「你前面用了'___'这个词——这个字是你习惯说的，还是第一次这么说？」</span>
+      <span class="var-note">语用版；探索语言习惯，本身是 5.4（好奇心）</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">6.2</span>
+    <span class="marker-tag gold">6.1</span>
+    <span class="marker-tag gold">6.3</span>
+    <span class="marker-tag gold">5.4</span>
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 2 · 情绪承接型</span>
+    <span class="hit-count">理论上触达 2–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「说到这儿，你心里什么感觉？」</span>
+      <span class="var-note">经典版；客户情绪出现时不绕向行动（防模式 08）</span>
+    </li>
+    <li>
+      <span class="var-text">「听起来有点___，是这样吗？」</span>
+      <span class="var-note">命名核对版；同时 4.2（表达同理）</span>
+    </li>
+    <li>
+      <span class="var-text">「这个'___'，如果它会说话，会说什么？」</span>
+      <span class="var-note">隐喻版；适合客户表层理性但底层有情绪</span>
+    </li>
+    <li>
+      <span class="var-text">「这个担心，可以多说一点吗？」</span>
+      <span class="var-note">邀请版；当客户刚表达完情绪时，鼓励继续</span>
+    </li>
+    <li>
+      <span class="var-text">「这个情绪——它在身体的哪个位置？」</span>
+      <span class="var-note">身体版；适合深入情绪层</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">6.3</span>
+    <span class="marker-tag">4.3</span>
+    <span class="marker-tag gold">4.2</span>
+    <span class="marker-tag gold">5.4</span>
+    <b>注意：</b>这是 PCC 最容易"礼貌命中"的一条，要"准确说出感受"而非安慰
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 3 · 非语言 / 能量探索型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「我注意到你说到这儿的时候声音低下去了。」</span>
+      <span class="var-note">经典版；必须明确邀请探索（vec-06 校准补）</span>
+    </li>
+    <li>
+      <span class="var-text">「你刚才笑了一下，那是什么？」</span>
+      <span class="var-note">细微表情版；5.5（允许沉默）顺带</span>
+    </li>
+    <li>
+      <span class="var-text">「你停顿了很久——你愿意说说你刚才在想什么吗？」</span>
+      <span class="var-note">停顿版；客户自发停顿 ≠ 5.5，但邀请本身 = 5.5</span>
+    </li>
+    <li>
+      <span class="var-text">「我注意到你讲到 A 的时候身体往后靠，讲到 B 的时候又坐直了——这对你来说意味着什么？」</span>
+      <span class="var-note">对照版；要求有真实音频/视频场才能命中</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">6.4</span>
+    <span class="marker-tag gold">5.5</span>
+    <span class="marker-tag gold">4.4</span>
+    <b>注意：</b>纯文字场少用；文字稿无停顿标记时即使问也判 ✘
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 4 · 自我感知型</span>
+    <span class="hit-count">理论上触达 3–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「在这件事里，你把自己看成什么样的人？」</span>
+      <span class="var-note">经典版；把客户从"事"拉到"人"</span>
+    </li>
+    <li>
+      <span class="var-text">「你觉得在别人眼里你是什么样的？」</span>
+      <span class="var-note">他者版；探索自我感知的另一面</span>
+    </li>
+    <li>
+      <span class="var-text">「当你做这件事的时候，你是一个怎样的自己？」</span>
+      <span class="var-note">情境版；锁定"此刻在这件事上"的身份</span>
+    </li>
+    <li>
+      <span class="var-text">「你说'必须扛住'——在扛的那个你，是什么样的你？」</span>
+      <span class="var-note">原词 + 身份复合版；6.2 + 6.5 + 7.1 三连</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">6.5</span>
+    <span class="marker-tag gold">7.1</span>
+    <span class="marker-tag gold">5.1</span>
+  </div>
+</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 5 · 简洁反映型</span>
+    <span class="hit-count">★必中 · 理论上触达 2–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「我听到的是___，是这样吗？」</span>
+      <span class="var-note">标准版；必带确认问，否则 6.7 降 △ + 4.4 不命中</span>
+    </li>
+    <li>
+      <span class="var-text">「所以是___，但___——我听到的对吗？」</span>
+      <span class="var-note">对照版；适合客户表达复杂时</span>
+    </li>
+    <li>
+      <span class="var-text">「你说的是___，我这样理解对吗？」</span>
+      <span class="var-note">复述版；最简洁，6.7 最稳</span>
+    </li>
+    <li>
+      <span class="var-text">「如果用你刚才的词，是'___'——你愿意再确认下吗？」</span>
+      <span class="var-note">原词回放版；6.7 + 6.2 双重命中</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★6.7</span>
+    <span class="marker-tag">4.4</span>
+    <span class="marker-tag gold">6.1</span>
+    <span class="marker-tag gold">6.2</span>
+    <b>雷区：</b>只总结不确认 = 6.7 降 △；用教练词替换客户词 = 6.7 + 4.4 双丢
+  </div>
+</div>
+
+<!-- 20–35 分 -->
+<div class="phase-label">20–35 分　唤起觉察（必命中 7.2 或 7.3）</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 1 · 并置唤醒型</span>
+    <span class="hit-count">★必中 · 理论上触达 3–5 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「你刚才说 A，又说 B——放一起，你看到什么？」</span>
+      <span class="var-note">经典版；A/B 必须是客户实际说过的内容</span>
+    </li>
+    <li>
+      <span class="var-text">「你前面说很难，又说必须扛住。这两个放一起，你想到什么？」</span>
+      <span class="var-note">自带情绪词版；7.3 命中率高</span>
+    </li>
+    <li>
+      <span class="var-text">「你说想要 X，又说代价是 Y——这两件事在一起，对你来说是怎样的？」</span>
+      <span class="var-note">价值冲突版；适合"想要但代价大"型客户</span>
+    </li>
+    <li>
+      <span class="var-text">「你开头说想___，现在又说___——这两个之间，有什么联系？」</span>
+      <span class="var-note">时间轴版；适合议题漂移时拉回</span>
+    </li>
+    <li>
+      <span class="var-text">「你刚才那句'___'和你接下来那句'___'，听起来是矛盾的。你怎么理解这个？」</span>
+      <span class="var-note">显式矛盾版；客户自我合理化时用（防模式 12）</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★7.3</span>
+    <span class="marker-tag gold">6.1</span>
+    <span class="marker-tag gold">6.7</span>
+    <span class="marker-tag gold">4.4</span>
+    <span class="marker-tag gold">7.1</span>
+    <b>注意：</b>等客户出现"我没这么想过"才算真命中，否则降 △
+  </div>
+</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 2 · 原词追溯型</span>
+    <span class="hit-count">★必中 · 理论上触达 3–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「你说'必须___'，这个'必须'从哪儿来？」</span>
+      <span class="var-note">经典版；最易命中 7.2 的原词</span>
+    </li>
+    <li>
+      <span class="var-text">「你说'撑'——这个'撑'，从哪儿学来的？」</span>
+      <span class="var-note">来源版；适合客户把"扛"内化为自我认知</span>
+    </li>
+    <li>
+      <span class="var-text">「你说'不能让他失望'——这个'不能'是谁的声音？」</span>
+      <span class="var-note">内化他人版；探索客户内在的他人声音</span>
+    </li>
+    <li>
+      <span class="var-text">「你说'不想变成我爸'——这个'爸'在你脑子里，是个什么样的人？」</span>
+      <span class="var-note">人物版；6.2 + 6.5 + 7.1 三连</span>
+    </li>
+    <li>
+      <span class="var-text">「你说'我怕搞砸'——这个'怕'，在你人生里，是什么时候第一次出现？」</span>
+      <span class="var-note">时间版；直接探根源</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★7.2</span>
+    <span class="marker-tag">6.2</span>
+    <span class="marker-tag gold">7.1</span>
+    <span class="marker-tag gold">5.4</span>
+    <b>注意：</b>7.2 / 7.3 二选一即可；客户出现"我没这么想 / 其实我……"才升 ✔
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 3 · 身份位移型</span>
+    <span class="hit-count">理论上触达 3–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「如果不做那个'必须搞定一切的人'，你会是谁？」</span>
+      <span class="var-note">经典版；身份层的 7.2</span>
+    </li>
+    <li>
+      <span class="var-text">「如果这个'必须___'消失了，你看到的是一个什么样的自己？」</span>
+      <span class="var-note">移除版；适合"我必须 X"型客户</span>
+    </li>
+    <li>
+      <span class="var-text">「5 年后回头看今天，你希望那时的你是一个什么样的人？」</span>
+      <span class="var-note">时间版；触发 7.3（关于事）+ 5.1</span>
+    </li>
+    <li>
+      <span class="var-text">「如果不是你最信任的人听到你说这话，他会怎么看你？」</span>
+      <span class="var-note">他者版；多视角看自我</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">7.2</span>
+    <span class="marker-tag gold">5.1</span>
+    <span class="marker-tag gold">5.4</span>
+    <span class="marker-tag gold">7.1</span>
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 4 · 低权重分享型</span>
+    <span class="hit-count">理论上触达 3–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「我有个感觉不一定对——___，对你来说是什么？」</span>
+      <span class="var-note">标准版；分享前降权，分享后交出去</span>
+    </li>
+    <li>
+      <span class="var-text">「我注意到你说 A 时用的词是'___'——这跟你之前说的 B 有点不一样。这个观察对吗？」</span>
+      <span class="var-note">语言观察版；不评判，只描述变化</span>
+    </li>
+    <li>
+      <span class="var-text">「我有个直觉——你其实已经知道答案了，只是还没准备好说。是不是这样？」</span>
+      <span class="var-note">直觉版；客户常因此松动</span>
+    </li>
+    <li>
+      <span class="var-text">「我听到你说这件事的时候，底下好像有一个'但其实'——你愿意多说一点吗？」</span>
+      <span class="var-note">未说出版；适合客户表达克制的场景</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">7.5</span>
+    <span class="marker-tag gold">6.1</span>
+    <span class="marker-tag gold">4.4</span>
+    <span class="marker-tag gold">5.4</span>
+    <b>雷区：</b>客户否定后"再推一次" = 7.5 直接 ✘，且 4.4 也丢
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 5 · 朝向结果型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「要到你说的那个状态，需要有什么不一样？」</span>
+      <span class="var-note">经典版；7.4 + 7.1</span>
+    </li>
+    <li>
+      <span class="var-text">「什么会让你更接近它？」</span>
+      <span class="var-note">最短版；7.4 命中</span>
+    </li>
+    <li>
+      <span class="var-text">「如果今天结束时你真的拿到了那个答案——从现在到那之间，最关键的一步是什么？」</span>
+      <span class="var-note">路径版；7.4 + 8.4 桥</span>
+    </li>
+    <li>
+      <span class="var-text">「你已经做过的、让你靠近了它的事，是什么？」</span>
+      <span class="var-note">资源版；不直接问结果，而问已有的接近</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">7.4</span>
+    <span class="marker-tag gold">7.1</span>
+    <span class="marker-tag gold">8.4</span>
+    <b>注意：</b>3.1 未真正确认期望结果时，7.4 严格 △ 不升 ✔
+  </div>
+</div>
+
+<!-- 35–42 分 -->
+<div class="phase-label">35–42 分　设计与承诺（必命中 8.5）</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 1 · 新学习运用型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「刚才这个发现，你想拿它做点什么？」</span>
+      <span class="var-note">8.4 桥；把"学习"和"未来"挂钩</span>
+    </li>
+    <li>
+      <span class="var-text">「这个新的看法，会怎么影响你接下来的做法？」</span>
+      <span class="var-note">影响版；8.4 + 7.4 双重命中</span>
+    </li>
+    <li>
+      <span class="var-text">「这次约谈收获到的，会为你的未来创造什么？」</span>
+      <span class="var-note">未来版；本土督导标志性问法</span>
+    </li>
+    <li>
+      <span class="var-text">「你刚才说'其实我是___'——这个发现如果留在你生活里，你想让它出现在哪里？」</span>
+      <span class="var-note">具象版；锁定一个具体场景</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">8.4</span>
+    <span class="marker-tag gold">8.5</span>
+    <span class="marker-tag gold">5.3</span>
+  </div>
+</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 2 · 行动 + 反思设计型</span>
+    <span class="hit-count">★必中 · 理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「接下来一周你想做点什么或想点什么？」</span>
+      <span class="var-note">标准版；"或想点什么"是关键，反思也算行动</span>
+    </li>
+    <li>
+      <span class="var-text">「从今天到下次见面，你想试什么？」</span>
+      <span class="var-note">区间版；适合有连续教练关系的客户</span>
+    </li>
+    <li>
+      <span class="var-text">「约谈后你的行动是什么？有哪些新的思考？」</span>
+      <span class="var-note">本土督导标志性问法；"行动 + 思考"并列</span>
+    </li>
+    <li>
+      <span class="var-text">「你想做点什么，让今天聊出来的不是停在今天的？」</span>
+      <span class="var-note">连接版；防止"我会想想"敷衍</span>
+    </li>
+    <li>
+      <span class="var-text">「你刚才说的那个 ___ 想法，第一个想尝试的步骤是什么？」</span>
+      <span class="var-note">具体版；逼出可执行行动</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★8.5</span>
+    <span class="marker-tag gold">8.4</span>
+    <span class="marker-tag gold">5.3</span>
+    <b>雷区：</b>教练布置作业"那你回去跟他谈一次"= 触发能力 1 红线
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 3 · 资源 / 障碍型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「什么会帮你做到？什么可能挡你？」</span>
+      <span class="var-note">标准版；资源 / 障碍同时探</span>
+    </li>
+    <li>
+      <span class="var-text">「你需要谁的支持？」</span>
+      <span class="var-note">支持版；适合客户关系网明确时</span>
+    </li>
+    <li>
+      <span class="var-text">「如果这件事变得容易，是什么让它容易了？」</span>
+      <span class="var-note">反推版；从"容易"反推资源</span>
+    </li>
+    <li>
+      <span class="var-text">「你之前做到类似的事时，是什么帮了你？」</span>
+      <span class="var-note">历史版；触发过往资源</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">8.6</span>
+    <span class="marker-tag gold">6.1</span>
+    <span class="marker-tag gold">7.1</span>
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 4 · 自我问责型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「你希望怎么知道自己真的做到了？」</span>
+      <span class="var-note">标准版；主体是客户自己，不是"下次汇报给我"</span>
+    </li>
+    <li>
+      <span class="var-text">「什么方式能帮你盯住这件事？」</span>
+      <span class="var-note">盯住版；比"做到了"更行动导向</span>
+    </li>
+    <li>
+      <span class="var-text">「你会怎么提醒自己真的在做？」</span>
+      <span class="var-note">提醒版；适合容易遗忘型客户</span>
+    </li>
+    <li>
+      <span class="var-text">「什么信号出现，你就知道自己走在了对的方向上？」</span>
+      <span class="var-note">信号版；比"做到了"更可观察</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">8.7</span>
+    <span class="marker-tag gold">6.5</span>
+    <span class="marker-tag gold">5.3</span>
+    <b>雷区：</b>"下次汇报给我"= 问责主体错误，8.7 直接 ✘
+  </div>
+</div>
+
+<!-- 42–45 分 -->
+<div class="phase-label">42–45 分　庆祝与收尾（必命中 8.9）</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 1 · 学习 / 收获邀请型</span>
+    <span class="hit-count">理论上触达 3–4 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「今天关于你自己，你看到了什么？」</span>
+      <span class="var-note">关于人；必须明确"关于你自己"，泛化不算</span>
+    </li>
+    <li>
+      <span class="var-text">「关于这个局面，你现在看得跟一开始有什么不同？」</span>
+      <span class="var-note">关于事；与上一条互斥，分两句问</span>
+    </li>
+    <li>
+      <span class="var-text">「今天最让你意外的是什么？」</span>
+      <span class="var-note">意外版；适合客户表达密集的场景</span>
+    </li>
+    <li>
+      <span class="var-text">「如果今天只能带走一句话，你带走哪句？」</span>
+      <span class="var-note">带走版；逼出客户最核心的一句话</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">8.2</span>
+    <span class="marker-tag">8.3</span>
+    <span class="marker-tag gold">8.8</span>
+    <span class="marker-tag gold">7.1</span>
+    <b>雷区：</b>"今天有什么收获"未明确指向自我 → 8.2 降 △（vec-06 校准）
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 2 · 进展闭环型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「回到开头你说的那个目标，现在到哪儿了？」</span>
+      <span class="var-note">标准版；必须呼应 3.1 锁定的目标</span>
+    </li>
+    <li>
+      <span class="var-text">「跟刚开始比，有什么不一样了吗？」</span>
+      <span class="var-note">对照版；不绑定具体目标</span>
+    </li>
+    <li>
+      <span class="var-text">「当初想弄清楚的___，现在有没有清晰一点？」</span>
+      <span class="var-note">配对版；8.1 + 6.7 双重命中</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">8.1</span>
+    <span class="marker-tag gold">6.7</span>
+    <span class="marker-tag gold">5.2</span>
+  </div>
+</div>
+
+<div class="question-card">
+  <div class="header">
+    <span class="category">类别 3 · 庆祝型</span>
+    <span class="hit-count">理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「你今天从'___'走到了'___'——这个跨度不小。」</span>
+      <span class="var-note">对比版；具体锚定本场变化</span>
+    </li>
+    <li>
+      <span class="var-text">「刚才那个'啊我懂了'的瞬间——你自己也惊讶吗？」</span>
+      <span class="var-note">惊叹版；唤起客户觉察自己的变化</span>
+    </li>
+    <li>
+      <span class="var-text">「今天最让你欣赏自己的，是哪个部分？」</span>
+      <span class="var-note">欣赏版；8.8 + 4.1 + 5.1</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag">8.8</span>
+    <span class="marker-tag gold">4.1</span>
+    <span class="marker-tag gold">5.1</span>
+    <b>雷区：</b>"今天聊得很好"= 泛赞美，8.8 不命中
+  </div>
+</div>
+
+<div class="question-card must">
+  <div class="header">
+    <span class="category">类别 4 · 共同收尾型</span>
+    <span class="hit-count">★必中 · 理论上触达 2–3 条</span>
+  </div>
+  <ul class="variants">
+    <li>
+      <span class="var-text">「我们还有五分钟，你希望怎么用它来收尾？」</span>
+      <span class="var-note">标准版；最稳的 8.9 必中问法</span>
+    </li>
+    <li>
+      <span class="var-text">「你觉得今天可以在这里停下来吗，还是有什么想补的？」</span>
+      <span class="var-note">选择题版；给客户两个选项</span>
+    </li>
+    <li>
+      <span class="var-text">「要结束前，你还有什么想说的，或者想问我的？」</span>
+      <span class="var-note">回请版；邀请客户表达未完成</span>
+    </li>
+    <li>
+      <span class="var-text">「用什么方式收尾，对你来说是合适的？」</span>
+      <span class="var-note">开放式版；客户容易说出隐含需求</span>
+    </li>
+  </ul>
+  <div class="marker-line">
+    <b>理论上可触达：</b>
+    <span class="marker-tag must">★8.9</span>
+    <span class="marker-tag gold">5.3</span>
+    <span class="marker-tag gold">8.8</span>
+    <b>雷区：</b>"今天就先到这里吧" = 教练单方面宣布，8.9 直接 ✘，无解释空间
+  </div>
+</div>
+
+<!-- ========== 最小问题套餐 ========== -->
+<h2>五、最小问题套餐（按时长）</h2>
+<p class="note">下面是从清单中精选的"最少问题数"组合。每个套餐都覆盖 6 个必命中项 + 整场型 marker。<br>
+<b>⚠️ 套餐内的问句多数直接来自 KB 的 ✔ 例子或肌肉记忆卡 18 问口诀</b>，但"10 问全保 37 条"是按 6 必命中 + 整场型反推的最少问题数，未经实战校准。<br>
+<b>⚠️ 套餐里的"理论上可触达"列表同样是按 KB 判据做的理论推论</b>，不是说"问出后这 N 条自动 ✔"。</p>
+
+<table class="kit">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>问句</th>
+      <th>理论上可触达（★=必中 · 7.2/7.3 需客户认知位移）</th>
+      <th>时段</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td colspan="4" style="background:var(--time); color:#fff; font-weight:700; letter-spacing:0.5pt; text-align:center;">45 分钟完整套餐（10 问全保）</td>
+    </tr>
+    <tr>
+      <td class="num">1</td>
+      <td class="q">「今天这 45 分钟，你最想带走的是什么？」</td>
+      <td class="markers"><span class="marker-tag must">★3.1</span><span class="marker-tag">3.2</span><span class="marker-tag gold">5.3</span><span class="marker-tag gold">8.1</span></td>
+      <td class="time">2–10 分</td>
+    </tr>
+    <tr>
+      <td class="num">2</td>
+      <td class="q">「如果这件事成了，对你意味着什么？」</td>
+      <td class="markers"><span class="marker-tag">3.3</span><span class="marker-tag gold">6.5</span><span class="marker-tag gold">7.1</span><span class="marker-tag gold">5.1</span></td>
+      <td class="time">2–10 分</td>
+    </tr>
+    <tr>
+      <td class="num">3</td>
+      <td class="q">「要走到那儿，眼下最需要先弄清哪一块？」</td>
+      <td class="markers"><span class="marker-tag must">★3.4</span><span class="marker-tag gold">5.3</span></td>
+      <td class="time">2–10 分</td>
+    </tr>
+    <tr>
+      <td class="num">4</td>
+      <td class="q">「说到这儿，你心里什么感觉？」</td>
+      <td class="markers"><span class="marker-tag">6.3</span><span class="marker-tag">4.3</span><span class="marker-tag gold">5.4</span><span class="marker-tag gold">4.2</span></td>
+      <td class="time">10–20 分</td>
+    </tr>
+    <tr>
+      <td class="num">5</td>
+      <td class="q">「我听到的是___，是这样吗？」</td>
+      <td class="markers"><span class="marker-tag must">★6.7</span><span class="marker-tag">4.4</span><span class="marker-tag gold">6.1</span></td>
+      <td class="time">10–20 分</td>
+    </tr>
+    <tr>
+      <td class="num">6</td>
+      <td class="q">「你刚才说 A，又说 B——放一起，你看到什么？」</td>
+      <td class="markers"><span class="marker-tag must">★7.3</span><span class="marker-tag gold">6.1</span><span class="marker-tag gold">6.7</span><span class="marker-tag gold">4.4</span></td>
+      <td class="time">20–35 分</td>
+    </tr>
+    <tr>
+      <td class="num">7</td>
+      <td class="q">「我有个感觉不一定对——___，对你来说是什么？」</td>
+      <td class="markers"><span class="marker-tag">7.5</span><span class="marker-tag gold">4.4</span><span class="marker-tag gold">5.4</span><span class="marker-tag gold">6.1</span></td>
+      <td class="time">20–35 分</td>
+    </tr>
+    <tr>
+      <td class="num">8</td>
+      <td class="q">「接下来一周你想做点什么或想点什么？」</td>
+      <td class="markers"><span class="marker-tag must">★8.5</span><span class="marker-tag">8.4</span><span class="marker-tag gold">5.3</span></td>
+      <td class="time">35–42 分</td>
+    </tr>
+    <tr>
+      <td class="num">9</td>
+      <td class="q">「你希望怎么知道自己真的做到了？」</td>
+      <td class="markers"><span class="marker-tag">8.7</span><span class="marker-tag gold">6.5</span></td>
+      <td class="time">35–42 分</td>
+    </tr>
+    <tr>
+      <td class="num">10</td>
+      <td class="q">「我们还有五分钟，你希望怎么用它来收尾？」</td>
+      <td class="markers"><span class="marker-tag must">★8.9</span><span class="marker-tag gold">5.3</span><span class="marker-tag gold">8.8</span></td>
+      <td class="time">42–45 分</td>
+    </tr>
+
+    <tr>
+      <td colspan="4" style="background:var(--time); color:#fff; font-weight:700; letter-spacing:0.5pt; text-align:center;">30 分钟精简套餐（8 问）</td>
+    </tr>
+    <tr>
+      <td class="num">1</td>
+      <td class="q">「今天 30 分钟，你最想弄清楚的是什么？」</td>
+      <td class="markers"><span class="marker-tag must">★3.1</span><span class="marker-tag gold">8.1</span></td>
+      <td class="time">1–7 分</td>
+    </tr>
+    <tr>
+      <td class="num">2</td>
+      <td class="q">「要走到那儿，眼下最需要先弄清哪一块？」</td>
+      <td class="markers"><span class="marker-tag must">★3.4</span></td>
+      <td class="time">1–7 分</td>
+    </tr>
+    <tr>
+      <td class="num">3</td>
+      <td class="q">「你说'___'——对你来说是什么感觉？」</td>
+      <td class="markers"><span class="marker-tag">6.2</span><span class="marker-tag gold">6.3</span><span class="marker-tag gold">6.1</span></td>
+      <td class="time">7–14 分</td>
+    </tr>
+    <tr>
+      <td class="num">4</td>
+      <td class="q">「我听到的是___，是这样吗？」</td>
+      <td class="markers"><span class="marker-tag must">★6.7</span><span class="marker-tag">4.4</span></td>
+      <td class="time">7–14 分</td>
+    </tr>
+    <tr>
+      <td class="num">5</td>
+      <td class="q">「你刚才说 A，又说 B——放一起，你看到什么？」</td>
+      <td class="markers"><span class="marker-tag must">★7.3</span><span class="marker-tag gold">6.1</span><span class="marker-tag gold">4.4</span></td>
+      <td class="time">14–23 分</td>
+    </tr>
+    <tr>
+      <td class="num">6</td>
+      <td class="q">「我有个感觉不一定对——___，对你来说是什么？」</td>
+      <td class="markers"><span class="marker-tag">7.5</span><span class="marker-tag gold">4.4</span></td>
+      <td class="time">14–23 分</td>
+    </tr>
+    <tr>
+      <td class="num">7</td>
+      <td class="q">「接下来一周你想做点什么或想点什么？」</td>
+      <td class="markers"><span class="marker-tag must">★8.5</span><span class="marker-tag">8.4</span></td>
+      <td class="time">23–28 分</td>
+    </tr>
+    <tr>
+      <td class="num">8</td>
+      <td class="q">「还有两分钟，你想怎么收尾？」</td>
+      <td class="markers"><span class="marker-tag must">★8.9</span><span class="marker-tag gold">5.3</span></td>
+      <td class="time">28–30 分</td>
+    </tr>
+
+    <tr>
+      <td colspan="4" style="background:var(--time); color:#fff; font-weight:700; letter-spacing:0.5pt; text-align:center;">15 分钟迷你套餐（5 问·焦点段练习用）</td>
+    </tr>
+    <tr>
+      <td class="num">1</td>
+      <td class="q">「今天 15 分钟，你最想弄清楚的一件事是什么？」</td>
+      <td class="markers"><span class="marker-tag must">★3.1</span></td>
+      <td class="time">1–4 分</td>
+    </tr>
+    <tr>
+      <td class="num">2</td>
+      <td class="q">「说到这儿，你心里什么感觉？」</td>
+      <td class="markers"><span class="marker-tag">6.3</span><span class="marker-tag">4.3</span></td>
+      <td class="time">4–7 分</td>
+    </tr>
+    <tr>
+      <td class="num">3</td>
+      <td class="q">「你说'必须___'，这个'必须'从哪儿来？」</td>
+      <td class="markers"><span class="marker-tag must">★7.2</span><span class="marker-tag">6.2</span><span class="marker-tag gold">5.4</span></td>
+      <td class="time">7–11 分</td>
+    </tr>
+    <tr>
+      <td class="num">4</td>
+      <td class="q">「接下来一周，你想做点什么或想点什么？」</td>
+      <td class="markers"><span class="marker-tag must">★8.5</span></td>
+      <td class="time">11–14 分</td>
+    </tr>
+    <tr>
+      <td class="num">5</td>
+      <td class="q">「还有一分钟，你想怎么收尾？」</td>
+      <td class="markers"><span class="marker-tag must">★8.9</span><span class="marker-tag gold">5.3</span></td>
+      <td class="time">14–15 分</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ========== 雷区 ========== -->
+<h2>六、雷区——看似多命中实际丢分的"伪多命中问句"</h2>
+<div class="minefield">
+  <h4>1. 看似问 ≥2 个 marker，其实一条都没拿到</h4>
+  <ol>
+    <li>「<b>你打算怎么办？</b>」——3.1 未确认时 7.4 ✘，无 8.5 桥则 8.5 ✘，无新学习挂钩 8.4 ✘。<b>补救：</b>改成"接下来一周你想做点什么或想点什么"加 8.5 必中。</li>
+    <li>「<b>为什么这件事对你这么难？</b>」——"为什么"指向原因而非意义，3.3 ✘；泛化问句 6.1 ✘；无原词 6.2 ✘。<b>补救：</b>改成"如果这件事成了，对你意味着什么"指向 3.3 + 6.5。</li>
+    <li>「<b>你想要的是什么？</b>」——开放但宽泛，3.1 ✘（不是本次会话目标）；泛问 6.1 ✘。<b>补救：</b>加锚点："今天这 45 分钟你最想带走的是什么"。</li>
+  </ol>
+</div>
+
+<div class="minefield">
+  <h4>2. 多命中问句的反模式（看似命中但降档）</h4>
+  <ol>
+    <li>「<b>你是不是觉得压力很大？</b>」——诱导式，5.4 ✘（无好奇）+ 6.3 ✘（替客户断定情绪）。<b>补救：</b>改成"说到这儿，你心里什么感觉？"开放探索。</li>
+    <li>「<b>你有没有想过跟他直接谈一次？</b>」——形式问号实质主张，触发能力 1 红线。<b>补救：</b>改成"面对他，你有哪些选择？"开放探索。</li>
+    <li>「<b>所以你其实是个完美主义者。</b>」——替客户下定义，6.7 ✘ + 4.4 ✘ + 触发能力 1 评判。<b>补救：</b>改成"我听到的是___，是这样吗？"用客户原词。</li>
+    <li>「<b>这是不是有点像你爸？</b>」——强行联结，7.2 ✘（客户无认知位移）+ 7.5 ✘（带预判）。<b>补救：</b>改成"你看到的是___，这个发现如果留在你生活里，你想让它出现在哪里？"先承认发现再谈运用。</li>
+    <li>「<b>那你打算怎么办？要不要先找他谈？</b>」——连环问 + 第一个问题触发行动过早，7.6 ✘ + 4.3 ✘ + 触发能力 1。<b>补救：</b>先接情绪再问行动："这个担心，可以多说一点吗？"。</li>
+  </ol>
+</div>
+
+<!-- ========== 七、v1 实证校准（基于 03 案例单点验证）========== -->
+<h2>七、v1 实证校准（基于 03 案例单点验证）</h2>
+<p class="note">
+  03 案例（客户乙 vs 教练乙）是 5 份校准案例里<b>唯一带逐节点 marker 判定</b>的——P1 入门 / 45 分钟 / 督导师-5教练（资深 PCC/MCC）做督导。
+  下面 20 个节点的"实际命中"数据是 v1 升级的核心证据。<br>
+  <b>⚠️ N=1 局限：</b>单案例数据不能算"统计意义上的 v1 实证"，但作为 case study 验证 + 反例仍有效。
+  本节用于核对 TOP 10 理论推论与真实对话的差距。
+</p>
+
+<h3>7.1 03 案例 20 节点实证概览</h3>
+<table class="top" style="font-size:8pt;">
+  <thead>
+    <tr>
+      <th style="width:7%;">节点</th>
+      <th style="width:35%;">问法简述</th>
+      <th style="width:40%;">实际命中 markers（督导判定）</th>
+      <th style="width:8%;">实际命中数</th>
+      <th style="width:10%;">理论对照</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="rank">L001</td>
+      <td>"可以再多分享一些吗?"</td>
+      <td>5.3 (隐含)</td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L011</td>
+      <td>"困难在你的电影里面有些什么?"</td>
+      <td>6.2 部分 ("电影"是教练词非客户词)</td>
+      <td style="text-align:center;">0.5</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L018</td>
+      <td>"第二曲线对你意味着什么?"</td>
+      <td><span class="marker-tag">3.3 ✔</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L026</td>
+      <td>"想象当中会是什么样子的?"</td>
+      <td><span class="marker-tag">7.7 ✔</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L033</td>
+      <td>"哪个话题对今天的你比较重要?"</td>
+      <td><span class="marker-tag">5.3 ✔</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L036–L046</td>
+      <td>合约反复 3 句(聚焦/成果/继续谈)</td>
+      <td><span class="marker-tag">3.1 △</span> <span class="marker-tag">3.2 (隐含)</span> <span class="marker-tag">5.3</span></td>
+      <td style="text-align:center;">1–2</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr style="background:#fff0ec;">
+      <td class="rank">L054</td>
+      <td>"我好像看到了...想要反馈给你看看你怎么看"</td>
+      <td><span class="marker-tag must">7.5 ✘</span> 未降权+未交出去</td>
+      <td style="text-align:center; color:var(--must); font-weight:700;">0</td>
+      <td style="text-align:center; color:var(--must);">理论 4 → 实际 0</td>
+    </tr>
+    <tr>
+      <td class="rank">L060</td>
+      <td>"跟我再多分享一下,还想在今天再多聊聊的"</td>
+      <td><span class="marker-tag">7.7 ✔</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr style="background:#f0f7f1;">
+      <td class="rank">L066 ⭐</td>
+      <td>"担忧的部分占更多,但你刚才笑了一下——那一刻想到什么,会有不一样的吗?"</td>
+      <td><span class="marker-tag ok">6.3 ✔</span> <span class="marker-tag ok">6.4 ✔</span> <span class="marker-tag">7.7 (隐含)</span></td>
+      <td style="text-align:center; color:var(--ok); font-weight:700;">2–3</td>
+      <td style="text-align:center; color:var(--ok);">实证多命中</td>
+    </tr>
+    <tr style="background:#fff0ec;">
+      <td class="rank">L072</td>
+      <td>"抛开那些表面的担忧,真正担忧的是什么?"</td>
+      <td><span class="marker-tag must">7.2 △</span> 偏封闭</td>
+      <td style="text-align:center; color:var(--must); font-weight:700;">0</td>
+      <td style="text-align:center; color:var(--must);">理论 4 → 实际 0</td>
+    </tr>
+    <tr>
+      <td class="rank">L080</td>
+      <td>"如果最坏的结果发生了,那个时候会发生什么?"</td>
+      <td><span class="marker-tag ok">7.3 ✔</span> <span class="marker-tag">7.6 ✔</span></td>
+      <td style="text-align:center;">2</td>
+      <td style="text-align:center; color:var(--ok);">实证多命中</td>
+    </tr>
+    <tr style="background:#fff8eb;">
+      <td class="rank">L092</td>
+      <td>"大家首先想到的是坏的那一面,对吧?"</td>
+      <td><span class="marker-tag must">4.4 △</span> 直接归类,未邀请反思</td>
+      <td style="text-align:center; color:var(--must); font-weight:700;">0</td>
+      <td style="text-align:center; color:var(--must);">理论 1 → 实际 0</td>
+    </tr>
+    <tr>
+      <td class="rank">L094</td>
+      <td>重复 L072("真正担忧的是什么?")</td>
+      <td>7.2 重复但客户产生突破</td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr style="background:#f0f7f1;">
+      <td class="rank">L122 ⭐⭐</td>
+      <td>"客户乙的整一个能量还有点点起来,有点不一样,你感觉呢?"</td>
+      <td><span class="marker-tag ok">6.3 ✔</span> <span class="marker-tag ok">6.4 ✔</span> <span class="marker-tag">6.7 △</span> <span class="marker-tag">5.4 (隐含)</span></td>
+      <td style="text-align:center; color:var(--ok); font-weight:700;">3</td>
+      <td style="text-align:center; color:var(--ok);">实证多命中天花板</td>
+    </tr>
+    <tr>
+      <td class="rank">L130</td>
+      <td>"回顾今天的教练对话,进展到哪里?"</td>
+      <td><span class="marker-tag">8.2 ✔</span> <span class="marker-tag">8.1 △</span></td>
+      <td style="text-align:center;">1–2</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L138</td>
+      <td>"分享一下你现在的苗头"</td>
+      <td><span class="marker-tag">8.5 ✔</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr style="background:#fff0ec;">
+      <td class="rank">L162</td>
+      <td>"你觉得足够吗?"</td>
+      <td><span class="marker-tag must">0</span> 偏封闭 + <b>状态污染后续 8.x</b></td>
+      <td style="text-align:center; color:var(--must); font-weight:700;">-2</td>
+      <td style="text-align:center; color:var(--must);">理论 1 → 实际 −2</td>
+    </tr>
+    <tr>
+      <td class="rank">L172</td>
+      <td>"焦虑出来,用什么方式或资源支持自己?"</td>
+      <td><span class="marker-tag">8.7 △</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr>
+      <td class="rank">L182</td>
+      <td>"今天的教练对话对你个人而言有什么学习?"</td>
+      <td><span class="marker-tag">8.2 ✔</span></td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+    <tr style="background:#fff8eb;">
+      <td class="rank">L184</td>
+      <td>"时间有限,到这里,你觉得可以吗?"</td>
+      <td><span class="marker-tag">8.9 △</span> 因 L162 污染, 严格 △ 不升 ✔</td>
+      <td style="text-align:center;">1</td>
+      <td style="text-align:center; color:var(--ink-mute);">—</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>7.2 实证"多命中天花板"——L066 + L122 详析</h3>
+
+<div class="question-card" style="border-left-color:var(--ok);">
+  <div class="header">
+    <span class="category" style="color:var(--ok);">⭐ L066 · 笑捕捉 + 命名(实证 2-3 命中)</span>
+    <span class="hit-count" style="color:var(--ok); background:#ecf2ed;">实证命中 2–3</span>
+  </div>
+  <p style="font-size:9.5pt; margin:4pt 0;">
+    <b>原问句：</b>「好像担忧的部分占的更多，但刚刚听到你在说话的时候，其实是笑了一下。所以在那一刻有什么样子的想到的东西，会有不一样的东西吗？」
+  </p>
+  <p style="font-size:9pt; margin:2pt 0;"><b>为什么能多命中：</b></p>
+  <ul style="font-size:9pt; margin:2pt 0 4pt 16pt;">
+    <li><b>捕捉矛盾信号</b>：客户表层说"担忧占更多"，但声音里有笑——教练<b>先识别了非语言信号</b> (6.4)</li>
+    <li><b>命名情绪 + 命名非语言</b>：把"担忧"和"笑"并置邀请客户解释 (6.3 + 6.4 双命中)</li>
+    <li><b>"会有不一样的吗" 开放式收尾</b>：邀请客户自由探索 (7.7 隐含命中)</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--ok); margin:0;">
+    <b>v1 验证：</b>这是 03 案例里"理论 2 实际 2-3" 的代表——<b>形式和理论推论一致</b>。
+  </p>
+</div>
+
+<div class="question-card" style="border-left-color:var(--ok);">
+  <div class="header">
+    <span class="category" style="color:var(--ok);">⭐⭐ L122 · 能量捕捉 + 反映(实证天花板 3 命中)</span>
+    <span class="hit-count" style="color:var(--ok); background:#ecf2ed;">实证命中 3</span>
+  </div>
+  <p style="font-size:9.5pt; margin:4pt 0;">
+    <b>原问句：</b>「好像这一段的时候，客户乙的整一个能量还有点点起来哦，有点不一样，你感觉呢？」
+  </p>
+  <p style="font-size:9pt; margin:2pt 0;"><b>为什么是 03 案例实证天花板：</b></p>
+  <ul style="font-size:9pt; margin:2pt 0 4pt 16pt;">
+    <li><b>6.3 命名能量变化</b>："整一个能量还有点点起来"——直接命名非语言信号</li>
+    <li><b>6.4 探索能量变化</b>："有点不一样" + "你感觉呢"——明确邀请客户探索</li>
+    <li><b>6.7 简洁反映</b>：反映客户当下的状态(但督导判 △ "非简洁但有"——长度超标)</li>
+    <li><b>5.4 好奇心</b>(隐含)：从"你感觉呢"可见</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--ok); margin:0;">
+    <b>v1 验证：</b>这是 03 案例里实际命中数最高的节点。<b>3 条 ≈ 03 案例实际天花板</b>。我的 TOP 10 理论推论的"4-5 条"在这个案例里<b>未观察到</b>。
+  </p>
+</div>
+
+<h3>7.3 实证反例——"理论 4 实际 0"三个节点</h3>
+
+<div class="question-card" style="border-left-color:var(--must); background:#fff0ec;">
+  <div class="header">
+    <span class="category" style="color:var(--must);">⚠ L054 · 分享观察(理论 4 → 实际 0)</span>
+    <span class="hit-count" style="color:var(--must); background:#fff; border:1px solid var(--accent);">实证命中 0</span>
+  </div>
+  <p style="font-size:9.5pt; margin:4pt 0;">
+    <b>原问句：</b>「我好像看到了这个东西，想要反馈给客户乙看看客户乙对我这样子的一个看法怎么看。」
+  </p>
+  <p style="font-size:9pt; margin:2pt 0;"><b>为什么理论 4 实际 0：</b></p>
+  <ul style="font-size:9pt; margin:2pt 0 4pt 16pt;">
+    <li>形式上像 7.5(分享观察)——但<b>未降权重</b>("我好像看到了" 实际是"我看到的是")</li>
+    <li>未明确"交出去"动作("你怎么看"被埋在前一句)</li>
+    <li>督导特别标注 7.5 ✘：结构判据全数违反</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--must); margin:0;">
+    <b>v1 警示：</b>我的 TOP 10 #2 "低权重分享型"理论 4 命中——但<b>若"降权重"和"交出去"任一动作缺失，立即从 4 → 0</b>。这是 03 案例的实证证据。
+  </p>
+</div>
+
+<div class="question-card" style="border-left-color:var(--must); background:#fff0ec;">
+  <div class="header">
+    <span class="category" style="color:var(--must);">⚠ L072 · 原词追溯(理论 4 → 实际 0 △)</span>
+    <span class="hit-count" style="color:var(--must); background:#fff; border:1px solid var(--accent);">实证命中 0 △</span>
+  </div>
+  <p style="font-size:9.5pt; margin:4pt 0;">
+    <b>原问句：</b>「抛开那些限制啊、时间啊，这种表面的担忧，你真正担忧的是什么？」
+  </p>
+  <p style="font-size:9pt; margin:2pt 0;"><b>为什么理论 4 实际 0：</b></p>
+  <ul style="font-size:9pt; margin:2pt 0 4pt 16pt;">
+    <li>形式上像 7.2(向内探索)——但<b>偏封闭</b>("真正担忧的是什么"是封闭式的"是什么")</li>
+    <li>督导评注：「此问题偏封闭，应改为'第二曲线对你重要吗?它会给你带来什么?'等正向问题」</li>
+    <li>客户虽答出"真正担忧的是..."但<b>仍在原框架内</b>——7.2 △ 不升 ✔</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--must); margin:0;">
+    <b>v1 警示：</b>我的 TOP 10 #3 "原词追溯型"理论 4 命中——但若问句<b>偏封闭</b>或指向负向"担忧",即使有原词也会从 4 → 0 △。
+    督导建议"正向"问法替代"负向"问法。
+  </p>
+</div>
+
+<div class="question-card" style="border-left-color:var(--must); background:#fff0ec;">
+  <div class="header">
+    <span class="category" style="color:var(--must);">⚠ L162 · 反思邀请(理论 1 → 实际 -2 含状态污染)</span>
+    <span class="hit-count" style="color:var(--must); background:#fff; border:1px solid var(--accent);">实证命中 -2</span>
+  </div>
+  <p style="font-size:9.5pt; margin:4pt 0;">
+    <b>原问句：</b>「你觉得足够吗?」
+  </p>
+  <p style="font-size:9pt; margin:2pt 0;"><b>为什么是负数：</b></p>
+  <ul style="font-size:9pt; margin:2pt 0 4pt 16pt;">
+    <li>形式上像 4.4(邀请回应)——但<b>偏封闭 + 不相信</b>("足够吗"暗示不信任)</li>
+    <li>督导师-5 教练原话：「这种其实是一个比较重要啊，要去处理的问题...因为教练评估这一块...他实际上可以问他的...这种足够吗，这件事情好像是有点不太相信啊。偏封闭哈」</li>
+    <li><b>状态污染</b>：不仅自身 0 命中，还把后续 L184 收尾 8.9 拖到 △(原本可能 ✔)</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--must); margin:0;">
+    <b>v1 警示：</b>这是 03 案例最严重的反例——<b>单句失分可传染</b>。
+    KB 没明确说"状态污染"，但 03 督导实际判定里 L184 因 L162 而 △。这条 v0 草稿没预测到。
+  </p>
+</div>
+
+<h3>7.4 v1 核心发现（v0 → v1 修订）</h3>
+<ol style="font-size:9.5pt; margin:0 0 0 18pt; line-height:1.7;">
+  <li><b>理论 vs 实际平均差 2-3 倍</b>：03 案例 20 节点里，平均实际命中 1 条/问；TOP 10 理论推论平均 3.7 条/问。<b>真实单问命中天花板是 3 条(L122)，不是 4-5 条</b>。</li>
+  <li><b>"形式 4 实际 0"三个反例</b>(L054 / L072 / L162)揭示<b>关键动作缺失是隐形杀手</b>：降权重 / 交出去 / 正向 / 开放——任一缺失即从满分到 0。</li>
+  <li><b>必命中项实际 1 ✔ + 5 △</b>：8.5 ✔；3.1, 3.4, 6.7, 7.2, 8.9 全 △。这反映 P1 边缘水平。<b>03 案例整体 ✔ 率 35.1%</b>(KB 完整 37 markers 映射表确认)。</li>
+  <li><b>状态污染是隐藏维度</b>：L162 "足够吗" 不仅自身 -2 命中，还把 L184 8.9 从潜在 ✔ 拖到 △。<b>v0 草稿没预测到</b>，v1 加上作为新警示。</li>
+  <li><b>唯一经过真人验证的多命中模式：L066(2-3 命中) + L122(3 命中天花板)</b>——共性是<b>非语言捕捉 + 命名 + 邀请探索</b>。这应是 PCC 备考的"实证多命中样板"。</li>
+</ol>
+
+<p class="note" style="margin-top:6pt;">
+  <b>v1 局限性：</b>仅 03 案例 N=1。04 / 05 案例的督导反馈是<b>整体性 / 模式化</b>，无逐节点 marker 判定(已扫 02 案例督导段确认)，
+  所以无法扩展到多案例共现矩阵。要做真正的 v2 多案例共现，需要补 04 / 05 案例的逐节点判定（每份半天工作量）。
+</p>
+
+<h3>7.5 v2 跨案共现矩阵（03/04/05 三案 56 节点）</h3>
+<p class="note">下表按"问法类型"聚合三案数据。✓ = 该案有命中案例；△ = 部分命中；✘ = 该案命中失败（形式 4 实际 0）；— = 该案无此类型问法。</p>
+
+<table class="top" style="font-size:8pt;">
+  <thead>
+    <tr>
+      <th style="width:24%;">问法类型</th>
+      <th style="width:18%;">03（P1 入门）</th>
+      <th style="width:18%;">04（P2 生死）</th>
+      <th style="width:18%;">05（P2 身份+价值）</th>
+      <th style="width:22%;">跨案验证</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="background:#f0f7f1;">
+      <td class="name">情绪承接型（6.3+6.4）</td>
+      <td>L066/L122 <b>✔✔</b>（2-3 命中）</td>
+      <td>L13:02 <b>✔</b>（6.3+6.4）</td>
+      <td>L11:38 <b>✔</b>（6.3+6.4 部分）</td>
+      <td style="color:var(--ok); font-weight:700;">✓✓✓ 3/3 强</td>
+    </tr>
+    <tr style="background:#f0f7f1;">
+      <td class="name">假设探索型（7.3）</td>
+      <td>L080 <b>✔</b>（7.3+7.6 = 2 命中）</td>
+      <td>L37:31 <b>✔</b>（7.3+7.6 = 2 命中）</td>
+      <td>L46:37 <b>✔</b>（7.3 + 客户自发觉察）</td>
+      <td style="color:var(--ok); font-weight:700;">✓✓✓ 3/3 强</td>
+    </tr>
+    <tr style="background:#f0f7f1;">
+      <td class="name">行动+反思型（8.5 必中）</td>
+      <td>L138 <b>✔</b>（8.5 = 1 命中）</td>
+      <td>L1:06:05 <b>✔</b>（8.5+8.4 △）</td>
+      <td>L01:08:32 末段 <b>✔</b>（8.5 自发）</td>
+      <td style="color:var(--ok); font-weight:700;">✓✓✓ 3/3 强</td>
+    </tr>
+    <tr>
+      <td class="name">意义探寻型（3.3）</td>
+      <td>L018 <b>✔</b>（3.3 = 1 命中）</td>
+      <td>L22:59 <b>✔</b>（3.3+7.2 = 2 命中）</td>
+      <td>L27:13 <b>△</b>（3.3 部分自发）</td>
+      <td style="color:var(--ok);">✓✓ 2/3 中</td>
+    </tr>
+    <tr>
+      <td class="name">身份探问型（7.2 必中）</td>
+      <td>L094 <b>△</b>（重复触发，7.2 = 1）</td>
+      <td>L22:59 <b>✔</b>（7.2 = 1 命中）</td>
+      <td>L58:18 <b>✔</b>（7.2 身份层对照）<br>L01:00:51 <b>✔</b>（7.2 身份层确认）</td>
+      <td style="color:var(--ok);">✓✓ 2/3 中</td>
+    </tr>
+    <tr>
+      <td class="name">共同收尾型（8.9 必中）</td>
+      <td>L184 <b>△</b>（被 L162 污染）</td>
+      <td>L1:12:29 <b>✔</b></td>
+      <td>L01:08:32 <b>✔</b></td>
+      <td style="color:var(--ok);">✓✓ 2/3 中</td>
+    </tr>
+    <tr>
+      <td class="name">进展回顾型（8.2）</td>
+      <td>L182 <b>✔</b>（8.2 = 1 命中）</td>
+      <td>L1:06:05 <b>△</b>（8.2 未明确指向自我）</td>
+      <td>L01:08:32 <b>✘</b>（8.2 落回自己）</td>
+      <td style="color:var(--must);">⚠ 跨案反复失守</td>
+    </tr>
+    <tr style="background:#fff0ec;">
+      <td class="name">简洁反映型（6.7 必中）</td>
+      <td>L122 <b>△</b>（6.7 部分）</td>
+      <td>L30:02 <b>✘</b>（长段总结）</td>
+      <td>L01:08:32 <b>✘</b>（落回自己）</td>
+      <td style="color:var(--must); font-weight:700;">✗ 3/3 失守</td>
+    </tr>
+    <tr style="background:#fff0ec;">
+      <td class="name">低权重分享型（7.5 必中）</td>
+      <td>L054 <b>✘</b>（未降权+未交出去）</td>
+      <td>L30:02 <b>✘</b>（长段总结+自陈）</td>
+      <td>L01:08:32 <b>✘</b>（"我也有同感"焦点投自己）</td>
+      <td style="color:var(--must); font-weight:700;">✗ 3/3 失守</td>
+    </tr>
+    <tr>
+      <td class="name">客户卡住跟随型（5.5）</td>
+      <td>—（无显式跟随）</td>
+      <td>L52:22 <b>△</b>（实际有沉默但文字稿无标注）</td>
+      <td>L25:56 <b>✔</b>（"可以分享一下吗?"）</td>
+      <td style="color:var(--ok);">✓ 1/3</td>
+    </tr>
+    <tr>
+      <td class="name">客户反问未接型（5.2）</td>
+      <td>—</td>
+      <td>L44:06 <b>✘</b>（钻石点）</td>
+      <td>—（客户未反问）</td>
+      <td style="color:var(--must);">⚠ 04 特有</td>
+    </tr>
+    <tr>
+      <td class="name">议程套娃型（3.1 + 3.4）</td>
+      <td>—</td>
+      <td>—</td>
+      <td>L21:40 + 议题 3 跳 <b>✘</b>（3.4 ✘）</td>
+      <td style="color:var(--must);">⚠ 05 特有</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>7.6 v2 跨案反复失守的 3 个"形式 4 实际 0"模式</h3>
+<p class="note">v0 草稿只预测了 1 个反复失守模式（7.5 未降权）。v2 跨案数据揭示了 3 个，每个都导致"<b>理论 4 命中 → 实际 0 命中</b>"。</p>
+
+<div class="question-card" style="border-left-color:var(--must); background:#fff0ec;">
+  <div class="header">
+    <span class="category" style="color:var(--must);">跨案模式 A · 7.5 落回自己 / 形式分享 (3/3 案失守)</span>
+    <span class="hit-count" style="color:var(--must); background:#fff; border:1px solid var(--accent);">3/3 案 ✘</span>
+  </div>
+  <p style="font-size:9pt; margin:4pt 0;"><b>三案反例：</b></p>
+  <ul style="font-size:8.5pt; margin:2pt 0 4pt 16pt; line-height:1.6;">
+    <li><b>03 L054</b>：「我好像看到了这个东西，想要反馈给客户乙看看...怎么看」——未降权 + 未明确交出去</li>
+    <li><b>04 L30:02</b>：长段总结客户两次发言后，未邀请客户确认（督导师-9钻石）</li>
+    <li><b>05 L01:08:32</b>：「我觉得我也很有收获，效率不高...更容易进入心流」——直接落回自己（督导师-6:"焦点投给了自己"）</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--must); margin:0;">
+    <b>v2 警示：</b>7.5 是"理论上多命中"（4 条）但"实际反复失守"的典型。<b>真实命中的 7.5 必须在分享前显式降权 + 分享后立即交出去 + 不落回自己</b>——三动作齐全才升 ✔。
+  </p>
+</div>
+
+<div class="question-card" style="border-left-color:var(--must); background:#fff0ec;">
+  <div class="header">
+    <span class="category" style="color:var(--must);">跨案模式 B · 6.7 长段总结（3/3 案失守）</span>
+    <span class="hit-count" style="color:var(--must); background:#fff; border:1px solid var(--accent);">3/3 案 ✘</span>
+  </div>
+  <p style="font-size:9pt; margin:4pt 0;"><b>三案反例：</b></p>
+  <ul style="font-size:8.5pt; margin:2pt 0 4pt 16pt; line-height:1.6;">
+    <li><b>03 L122</b>：「客户乙的整一个能量还有点点起来...你感觉呢?」——虽触达 6.7 但被判 △ "非简洁但有"</li>
+    <li><b>04 L30:02</b>：长段总结客户两次发言（督导师-9："我听见两次就比较长段的总结"）</li>
+    <li><b>05 L01:08:32</b>：8.2 总结落回自己 + 多句自陈（督导师-6："焦点投给了自己"）</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--must); margin:0;">
+    <b>v2 警示：</b>KB 明确 6.7 是"简洁"反映——<b>单次发言 ≤ 1 句、用客户原词、给确认机会</b>。一旦超过 1 句或长段总结，6.7 立即降 △ 或 ✘。<b>这是 6.7 必中项最难的动作</b>，v2 建议 45 分钟场里至少做 3 次简短反映以冲抵 1 次长段失分。
+  </p>
+</div>
+
+<div class="question-card" style="border-left-color:var(--must); background:#fff0ec;">
+  <div class="header">
+    <span class="category" style="color:var(--must);">跨案模式 C · 8.2 教练落回自己（v0 完全未预测）</span>
+    <span class="hit-count" style="color:var(--must); background:#fff; border:1px solid var(--accent);">2/3 案 ✘</span>
+  </div>
+  <p style="font-size:9pt; margin:4pt 0;"><b>三案反例：</b></p>
+  <ul style="font-size:8.5pt; margin:2pt 0 4pt 16pt; line-height:1.6;">
+    <li><b>04 L30:02</b>：长段总结 + 自陈类内容（"我先说..."风格）</li>
+    <li><b>05 L01:08:32</b>：8.2 总结「我觉得我也很有收获，效率不高...更容易进入心流」——督导师-6："焦点投给了自己 / 嘎嘎笑 / 我也有同感"</li>
+  </ul>
+  <p style="font-size:8.5pt; color:var(--must); margin:0;">
+    <b>v2 警示：</b><b>v0 草稿完全没预测到 8.2 落回自己</b>。客户邀请教练分享学习时，教练若把焦点拉回自己（"我也有同感"/"我自己也会有"），
+    不仅 8.2 ✘，还可能污染 7.5 和整体 PCC 状态。KB 没明确说"教练落回自己"，但 04/05 真人督导都把这条单独点出。
+  </p>
+</div>
+
+<h3>7.7 v2 跨案核心发现（5 条修订）</h3>
+<ol style="font-size:9.5pt; margin:0 0 0 18pt; line-height:1.7;">
+  <li><b>跨案多命中天花板稳定在 2–3 条</b>：03 案 L122（3）/ 04 案 L13:02（2）/ 05 案 L11:38（2）。<b>三案无单问 4+ 命中案例</b>。TOP 10 理论推论的"4-5 条"在三案里<b>全部未观察到</b>。</li>
+  <li><b>3 案共现的"实证多命中样板"：情绪承接 + 假设探索 + 行动+反思 三类</b>——分别在 6.3+6.4、7.3+7.6、8.5 上稳定命中。<b>这应是 PCC 备考的高优先级训练</b>。</li>
+  <li><b>3 案反复失守的 3 个"形式 4 实际 0"模式</b>：A. 7.5 落回自己 / 形式分享（3/3 ✘）；B. 6.7 长段总结（3/3 ✘）；C. 8.2 教练落回自己（2/3 ✘）。<b>其中 8.2 落回自己是 v0 完全没预测到的新发现</b>。</li>
+  <li><b>P2 议题深度下必命中项失分率上升</b>：03 案 6/6 必中（5 △ + 1 ✔）；04 案 6/6 必中（3 △ + 3 ✔）；05 案 <b>5/6 必中（3.4 ✘ 议题收口）</b>。PCC 考试 45 分钟标准场下，<b>必命中项命中率应作为"重点保命线"</b>。</li>
+  <li><b>状态污染是普遍模式（不只 03 L162）</b>：04 L30:02 长段总结、05 L01:08:32 落回自己，都对后续 8.x 收尾产生污染。<b>v0 草稿没预测，v2 升级为正式警示</b>。</li>
+</ol>
+
+<p class="note" style="margin-top:6pt;">
+  <b>v2 局限性：</b>N=3 仍小，且 04/05 是 P2 75 分钟场，议题层级（生死 / 身份+价值+意义）显著深于 PCC 考试 45 分钟 P1 标准场。<br>
+  <b>PCC 考试应用提示：</b>实证多命中样板（情绪承接 / 假设探索 / 行动+反思）可直接借鉴；3 个反复失守模式应作为"考前必避雷区"；必命中项命中率在 45 分钟场下<b>应保守估计为 4-5/6（不是 6/6）</b>。<br>
+  <b>v3 升级路径：</b>需要补 vec-06/07/08 的 AI 模拟场（tracker.csv）做对照——AI 模拟场与真人场的偏差，可作为 v3 的关键校准维度。
+</p>
+
+<!-- ========== 一句话总结 ========== -->
+<div class="one-liner">
+  v2 跨案发现：03/04/05 三案 56 节点里，<b>跨案多命中天花板稳定在 2–3 条</b>，无任何单问 4+ 命中案例；<br>
+  跨案反复失守的"形式 4 实际 0"三模式：<b>7.5 落回自己 / 6.7 长段总结 / 8.2 教练落回自己</b>；<br>
+  <b>情绪承接 + 假设探索 + 行动+反思</b> 是当前唯一经过 3 案验证的实证多命中样板。
+</div>
+
+<p style="font-size:8pt; color:var(--ink-mute); text-align:center; margin-top:8pt;">
+  本清单基于 ICF 2025 版 37 条 markers 整理；配套 PCC-45min-muscle-memory.html 使用；阈值为督导基线校准估计，非 ICF 官方公开数值。<br>
+  2026-09-04
+</p>
+
+</body>
+</html>
