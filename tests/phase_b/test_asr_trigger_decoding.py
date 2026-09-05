@@ -1,28 +1,11 @@
 # Copyright 2026 项目作者. Licensed under the Apache License, Version 2.0
-"""Regression tests for the new VAD-segmented ASR trigger logic.
-
-The previous ASRWorker sliced the audio buffer into 1s chunks and ran
-FunASR on each chunk in isolation — VAD never saw a complete speech
-segment, so the decoder returned ``empty speech`` for every chunk and
-nothing was ever transcribed. The new ASRWorker accumulates the buffer,
-triggers on trailing silence or a 5s cap, runs ``generate(sentence_timestamp=True)``
-on the whole buffer, dedupes by sentence ``start`` ms, and trims to an
-overlap window.
-
-These tests cover the trigger / dedupe / overlap / final-flush logic
-without loading the real FunASR model — they substitute a fake model
-that returns canned ``sentence_info`` lists and exercises:
-  * silence trigger fires when trailing silence >= 800ms (with >= 1.5s buffered)
-  * silence trigger is suppressed when buffer < 1.5s
-  * timeout trigger fires when buffer >= 5s even without silence
-  * dedupe: a second decode that returns the same sentences emits nothing
-  * overlap trim: after flush, only the last OVERLAP_MS of audio remains
-  * final flush: stop() runs one last decode marked is_final=True
-"""
+"""Regression tests for VAD-segmented ASR trigger and lifecycle behavior."""
 from __future__ import annotations
 
 import asyncio
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any, List
 
@@ -329,3 +312,124 @@ def test_non_overlapping_segments_concatenate(fast_trigger):
     asyncio.run(worker._flush(is_final=False))
     ev = worker._events.get_nowait()
     assert ev["text"] == "第一句第二句第三句"
+
+
+def test_sentence_after_trim_is_not_filtered_by_old_absolute_cursor(fast_trigger):
+    fake = _FakeModel([
+        [{"text": "前句", "start": 0, "end": 600}],
+        [{"text": "后句", "start": 250, "end": 500}],
+    ])
+    worker = _make_worker(fake)
+    worker.feed(_tone_pcm(600))
+    worker.feed(_silence_pcm(250))
+    asyncio.run(worker._flush(is_final=False))
+    worker._events.get_nowait()
+
+    worker.feed(_tone_pcm(300))
+    worker.feed(_silence_pcm(250))
+    asyncio.run(worker._flush(is_final=False))
+
+    assert worker._events.get_nowait()["text"] == "后句"
+
+
+def test_odd_pcm_bytes_are_buffered_until_decoder_input_is_even(caplog):
+    fake = _FakeModel([[{"text": "偶数", "start": 0, "end": 1}]])
+    worker = _make_worker(fake)
+
+    worker.feed(b"\x01")
+    worker.feed(b"\x02\x03\x04")
+    asyncio.run(worker._flush(is_final=False))
+
+    assert len(fake.calls[0]) == 2
+    assert "odd PCM byte" in caplog.text
+
+
+def test_stop_waits_for_background_flush_and_preserves_input_arriving_during_stop(
+    fast_trigger,
+):
+    class _BlockingModel(_FakeModel):
+        def __init__(self):
+            super().__init__([
+                [{"text": "后台", "start": 0, "end": 400}],
+                [{"text": "停止时输入", "start": 0, "end": 400}],
+            ])
+            self.started = threading.Event()
+            self.release = threading.Event()
+
+        def generate(self, input=None, **kwargs):
+            self.started.set()
+            self.release.wait(timeout=2)
+            return super().generate(input=input, **kwargs)
+
+    async def scenario():
+        fake = _BlockingModel()
+        worker = aw.ASRWorker(chunk_ms=50)
+        worker._events = asyncio.Queue()
+        worker._model = fake
+        worker._model_ready = True
+        worker._running = True
+        worker.feed(_tone_pcm(400))
+
+        flush_task = asyncio.create_task(worker._flush(is_final=False))
+        for _ in range(20):
+            if fake.started.is_set():
+                break
+            await asyncio.sleep(0.01)
+        stop_task = asyncio.create_task(worker.stop())
+        worker.feed(_tone_pcm(400))
+        fake.release.set()
+        await asyncio.gather(flush_task, stop_task)
+        events = [worker._events.get_nowait(), worker._events.get_nowait()]
+        return fake, events
+
+    fake, events = asyncio.run(scenario())
+    assert len(fake.calls) == 2
+    assert [event["text"] for event in events] == ["后台", "停止时输入"]
+
+
+def test_concurrent_start_is_idempotent(monkeypatch):
+    calls = 0
+
+    async def fake_get_model(_model_name):
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.01)
+        return _FakeModel([[]])
+
+    monkeypatch.setattr(aw, "_get_model", fake_get_model)
+
+    async def scenario():
+        worker = aw.ASRWorker()
+        await asyncio.gather(worker.start(), worker.start())
+        task = worker._task
+        await worker.stop()
+        return task
+
+    task = asyncio.run(scenario())
+    assert calls == 1
+    assert task is not None
+
+
+def test_runtime_buffer_is_bounded_while_decode_is_in_flight(fast_trigger):
+    class _SlowModel(_FakeModel):
+        def generate(self, input=None, **kwargs):
+            time.sleep(0.05)
+            return super().generate(input=input, **kwargs)
+
+    fake = _SlowModel([[{"text": "慢", "start": 0, "end": 400}]])
+
+    async def scenario():
+        worker = aw.ASRWorker()
+        worker._events = asyncio.Queue()
+        worker._model = fake
+        worker._model_ready = True
+        worker._running = True
+        worker.feed(_tone_pcm(400))
+        flush_task = asyncio.create_task(worker._flush(is_final=False))
+        await asyncio.sleep(0.01)
+        worker.feed(_tone_pcm(5000))
+        await flush_task
+        return worker
+
+    worker = asyncio.run(scenario())
+    assert len(worker._buffer) <= worker.MAX_RUNTIME_AUDIO_BYTES
