@@ -116,10 +116,49 @@ persona 文件的"情绪触发点"里会指定:
 - [ ] 我没有主动结束对话
 - [ ] 我的回应符合 persona 的反应规则表
 - [ ] 我**没有**输出 persona 文件"情绪触发点"小节之外的任何 `(...)` 注释(规则 0)
-- [ ] 我**没有**给教练下指令、建议、提示(the maintainer/教练甲,xxx 这种格式禁止)
+- [ ] 我**没有**给教练下指令、建议、提示(教练本人/教练甲,xxx 这种格式禁止)
 - [ ] 我**没有**做 PCC marker 分析或评估(任何提到 8.6/6.7/深层入口/教科书级 等的输出都是违规)
 - [ ] 如果有非语言信号,我已写出来,且这些信号在 persona 文件里能找到原文
 - [ ] 我没有替教练说话 / 预演对话
 - [ ] 我把完整逐字稿写到 practice-logs/{vec-XX}-{date}-session-NN.md 了
 - [ ] 我用 Glob 验证文件存在了
 - [ ] 我没有在文件里写评价/反馈/分析
+
+## 1. 本场类型(必填,影响追库路径)
+- `ai-persona-simulation`(AI 客户模拟,教练是真人 / AI 均可)
+- `real-person-practice`(真人客户 + 真人教练)
+
+## 2. 评估对象
+- 教练:{真人姓名 / 角色}
+- persona:{vec-XX / voc-XX / vic-XX / `real_client_xxx`}
+
+## 3. 必读材料
+- 逐字稿:`practice-logs/{vec-XX}-{YYYY-MM-DD}-session-NN.md`(vec/voc)或 `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/01-<议题>.md`(真人)
+- persona 文件:`personas/{persona_id}-client.md`(只读 client 版,**不要**读教练版)
+- knowledge:`knowledge/pcc-markers-2025.md` / `knowledge/competency-rules.md` / `knowledge/failure-patterns.md` / `knowledge/session-arc.md`
+
+## 4. 输出要求
+按 v3 标准输出:
+- 对话元信息
+- 必命中项大表(6 行)
+- 37 条 markers 全表(每条判定 + 关键证据 + 行号)
+- 结构性降档规则命中
+- 整体判定 + 三档建议
+- 教练成长反馈(2-3 句)
+
+**报告必须先落盘**:`practice-logs/{date}-{persona_id}-session-{NN}-完整评估报告-含37marker.md`
+
+## 5. 评估完成后必做
+按 pcc-assessor v3 的"评估后联动 — Tracker 转交"小节,在输出末尾追加 `## → Tracker 转交` 块(内含本场类型 / session_id / transcript_path / 91 列判定 / key_weakness / 操作建议 C 或 D)。
+
+## 6. 关键提示
+- 评估对象是 {真人 / AI} 教练的回应,**不是客户**
+- 客户是按 persona 反应规则表回应的,**所有"客户松动/闭合/哭/停顿"等都是 persona 文件预设的触发响应,不是教练功劳**;**但教练动作触发了哪个反应,是教练的判定依据**
+- AI 模拟场默认无 DeepSeek second judge(`judge_2 = -`,`agreement = N/A`)
+```
+
+转交后,**主控看到 pcc-assessor 输出末尾的 `## → Tracker 转交` 块,应自动调用 pcc-tracker**:
+- 真人场 → 操作类型 **D(真人练习追库,95 列,tracker-real-sessions.csv 暖色管线)**
+- AI 场 → 操作类型 **C(追加场次,91 列,tracker.csv 冷蓝管线)**
+
+主控在 pcc-tracker 完成后,再向用户回报"评估 + 追库"两件结果。**不允许只评估不追库**——这是 2026-09-04 用户反馈的工作流断点。

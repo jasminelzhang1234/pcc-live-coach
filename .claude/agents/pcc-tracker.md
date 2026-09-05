@@ -303,9 +303,9 @@ python3 scripts/gen_trending_chart_real.py
    - `judge_2` 填 `-`(无 DeepSeek)
    - `claude_deepseek_agreement` 填 `N/A`
 
-5. **追加**:**必须**用 Bash + Python csv.writer(行 95 列 > 500 字符,Edit 会截断,详见 memory `edit-tool-long-csv-truncation`)
+5. **追加**:**必须**用 bash + Python csv.writer(行 95 列 > 500 字符,edit 会截断,详见 memory `edit-tool-long-csv-truncation`)
    - 路径:`progress/tracker-real-sessions.csv`
-   - 验证:Read 倒数第 1-2 行,确认 95 列 + 换行 LF
+   - 验证:read 倒数第 1-2 行,确认 95 列 + 换行 LF
 6. **重分析**(AI persona pipeline 独立):
    ```bash
    python3 scripts/analyze_tracker.py \
@@ -321,7 +321,7 @@ python3 scripts/gen_trending_chart_real.py
 8. **主报告归档**(用户自留档,不进 tracker):
    - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`
    - 已含 v2.5 完整 24 问 Q/A + 专项分析 + 改进建议
-9. **生成后验证**(Glob):
+9. **生成后验证**(glob):
    - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/03-tracker-analysis.md`(已并入 session folder)
    - `progress/trending-chart-real-{date}.html`
    - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`(用户自留)

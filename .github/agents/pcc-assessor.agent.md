@@ -307,3 +307,66 @@ tools: ['read', 'glob', 'write', 'edit']
 - [ ] 我把报告写到 practice-logs/{date}-vec-XX-session-NN-{后缀}.md 了
 - [ ] 我用 Glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
+
+# 评估后联动 — Tracker 转交(2026-09-04 新增)
+
+> 任何 A / B / C 模式评估完成、报告落盘后,**必须**在输出末尾追加一个 `## → Tracker 转交` 段。
+> 主控 / 调用方(本项目通常 = pcc-coachee 或用户本人)看到此段后,**自动调用 pcc-tracker agent** 完成 csv 追库 + 重分析。
+> 目的:消除"评估完忘了追库"的工作流断点(2026-09-04 用户反馈:"跑完评估,会出发 tracker agent 吗?")。
+
+## 触发条件
+
+- 任意评估完成(单条 / 整场 / 全评 都触发)
+- **真人练习场** OR **AI persona 模拟场** 都触发(走不同 csv 路径,见下)
+
+## 输出块格式(强制)
+
+无论 A / B / C,评估报告主体输出完后,**追加**(不要插入到报告中间):
+
+```markdown
+
+## → Tracker 转交
+
+**本场类型**:`real-person-practice` | `ai-persona-simulation`
+**session_id**:`{session_id}`(例:`voc-08-2026-09-04-session-01`)
+**transcript_path**:`{相对路径}`(例:`practice-logs/voc-08-2026-09-04-session-01.md`)
+**transcript 已落盘验证**:✔ / ✘
+**persona**:`{persona ID}`(真人场填 `real_client_<代号>` 自由标识)
+**judge_main**:`Claude v3` / `真人督导(姓名)`(本场主要判定者)
+**judge_2**:`-` / `DeepSeek V4 Flash`(本场 second judge;真人场恒为 `-`)
+**判定统计**:✔ {N} / △ {N} / ✘ {N}
+**必命中项 ✘ 数**:{N}
+**key_weakness**:`{一句话}`(本场最弱能力 / 必命中项,如 `3.4 ✘ 能力 3 整体未达标`)
+
+**→ 操作建议**:
+- 真人场 → 调用 `pcc-tracker` **操作类型 D(真人练习追库)**
+- AI persona 模拟场 → 调用 `pcc-tracker` **操作类型 C(追加场次)**
+- 调用 prompt 可直接复制本块
+```
+
+## 调用方接续动作
+
+- **主控**看到此块 → **自动**用 Agent 工具调用 `pcc-tracker`(无需用户再指令)
+- 真人场 prompt 必须包含:`transcript_path` + `audio_path`(`-` 表示无录音)+ `audio_quality_notes` + 全部 91 列判定 + 末尾 4 列真人专列
+- AI 场 prompt 必须包含:`transcript_path` + 全部 91 列判定(末尾 4 列不填)
+- pcc-tracker 完成后会回报 summary + `tracker-analysis-{date}.md` 路径 + `trending-chart-{date}.html` 路径
+
+## 反例(出错成本高)
+
+- 评估完只输出报告 + 落盘,**没追加 tracker 转交块** → 工作流断点,数据漏入库
+- **真人场误推到 `progress/tracker.csv`(冷蓝 AI 管线)** → 数据污染(真人锚点和 AI 模拟混在一起,后续分析失真)
+- **AI 场误推到 `progress/tracker-real-sessions.csv`(暖色真人管线)** → 数据污染
+- 真人场填了 `judge_2` 真人 second judge → 违反 schema(`judge_2` 真人场恒 `-`)
+
+## 自检清单(每次输出前)
+
+- [ ] 我读了逐字稿全文
+- [ ] 我读了 4 个 knowledge 文件
+- [ ] 每条判定都有行号 + 原话(✘ 例外)
+- [ ] 必命中项我单独标出来了
+- [ ] 结构性降档规则我单独检查了
+- [ ] 我没有为了鼓励用户而放宽
+- [ ] 模糊地带我向下取整了
+- [ ] 我把报告写到 practice-logs/{date}-vec-XX-session-NN-{后缀}.md 了
+- [ ] 我用 glob 验证文件存在了
+- [ ] 验证失败的话我重新写了,而不是交付聊天版

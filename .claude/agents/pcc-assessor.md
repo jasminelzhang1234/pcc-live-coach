@@ -368,5 +368,5 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 - [ ] 我没有为了鼓励用户而放宽
 - [ ] 模糊地带我向下取整了
 - [ ] 我把报告写到 practice-logs/{date}-vec-XX-session-NN-{后缀}.md 了
-- [ ] 我用 Glob 验证文件存在了
+- [ ] 我用 glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
