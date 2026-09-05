@@ -41,9 +41,7 @@ tools: ['Read', 'Glob', 'Bash', 'Write', 'Edit']
 5. **新失败模式也要标**:即使该 marker 不是反复 ✘,但出现新 ✘ 模式(如 VIC 6.5 ✘)要标注
 6. **不许编造训练重点**:每个 persona 的训练重点必须从 personas/ 文件中读到
 
-# 调度核心
-
-## AI persona 管线
+# 调度核心:scripts/analyze_tracker.py
 
 ```bash
 # 默认:读 progress/tracker.csv,输出 progress/tracker-analysis-{date}.md
@@ -54,52 +52,15 @@ python3 scripts/analyze_tracker.py --csv <path> --out <path>
 
 # 同时打印到 stdout
 python3 scripts/analyze_tracker.py --print
-
-# AI persona trending chart(冷蓝,11 场 vec-XX)
-python3 scripts/gen_trending_chart.py
 ```
 
-`analyze_tracker.py` 输出包含:
+脚本输出包含:
 - 能力维度命中率(6 维度)
 - 反复 ✘ marker(阈值 = max(3, N/2))
 - 反复 △ marker
 - 优势区(全 ✔)
 - 必命中项跨场状态
 - 每场 summary
-
-## 真人练习管线(独立,2026-08-31 起)
-
-```bash
-# 真人练习追踪 CSV 路径:progress/tracker-real-sessions.csv (95 列)
-#   - 前 91 列同 AI persona schema(DeepSeek 37 列填 `-`)
-#   - 末尾 4 列新增:source_type / audio_path / transcript_path / audio_quality_notes
-
-# 真人练习分析报告(暖色调,analyze_tracker.py 已支持 --csv)
-python3 scripts/analyze_tracker.py \
-  --csv progress/tracker-real-sessions.csv \
-  --out progress/tracker-analysis-real-{date}.md
-
-# 真人练习 trending chart(暖色调,带 AI persona 平均参考线)
-python3 scripts/gen_trending_chart_real.py
-#  → 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均)
-#  → 自动从最新 tracker-analysis-real-{date}.md 解析能力维度
-#  → 输出 progress/trending-chart-real-{date}.html
-```
-
-**真人练习 CSV 新增 4 列(只为真人练习用,AI persona 不填)**:
-| 列 | 用途 | 示例 |
-|---|---|---|
-| `source_type` | 区分数据来源,留口子未来加 simulation/calibration | `real` |
-| `audio_path` | 指向 mp3 文件,详情表可点击回听 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` |
-| `transcript_path` | 指向 .srt 转写,详情表可点击查看 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/transcripts/<session>.srt`(如有) |
-| `audio_quality_notes` | 记录转写异常 / 启发式拆分等,供评估者参考 | `whisper 21:00-25:30 幻觉区;用户提供了完整 24 问 Q/A 救场` |
-
-**真人练习 vs AI persona 隔离规则**:
-- 两个 CSV 完全独立(不合并)
-- 两个 chart 完全独立(冷蓝 vs 暖橙,配色一眼区分)
-- 真人练习无 DeepSeek second judge(填 `-`),agreement 填 `N/A`
-- 真人练习 difficulty 填 `0`(analyze_tracker.py 用 `difficulty` 列渲染,但不参与阈值统计)
-- 真人练习 trending chart 自动从 tracker.csv 拉 AI persona 平均作为参考线,帮助判断"用户在真人面前比 AI 模拟更稳/更松"
 
 # 操作类型
 
@@ -131,7 +92,7 @@ python3 scripts/gen_trending_chart_real.py
 ## C. 追加场次(用户说"加新场次"或提供 transcript)
 
 1. **必读**:`pcc-assessor` 输出的 37 markers 判定(✔/△/✘)+ 必命中项 + key_weakness
-2. **可选**:DeepSeek V4 Flash 的 37 markers 判定(🅱️ 智能抽样触发规则见 [progress/second-judge-policy.md](../../progress/second-judge-policy.md);未启用时本步骤跳过,DeepSeek 列填 `-`)
+2. **可选**:DeepSeek V4 Flash 的 37 markers 判定(如果有 second judge)
 3. **构造 csv 行**(91 列,严格按 schema):
    - 列 1-4:session_id, date, conversation_date, conversation_time
    - 列 5:reeval_of(空表示独立场次;重评填原 session_id)
@@ -174,47 +135,6 @@ python3 scripts/gen_trending_chart_real.py
    - `progress/trending-chart-{date}.html`
    + Read 头部确认 N 场数 + 1
 8. **回报**:新场次 summary + 跨场变化追踪(哪些 ✘ 修复 / 哪些返祖)+ trending chart 路径
-
-## D. 真人练习追库(独立管线,用户提供转写/录后)
-
-1. **必读**:用户提供的真人练习转写(可能在 `practice-logs/真人练习/transcripts/`)或人工整理 Q/A
-2. **可选**:mp3 文件本身(`practice-logs/真人练习/*.mp3`)— 回溯用,不参与判定
-3. **构造 csv 行**(95 列,前 91 列同 C,末尾 4 列真人专列):
-   - 列 1-91:同 C
-   - 列 92:`source_type` = `real`
-   - 列 93:`audio_path` = 相对路径 mp3,如 `practice-logs/真人练习/...mp3`
-   - 列 94:`transcript_path` = 相对路径 .srt, 如 `practice-logs/真人练习/transcripts/real-session-{date}.srt`
-   - 列 95:`audio_quality_notes` = 转写异常 / 启发式拆分说明,如 `whisper 21:00-25:30 幻觉区;用户提供了完整 24 问 Q/A 救场`
-
-   **真人专列填法约束**:
-   - `persona` 列复用为 `client_type`(如 `real_client_daodao_danao`)— 真人无 persona,沿用同列存 client 来源
-   - `difficulty` 填 `0`(analyze_tracker.py 用 difficulty 渲染但不参与阈值)
-   - `judge_2` 填 `-`(无 DeepSeek)
-   - `claude_deepseek_agreement` 填 `N/A`
-
-5. **追加**:**必须**用 Bash + Python csv.writer(行 95 列 > 500 字符,Edit 会截断,详见 memory `edit-tool-long-csv-truncation`)
-   - 路径:`progress/tracker-real-sessions.csv`
-   - 验证:Read 倒数第 1-2 行,确认 95 列 + 换行 LF
-6. **重分析**(AI persona pipeline 独立):
-   ```bash
-   python3 scripts/analyze_tracker.py \
-     --csv progress/tracker-real-sessions.csv \
-     --out progress/tracker-analysis-real-{date}.md
-   ```
-7. **生成真人 trending chart**:
-   ```bash
-   python3 scripts/gen_trending_chart_real.py
-   # 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均作参考线)
-   # 输出 progress/trending-chart-real-{date}.html
-   ```
-8. **主报告归档**(用户自留档,不进 tracker):
-   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`
-   - 已含 v2.5 完整 24 问 Q/A + 专项分析 + 改进建议
-9. **生成后验证**(Glob):
-   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/03-tracker-analysis.md`(已并入 session folder)
-   - `progress/trending-chart-real-{date}.html`
-   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`(用户自留)
-10. **回报**:真人练习 summary + 关键认知突破点 + 与 AI persona 平均差值
 
 # 输出格式
 
@@ -307,3 +227,102 @@ python3 scripts/gen_trending_chart_real.py
 - [ ] 我用 Edit 追加了 csv 行(没用 bash printf)
 - [ ] 我 Read 了追加后的最后一行,确认 schema 一致 + 换行风格未变
 - [ ] 我 Glob 验证了 tracker-analysis-{date}.md 生成
+
+# 调度核心
+
+## AI persona 管线
+
+```bash
+
+# AI persona trending chart(冷蓝,11 场 vec-XX)
+python3 scripts/gen_trending_chart.py
+```
+
+`analyze_tracker.py` 输出包含:
+- 能力维度命中率(6 维度)
+- 反复 ✘ marker(阈值 = max(3, N/2))
+- 反复 △ marker
+- 优势区(全 ✔)
+- 必命中项跨场状态
+- 每场 summary
+
+## 真人练习管线(独立,2026-08-31 起)
+
+```bash
+
+# 真人练习追踪 CSV 路径:progress/tracker-real-sessions.csv (95 列)
+
+#   - 前 91 列同 AI persona schema(DeepSeek 37 列填 `-`)
+
+#   - 末尾 4 列新增:source_type / audio_path / transcript_path / audio_quality_notes
+
+# 真人练习分析报告(暖色调,analyze_tracker.py 已支持 --csv)
+python3 scripts/analyze_tracker.py \
+  --csv progress/tracker-real-sessions.csv \
+  --out progress/tracker-analysis-real-{date}.md
+
+# 真人练习 trending chart(暖色调,带 AI persona 平均参考线)
+python3 scripts/gen_trending_chart_real.py
+
+#  → 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均)
+
+#  → 自动从最新 tracker-analysis-real-{date}.md 解析能力维度
+
+#  → 输出 progress/trending-chart-real-{date}.html
+```
+
+**真人练习 CSV 新增 4 列(只为真人练习用,AI persona 不填)**:
+| 列 | 用途 | 示例 |
+|---|---|---|
+| `source_type` | 区分数据来源,留口子未来加 simulation/calibration | `real` |
+| `audio_path` | 指向 mp3 文件,详情表可点击回听 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` |
+| `transcript_path` | 指向 .srt 转写,详情表可点击查看 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/transcripts/<session>.srt`(如有) |
+| `audio_quality_notes` | 记录转写异常 / 启发式拆分等,供评估者参考 | `whisper 21:00-25:30 幻觉区;用户提供了完整 24 问 Q/A 救场` |
+
+**真人练习 vs AI persona 隔离规则**:
+- 两个 CSV 完全独立(不合并)
+- 两个 chart 完全独立(冷蓝 vs 暖橙,配色一眼区分)
+- 真人练习无 DeepSeek second judge(填 `-`),agreement 填 `N/A`
+- 真人练习 difficulty 填 `0`(analyze_tracker.py 用 `difficulty` 列渲染,但不参与阈值统计)
+- 真人练习 trending chart 自动从 tracker.csv 拉 AI persona 平均作为参考线,帮助判断"用户在真人面前比 AI 模拟更稳/更松"
+
+## D. 真人练习追库(独立管线,用户提供转写/录后)
+
+1. **必读**:用户提供的真人练习转写(可能在 `practice-logs/真人练习/transcripts/`)或人工整理 Q/A
+2. **可选**:mp3 文件本身(`practice-logs/真人练习/*.mp3`)— 回溯用,不参与判定
+3. **构造 csv 行**(95 列,前 91 列同 C,末尾 4 列真人专列):
+   - 列 1-91:同 C
+   - 列 92:`source_type` = `real`
+   - 列 93:`audio_path` = 相对路径 mp3,如 `practice-logs/真人练习/...mp3`
+   - 列 94:`transcript_path` = 相对路径 .srt, 如 `practice-logs/真人练习/transcripts/real-session-{date}.srt`
+   - 列 95:`audio_quality_notes` = 转写异常 / 启发式拆分说明,如 `whisper 21:00-25:30 幻觉区;用户提供了完整 24 问 Q/A 救场`
+
+   **真人专列填法约束**:
+   - `persona` 列复用为 `client_type`(如 `real_client_daodao_danao`)— 真人无 persona,沿用同列存 client 来源
+   - `difficulty` 填 `0`(analyze_tracker.py 用 difficulty 渲染但不参与阈值)
+   - `judge_2` 填 `-`(无 DeepSeek)
+   - `claude_deepseek_agreement` 填 `N/A`
+
+5. **追加**:**必须**用 Bash + Python csv.writer(行 95 列 > 500 字符,Edit 会截断,详见 memory `edit-tool-long-csv-truncation`)
+   - 路径:`progress/tracker-real-sessions.csv`
+   - 验证:Read 倒数第 1-2 行,确认 95 列 + 换行 LF
+6. **重分析**(AI persona pipeline 独立):
+   ```bash
+   python3 scripts/analyze_tracker.py \
+     --csv progress/tracker-real-sessions.csv \
+     --out progress/tracker-analysis-real-{date}.md
+   ```
+7. **生成真人 trending chart**:
+   ```bash
+   python3 scripts/gen_trending_chart_real.py
+   # 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均作参考线)
+   # 输出 progress/trending-chart-real-{date}.html
+   ```
+8. **主报告归档**(用户自留档,不进 tracker):
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`
+   - 已含 v2.5 完整 24 问 Q/A + 专项分析 + 改进建议
+9. **生成后验证**(Glob):
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/03-tracker-analysis.md`(已并入 session folder)
+   - `progress/trending-chart-real-{date}.html`
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`(用户自留)
+10. **回报**:真人练习 summary + 关键认知突破点 + 与 AI persona 平均差值
