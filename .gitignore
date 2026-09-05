@@ -16,10 +16,7 @@ Thumbs.db
 *.tmp
 *.crdownload
 
-# Coach session artifacts — never commit
-# raw/      真实客户原始音频
-# transcripts/  转写稿(即便匿名化也本地存)
-# assessments/  评估报告(含个人分析)
+# ===== Coach session artifacts — never commit =====
 sessions/
 
 # 校准案例(真实对话记录 + 督导点评,仅本地使用)
@@ -28,14 +25,30 @@ knowledge/校准案例/
 # 个人陪练实践日志(本地工作日志,不入版本控制)
 practice-logs/
 
-# 校准锚点 csv(真人督导判定,不入版本控制)
-progress/calibration-bench.csv
+# ===== 训练记录 + 校准工作文档(内部沉淀,真人姓名/路径全在这里) =====
+# 整个 progress/ 屏蔽:含 tracker.csv(AI 模拟 + 真人 session)、
+# 校准三方对照(真人督导师真名)、tracker-real-sessions.csv(真人场数据)、
+# trending-chart.html、prompts/、v3-KB-candidates/、snapshots/、claude-judgment-*.json
+progress/
 
-# Phase B — never commit secrets
+# 设计/实施计划 + 个人笔记(开发轨迹,含完整 Mac 路径)
+plans/
+notes/
+
+# 真人案例评估报告(对应 knowledge/校准案例/ 已屏蔽,但产物散落)
+calibration-reports/
+
+# 参考材料索引(含内部作者署名)
+Reference/
+
+# Phase A 设计/实施计划 HTML(含本地完整路径,可能暴露作者信息)
+PCC-陪练与评估-Agent-设计方案.html
+PCC-陪练与评估-Agent-实施计划.html
+
+# ===== Phase B — never commit secrets =====
 .env
 .env.local
-.venv-funasr-spike/
-.funasr-spike-tmp/
+.venv/
 
 # Local Claude Code MCP config (contains absolute paths)
 .mcp.json

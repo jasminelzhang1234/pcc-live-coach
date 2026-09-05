@@ -164,7 +164,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--assessment", required=True, type=Path, help="源评估报告(HTML/MD)")
     p.add_argument("--persona", required=True, help="如 vec-08")
     p.add_argument("--date", default=dt.date.today().isoformat(), help="YYYY-MM-DD(默认今天)")
-    p.add_argument("--coach", default="the maintainer", help="教练名")
+    p.add_argument("--coach", default="教练本人", help="教练名")
     p.add_argument("--duration", default="45min", help="会话时长")
     p.add_argument("--assessor", default="未指定", help="assessor 标识,如 'github-copilot' / 'claude-code'")
     p.add_argument("--assessor-version", default="未指定", help="commit hash 或版本")

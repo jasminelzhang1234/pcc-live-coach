@@ -36,7 +36,7 @@ AI_CSV = PROGRESS / "tracker.csv"
 def client_color(client_type: str) -> str:
     """根据 client_type 返回暖色配色,缺省 amber。"""
     mapping = {
-        "real_client_daodao_danao": "#d97706",  # amber-600(得到大脑)
+        "real_client_alpha": "#d97706",  # amber-600(真人客户 A)
     }
     return mapping.get(client_type, "#ea580c")  # orange-600 fallback
 

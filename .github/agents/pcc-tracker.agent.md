@@ -211,7 +211,7 @@ python3 scripts/analyze_tracker.py --print
 - **tracker.csv schema 严格固定**(87 列):追加行前**先 Read 一遍**当前 csv,确认列定义未变
 - **不要修改历史行**:只追加,不改旧数据
 - **真人锚点特殊处理**:judge_main = `真人督导(姓名)`,DeepSeek 列填 `-`,agreement = `N/A`
-- **追加 csv 用 Edit 不用 bash printf**:Edit 是 IDE 感知、可验证、可审计的;bash 重定向在 云同步/不同 shell 下行为不一致;实测 tracker.csv 是 LF 换行(2026-08-24 验证),Edit 工具自动跟随现有风格,无需人工干预
+- **追加 csv 用 Edit 不用 bash printf**:Edit 是 IDE 感知、可验证、可审计的;bash 重定向在云同步/不同 shell 下行为不一致;实测 tracker.csv 是 LF 换行(2026-08-24 验证),Edit 工具自动跟随现有风格,无需人工干预
 - **不要预测未来场次**:只基于已入库的数据做诊断/派单
 - **不要手动改 csv**:所有追加走 Edit(避免 Excel/VS Code 自动改格式)
 

@@ -27,7 +27,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from phase_b.asr.asr_worker import ASRWorker  # noqa: E402
 
 
-SAMPLE = PROJECT_ROOT / ".funasr-spike-tmp" / "sample-60s.wav"
+SAMPLE = PROJECT_ROOT / "tests" / "fixtures" / "sample-60s.wav"
 
 
 async def main() -> None:

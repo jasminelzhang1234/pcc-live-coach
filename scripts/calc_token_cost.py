@@ -8,7 +8,7 @@
 
 定价表(USD per million tokens,2026-08-26 收集):
 
-  MiniMax-M3 (默认,the maintainer 当前使用):
+  MiniMax-M3 (默认,当前用户使用):
     input          $3.00   ← MiniMax 公开 API 价(https://MiniMax.com/pricing)
     output        $15.00   ← MiniMax 公开 API 价
     cache_read     $0.30   ← MiniMax 公开 API 页未列 cache 价,参照 Sonnet 4.5
@@ -37,10 +37,10 @@ import sys
 from pathlib import Path
 
 # 各模型定价常量(USD per million tokens)— 价格变动时改这里
-# MiniMax-M3 是 the maintainer 当前 Claude Code 实际跑的模型,价格来源:
+# MiniMax-M3 是当前 Claude Code 实际跑的模型,价格来源:
 #   input/output: MiniMax 公开 API 定价页(2026-08-26 抓到)
 #   cache_read/write: MiniMax 公开页未列,参照 Sonnet 4.5(底层 Anthropic prompt
-#   caching 机制相同,推断定价一致);若 the maintainer 知道实际 cache 价,改这里即可
+#   caching 机制相同,推断定价一致);若实际 cache 价,改这里即可
 _MINIMAX_M3 = {"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write": 3.75}
 
 # 备用(其他模型,目前未在 PCC 工作区出现)
@@ -50,7 +50,7 @@ _OPUS_45   = {"input": 15.0,"output": 75.0, "cache_read": 1.50, "cache_write": 1
 _DEEPSEEK  = {"input": 0.27,"output": 1.10, "cache_read": 0.0,  "cache_write": 0.0}
 
 MODEL_PRICING: dict[str, dict[str, float]] = {
-    "MiniMax-M3":        _MINIMAX_M3,   # ← the maintainer 当前及未来长期使用
+    "MiniMax-M3":        _MINIMAX_M3,   # ← 当前及未来长期使用
     "claude-sonnet-4-5": _SONNET_45,
     "claude-haiku-4-5":  _HAIKU_45,
     "claude-opus-4-5":   _OPUS_45,

@@ -16,12 +16,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-PYTHON="$SCRIPT_DIR/.venv-funasr-spike/bin/python"
+PYTHON="$SCRIPT_DIR/.venv/bin/python"
 if [ ! -x "$PYTHON" ]; then
     echo "✗ Python venv not found at: $PYTHON"
     echo "  First-time setup:"
-    echo "    python3 -m venv .venv-funasr-spike"
-    echo "    .venv-funasr-spike/bin/pip install -r requirements.txt"
+    echo "    python3 -m venv .venv"
+    echo "    .venv/bin/pip install -r requirements.txt"
     exit 1
 fi
 

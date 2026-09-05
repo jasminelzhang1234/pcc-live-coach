@@ -92,14 +92,14 @@ python3 scripts/gen_trending_chart_real.py
 | `source_type` | 区分数据来源,留口子未来加 simulation/calibration | `real` |
 | `audio_path` | 指向 mp3 文件,详情表可点击回听 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` |
 | `transcript_path` | 指向 .srt 转写,详情表可点击查看 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/transcripts/<session>.srt`(如有) |
-| `audio_quality_notes` | 记录转写异常 / 启发式拆分等,供评估者参考 | `whisper 21:00-25:30 幻觉区;the maintainer 提供完整 24 问 Q/A 救场` |
+| `audio_quality_notes` | 记录转写异常 / 启发式拆分等,供评估者参考 | `whisper 21:00-25:30 幻觉区;用户提供了完整 24 问 Q/A 救场` |
 
 **真人练习 vs AI persona 隔离规则**:
 - 两个 CSV 完全独立(不合并)
 - 两个 chart 完全独立(冷蓝 vs 暖橙,配色一眼区分)
 - 真人练习无 DeepSeek second judge(填 `-`),agreement 填 `N/A`
 - 真人练习 difficulty 填 `0`(analyze_tracker.py 用 `difficulty` 列渲染,但不参与阈值统计)
-- 真人练习 trending chart 自动从 tracker.csv 拉 AI persona 平均作为参考线,帮助判断"the maintainer 在真人面前比 AI 模拟更稳/更松"
+- 真人练习 trending chart 自动从 tracker.csv 拉 AI persona 平均作为参考线,帮助判断"用户在真人面前比 AI 模拟更稳/更松"
 
 # 操作类型
 
@@ -175,16 +175,16 @@ python3 scripts/gen_trending_chart_real.py
    + Read 头部确认 N 场数 + 1
 8. **回报**:新场次 summary + 跨场变化追踪(哪些 ✘ 修复 / 哪些返祖)+ trending chart 路径
 
-## D. 真人练习追库(独立管线,the maintainer 提供转写/录后)
+## D. 真人练习追库(独立管线,用户提供转写/录后)
 
-1. **必读**:the maintainer 提供的真人练习转写(可能在 `practice-logs/真人练习/transcripts/`)或人工整理 Q/A
+1. **必读**:用户提供的真人练习转写(可能在 `practice-logs/真人练习/transcripts/`)或人工整理 Q/A
 2. **可选**:mp3 文件本身(`practice-logs/真人练习/*.mp3`)— 回溯用,不参与判定
 3. **构造 csv 行**(95 列,前 91 列同 C,末尾 4 列真人专列):
    - 列 1-91:同 C
    - 列 92:`source_type` = `real`
    - 列 93:`audio_path` = 相对路径 mp3,如 `practice-logs/真人练习/...mp3`
    - 列 94:`transcript_path` = 相对路径 .srt, 如 `practice-logs/真人练习/transcripts/real-session-{date}.srt`
-   - 列 95:`audio_quality_notes` = 转写异常 / 启发式拆分说明,如 `whisper 21:00-25:30 幻觉区;the maintainer 提供完整 24 问 Q/A 救场`
+   - 列 95:`audio_quality_notes` = 转写异常 / 启发式拆分说明,如 `whisper 21:00-25:30 幻觉区;用户提供了完整 24 问 Q/A 救场`
 
    **真人专列填法约束**:
    - `persona` 列复用为 `client_type`(如 `real_client_daodao_danao`)— 真人无 persona,沿用同列存 client 来源
@@ -207,13 +207,13 @@ python3 scripts/gen_trending_chart_real.py
    # 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均作参考线)
    # 输出 progress/trending-chart-real-{date}.html
    ```
-8. **主报告归档**(the maintainer 自留档,不进 tracker):
+8. **主报告归档**(用户自留档,不进 tracker):
    - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`
    - 已含 v2.5 完整 24 问 Q/A + 专项分析 + 改进建议
 9. **生成后验证**(Glob):
    - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/03-tracker-analysis.md`(已并入 session folder)
    - `progress/trending-chart-real-{date}.html`
-   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`(the maintainer 自留)
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`(用户自留)
 10. **回报**:真人练习 summary + 关键认知突破点 + 与 AI persona 平均差值
 
 # 输出格式
@@ -291,7 +291,7 @@ python3 scripts/gen_trending_chart_real.py
 - **tracker.csv schema 严格固定**(87 列):追加行前**先 Read 一遍**当前 csv,确认列定义未变
 - **不要修改历史行**:只追加,不改旧数据
 - **真人锚点特殊处理**:judge_main = `真人督导(姓名)`,DeepSeek 列填 `-`,agreement = `N/A`
-- **追加 csv 用 Edit 不用 bash printf**:Edit 是 IDE 感知、可验证、可审计的;bash 重定向在 云同步/不同 shell 下行为不一致;实测 tracker.csv 是 LF 换行(2026-08-24 验证),Edit 工具自动跟随现有风格,无需人工干预
+- **追加 csv 用 Edit 不用 bash printf**:Edit 是 IDE 感知、可验证、可审计的;bash 重定向在云同步/不同 shell 下行为不一致;实测 tracker.csv 是 LF 换行(2026-08-24 验证),Edit 工具自动跟随现有风格,无需人工干预
 - **不要预测未来场次**:只基于已入库的数据做诊断/派单
 - **不要手动改 csv**:所有追加走 Edit(避免 Excel/VS Code 自动改格式)
 
