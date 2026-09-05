@@ -122,7 +122,7 @@ Third-party attributions:
 
 ## Maintainer
 
-the maintainer · Individual maintainer · No organization affiliation
+项目作者 · Individual maintainer · No organization affiliation
 
 ---
 
@@ -259,4 +259,4 @@ Apache License 2.0。详见 [LICENSE](LICENSE)。
 
 ## 维护者
 
-the maintainer · 个人维护者 · 无组织关联
+项目作者 · 个人维护者 · 无组织关联

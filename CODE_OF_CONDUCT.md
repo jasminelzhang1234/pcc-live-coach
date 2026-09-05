@@ -18,4 +18,4 @@
 ## Enforcement
 
 - 违反 → 维护者私下沟通 → 必要时移除贡献权限
-- 联系:the maintainer(@the maintainerlzhang1234)
+- 联系:Maintainer(@the maintainerlzhang1234)

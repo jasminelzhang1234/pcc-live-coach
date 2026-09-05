@@ -54,7 +54,7 @@ Personas are Markdown files stored in `personas/`. They are read locally by the 
 
 Real (non-persona) practice sessions produce these local files:
 - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` — original audio (never uploaded)
-- `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/01-<topic>.md` — cleaned transcript (the maintainer-authored)
+- `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/01-<topic>.md` — cleaned transcript (coach-authored)
 - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md` — PCC 37-marker assessment
 - `progress/tracker-real-sessions.csv` — single-row-per-session summary for trending analysis
 
@@ -150,7 +150,7 @@ If the tool's privacy posture changes (e.g., optional cloud feature added), this
 
 真人(非 persona)练习会话产生以下本地文件:
 - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` —— 原始音频(绝不外传)
-- `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/01-<议题>.md` —— 整理后逐字稿(the maintainer 撰写)
+- `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/01-<议题>.md` —— 整理后逐字稿(本人撰写)
 - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md` —— PCC 37-marker 评估报告
 - `progress/tracker-real-sessions.csv` —— 逐场摘要,供 trending 分析使用
 
