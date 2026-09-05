@@ -416,7 +416,7 @@ def test_runtime_buffer_is_bounded_while_decode_is_in_flight(fast_trigger):
             time.sleep(0.05)
             return super().generate(input=input, **kwargs)
 
-    fake = _SlowModel([[{"text": "慢", "start": 0, "end": 400}]])
+    fake = _SlowModel([[]])
 
     async def scenario():
         worker = aw.ASRWorker()
@@ -427,9 +427,13 @@ def test_runtime_buffer_is_bounded_while_decode_is_in_flight(fast_trigger):
         worker.feed(_tone_pcm(400))
         flush_task = asyncio.create_task(worker._flush(is_final=False))
         await asyncio.sleep(0.01)
-        worker.feed(_tone_pcm(5000))
+        runtime_audio = bytes(range(256)) * ((worker.MAX_RUNTIME_AUDIO_BYTES + 256) // 256)
+        runtime_audio = runtime_audio[:worker.MAX_RUNTIME_AUDIO_BYTES + 256]
+        worker.feed(runtime_audio)
         await flush_task
-        return worker
+        return worker, runtime_audio
 
-    worker = asyncio.run(scenario())
-    assert len(worker._buffer) <= worker.MAX_RUNTIME_AUDIO_BYTES
+    worker, runtime_audio = asyncio.run(scenario())
+    assert len(runtime_audio) > worker.MAX_RUNTIME_AUDIO_BYTES
+    assert len(worker._buffer) == worker.MAX_RUNTIME_AUDIO_BYTES
+    assert worker._buffer == bytearray(runtime_audio[-worker.MAX_RUNTIME_AUDIO_BYTES:])

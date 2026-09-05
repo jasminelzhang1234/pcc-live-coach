@@ -15,9 +15,9 @@ Why in-process (not `funasr.bin.realtime_ws` subprocess)?
 - The streaming model `FunAudioLLM/Fun-ASR-Nano-2512` requires vLLM, which
   is heavy and Mac-incompatible out of the box.
 - `SenseVoiceSmall` (offline) is already validated in our venv at
-  RTF 0.029 — fast enough for V1 chunked streaming.
+    RTF 0.029 — fast enough for V1 buffered, VAD-triggered decoding.
 - Trade-off accepted: no sub-word partial; we emit a sentence-level "partial"
-  every ~chunk_ms, then a "final" when VAD signals end-of-utterance.
+    after VAD signals end-of-utterance, then a "final" when the worker stops.
 
 API:
     worker = ASRWorker(model="iic/SenseVoiceSmall")
@@ -80,7 +80,7 @@ async def _get_model(model_name: str) -> Any:
 
 
 class ASRWorker:
-    """Streaming ASR using FunASR's SenseVoiceSmall + fsmn-vad.
+    """Buffered ASR using FunASR's SenseVoiceSmall + fsmn-vad.
 
     Design (rewrite of the old FIFO-chunk decoder):
 
@@ -155,7 +155,7 @@ class ASRWorker:
         self._feed_version = 0
         self._emitted_segment_keys: Deque[tuple[int, int, str]] = deque(maxlen=128)
         self._emitted_until_ms: int = 0  # highest sentence end already emitted
-        self._last_decode_audio_ms: int = 0  # buffer length at last successful decode start
+        self._last_decode_audio_ms: int = 0  # buffer length at last decode attempt
 
     async def start(self) -> None:
         if self._lifecycle_lock is None:
