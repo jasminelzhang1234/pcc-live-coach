@@ -117,7 +117,7 @@ persona 文件的"情绪触发点"里会指定:
 - persona:{vec-XX / voc-XX / vic-XX / `real_client_xxx`}
 
 ## 3. 必读材料
-- 逐字稿:`practice-logs/{vec-XX}-{YYYY-MM-DD}-session-NN.md`(vec/voc)或 `progress/real-sessions/<日期>/01-<议题>.md`(真人)
+- 逐字稿:`practice-logs/{vec-XX}-{YYYY-MM-DD}-session-NN.md`(vec/voc)或 `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/01-<议题>.md`(真人)
 - persona 文件:`personas/{persona_id}-client.md`(只读 client 版,**不要**读教练版)
 - knowledge:`knowledge/pcc-markers-2025.md` / `knowledge/competency-rules.md` / `knowledge/failure-patterns.md` / `knowledge/session-arc.md`
 

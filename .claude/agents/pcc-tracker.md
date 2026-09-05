@@ -90,8 +90,8 @@ python3 scripts/gen_trending_chart_real.py
 | 列 | 用途 | 示例 |
 |---|---|---|
 | `source_type` | 区分数据来源,留口子未来加 simulation/calibration | `real` |
-| `audio_path` | 指向 mp3 文件,详情表可点击回听 | `practice-logs/真人练习/...mp3` |
-| `transcript_path` | 指向 .srt 转写,详情表可点击查看 | `practice-logs/真人练习/transcripts/real-session-2026-08-31.srt` |
+| `audio_path` | 指向 mp3 文件,详情表可点击回听 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` |
+| `transcript_path` | 指向 .srt 转写,详情表可点击查看 | `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/transcripts/<session>.srt`(如有) |
 | `audio_quality_notes` | 记录转写异常 / 启发式拆分等,供评估者参考 | `whisper 21:00-25:30 幻觉区;the maintainer 提供完整 24 问 Q/A 救场` |
 
 **真人练习 vs AI persona 隔离规则**:
@@ -208,12 +208,12 @@ python3 scripts/gen_trending_chart_real.py
    # 输出 progress/trending-chart-real-{date}.html
    ```
 8. **主报告归档**(the maintainer 自留档,不进 tracker):
-   - `practice-logs/真人练习/analysis/{date}-完整复盘报告-含37marker.md`
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`
    - 已含 v2.5 完整 24 问 Q/A + 专项分析 + 改进建议
 9. **生成后验证**(Glob):
-   - `progress/tracker-analysis-real-{date}.md`
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/03-tracker-analysis.md`(已并入 session folder)
    - `progress/trending-chart-real-{date}.html`
-   - `practice-logs/真人练习/analysis/{date}-完整复盘报告-含37marker.md`(the maintainer 自留)
+   - `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/02-评估.md`(the maintainer 自留)
 10. **回报**:真人练习 summary + 关键认知突破点 + 与 AI persona 平均差值
 
 # 输出格式
