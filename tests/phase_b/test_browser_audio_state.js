@@ -134,7 +134,25 @@ test("error reset stops queued sources and clears reply playback state", () => {
     bargeInSent: false,
     replyPlaying: false,
     replyStreamEnded: true,
+    replyAborted: false,
   });
+});
+
+test("error reset drops old PCM but allows the next reply to play", () => {
+  const errorReset = resetReplyAfterError({
+    activeSources: [{ stop() {} }],
+  });
+
+  assert.equal(errorReset.replyAborted, false);
+  assert.equal(errorReset.replyPlaying, false);
+
+  const nextReply = {
+    ...errorReset,
+    replyPlaying: true,
+    replyStreamEnded: false,
+  };
+  assert.equal(nextReply.replyAborted, false);
+  assert.equal(nextReply.replyPlaying, true);
 });
 
 test("close reset stops queued sources and clears reply playback state", () => {
@@ -151,5 +169,6 @@ test("close reset stops queued sources and clears reply playback state", () => {
     bargeInSent: false,
     replyPlaying: false,
     replyStreamEnded: true,
+    replyAborted: false,
   });
 });

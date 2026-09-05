@@ -64,6 +64,7 @@
       bargeInSent: false,
       replyPlaying: false,
       replyStreamEnded: true,
+      replyAborted: false,
     };
   }
 

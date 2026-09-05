@@ -272,7 +272,6 @@
         case "error":
           console.error("server error:", obj);
           if (!resetReplyAfterError) break;
-          replyAborted = true;
           const reset = resetReplyAfterError({ activeSources });
           activeSources = reset.activeSources;
           nextPlayTime = reset.nextPlayTime;
@@ -280,6 +279,7 @@
           bargeInSent = reset.bargeInSent;
           replyPlaying = reset.replyPlaying;
           replyStreamEnded = reset.replyStreamEnded;
+          replyAborted = reset.replyAborted;
           if (turnLock) turnLock.release(turnToken);
           turnToken = null;
           setStatus(`错误(${obj.stage || "?"}):${obj.error}`);

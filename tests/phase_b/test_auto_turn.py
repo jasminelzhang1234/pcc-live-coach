@@ -135,10 +135,9 @@ def test_utterance_end_auto_commits_once_and_max_duration_does_not(monkeypatch):
         await worker.events_queue.put(
             {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": False}
         )
-        duplicate_event = {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": True}
-        await worker.events_queue.put(duplicate_event)
-        await asyncio.sleep(0)
-        await worker.events_queue.put(duplicate_event)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": True}
+        )
         await websocket.inbound.put({"cmd": "end"})
         await task
         return websocket, manager
@@ -149,7 +148,7 @@ def test_utterance_end_auto_commits_once_and_max_duration_does_not(monkeypatch):
     assert not any(x.get("event") == "warn" for x in websocket.sent)
 
 
-def test_identical_utterances_from_separate_asr_events_commit_once(monkeypatch):
+def test_identical_utterances_from_separate_asr_events_commit_twice(monkeypatch):
     async def scenario():
         calls = []
 
@@ -168,7 +167,7 @@ def test_identical_utterances_from_separate_asr_events_commit_once(monkeypatch):
         await worker.events_queue.put(second)
         for _ in range(10):
             await asyncio.sleep(0)
-            if calls == ["重复内容"]:
+            if calls == ["重复内容", "重复内容"]:
                 break
         await websocket.inbound.put({"cmd": "end"})
         await task
@@ -176,17 +175,48 @@ def test_identical_utterances_from_separate_asr_events_commit_once(monkeypatch):
 
     calls, manager = asyncio.run(scenario())
     utterances = [x for x in manager.state.recorder.dialogue if x.get("event") == "utterance"]
-    assert calls == ["重复内容"]
-    assert [x["text"] for x in utterances] == ["重复内容"]
+    assert calls == ["重复内容", "重复内容"]
+    assert [x["text"] for x in utterances] == ["重复内容", "重复内容"]
+
+
+def test_duplicate_auto_event_while_turn_is_active_commits_once(monkeypatch):
+    async def scenario():
+        release = asyncio.Event()
+        calls = []
+
+        async def blocking_turn(**kwargs):
+            calls.append(kwargs["client_text"])
+            await release.wait()
+            if False:
+                yield {}
+
+        task, websocket, _manager, worker = await _run_ws(monkeypatch, [], blocking_turn)
+        event = {"event": "partial", "text": "同一事件", "audio_ms": 800, "is_utterance_end": True}
+        await worker.events_queue.put(event)
+        await asyncio.sleep(0)
+        await worker.events_queue.put(event)
+        for _ in range(10):
+            await asyncio.sleep(0)
+            if calls == ["同一事件"]:
+                break
+        release.set()
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return calls
+
+    assert asyncio.run(scenario()) == ["同一事件"]
 
 
 def test_utterance_end_with_different_latency_commits_once(monkeypatch):
     async def scenario():
+        release = asyncio.Event()
         calls = []
 
         async def record_turn(**kwargs):
             calls.append(kwargs["client_text"])
-            yield {"kind": "reply_end"}
+            await release.wait()
+            if False:
+                yield {}
 
         task, websocket, manager, worker = await _run_ws(monkeypatch, [], record_turn)
         first = {
@@ -206,6 +236,7 @@ def test_utterance_end_with_different_latency_commits_once(monkeypatch):
         await worker.events_queue.put(second)
         for _ in range(10):
             await asyncio.sleep(0)
+        release.set()
         await websocket.inbound.put({"cmd": "end"})
         await task
         return calls, manager
@@ -218,11 +249,14 @@ def test_utterance_end_with_different_latency_commits_once(monkeypatch):
 
 def test_utterance_end_final_upgrade_commits_once(monkeypatch):
     async def scenario():
+        release = asyncio.Event()
         calls = []
 
         async def record_turn(**kwargs):
             calls.append(kwargs["client_text"])
-            yield {"kind": "reply_end"}
+            await release.wait()
+            if False:
+                yield {}
 
         task, websocket, manager, worker = await _run_ws(monkeypatch, [], record_turn)
         first = {
@@ -241,6 +275,7 @@ def test_utterance_end_final_upgrade_commits_once(monkeypatch):
         await worker.events_queue.put(second)
         for _ in range(10):
             await asyncio.sleep(0)
+        release.set()
         await websocket.inbound.put({"cmd": "end"})
         await task
         return calls, manager

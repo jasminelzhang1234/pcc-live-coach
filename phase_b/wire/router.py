@@ -316,6 +316,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         if active_turn_task is not None and not active_turn_task.done():
             await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
             return False
+        auto_event_key = None
         if auto_event is not None:
             auto_event_key = utterance_identity(auto_event)
             if last_auto_submit_key[0] == auto_event_key:
@@ -384,6 +385,8 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                 except Exception:
                     pass
             finally:
+                if auto_event_key is not None and last_auto_submit_key[0] == auto_event_key:
+                    last_auto_submit_key[0] = None
                 if active_turn_task is asyncio.current_task():
                     active_turn_task = None
 
