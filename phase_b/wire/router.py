@@ -551,8 +551,10 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         except Exception:
             pass
         if not closed_normally:
-            # Browser went away without "end" — leave recorder open so the
-            # dashboard can still read partial data.
+            try:
+                mgr.end(session_id)
+            except Exception:
+                logger.exception("[%s] session cleanup failed", session_id)
             logger.info("[%s] ws closed without explicit end; turn_count=%d", session_id, turn_count)
 
 

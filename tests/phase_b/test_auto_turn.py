@@ -36,11 +36,13 @@ class _State:
 class _Manager:
     def __init__(self):
         self.state = _State()
+        self.end_calls = []
 
     def get(self, _session_id):
         return self.state
 
-    def end(self, _session_id):
+    def end(self, session_id):
+        self.end_calls.append(session_id)
         return self.state
 
 
@@ -67,6 +69,11 @@ class _WebSocket:
 
     async def close(self, **_kwargs):
         pass
+
+
+class _DisconnectingWebSocket(_WebSocket):
+    async def receive(self):
+        raise router.WebSocketDisconnect()
 
 
 class _Worker:
@@ -125,8 +132,45 @@ async def _run_ws(monkeypatch, messages, run_turn_impl, worker_cls=_Worker):
     return task, websocket, manager, _Worker.instances[0]
 
 
+async def _run_disconnecting_ws(monkeypatch, run_turn_impl):
+    manager = _Manager()
+    websocket = _DisconnectingWebSocket([])
+    _Worker.instances.clear()
+    monkeypatch.setattr(router, "get_manager", lambda: manager)
+    monkeypatch.setattr(router, "ASRWorker", _Worker)
+    monkeypatch.setattr(router, "run_turn", run_turn_impl)
+    monkeypatch.setattr("phase_b.config.get_settings", lambda: _Settings())
+    task = asyncio.create_task(router._ws_session_impl(websocket, "session-1"))
+    while not _Worker.instances:
+        await asyncio.sleep(0)
+    return task, manager
+
+
 async def _reply_turn(**_kwargs):
     yield {"kind": "reply_end"}
+
+
+def test_websocket_disconnect_ends_session_once(monkeypatch):
+    async def scenario():
+        task, manager = await _run_disconnecting_ws(monkeypatch, _reply_turn)
+        await task
+        return manager
+
+    manager = asyncio.run(scenario())
+
+    assert manager.end_calls == ["session-1"]
+
+
+def test_normal_end_does_not_end_session_again_in_finally(monkeypatch):
+    async def scenario():
+        task, websocket, manager, _worker = await _run_ws(monkeypatch, [], _reply_turn)
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return manager
+
+    manager = asyncio.run(scenario())
+
+    assert manager.end_calls == ["session-1"]
 
 
 def test_utterance_end_auto_commits_once_and_max_duration_does_not(monkeypatch):
