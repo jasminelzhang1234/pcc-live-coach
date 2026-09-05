@@ -1,0 +1,181 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from phase_b.wire import router  # noqa: E402
+
+
+class _Recorder:
+    def __init__(self):
+        self.dialogue = []
+
+    def write_dialogue(self, value):
+        self.dialogue.append(value)
+
+    def write_audio(self, _pcm):
+        pass
+
+
+class _State:
+    persona_id = "vec-01"
+    difficulty = 0
+    last_latency_ms = None
+
+    def __init__(self):
+        self.recorder = _Recorder()
+
+
+class _Manager:
+    def __init__(self):
+        self.state = _State()
+
+    def get(self, _session_id):
+        return self.state
+
+    def end(self, _session_id):
+        return self.state
+
+
+class _WebSocket:
+    def __init__(self, messages):
+        self.inbound = asyncio.Queue()
+        for message in messages:
+            self.inbound.put_nowait(message)
+        self.sent = []
+
+    async def accept(self):
+        pass
+
+    async def send_json(self, value):
+        self.sent.append(value)
+
+    async def send_bytes(self, value):
+        self.sent.append(value)
+
+    async def receive(self):
+        message = await self.inbound.get()
+        await asyncio.sleep(0)
+        return {"type": "websocket.receive", "text": json.dumps(message)}
+
+    async def close(self, **_kwargs):
+        pass
+
+
+class _Worker:
+    instances = []
+
+    def __init__(self, **_kwargs):
+        self.events_queue = asyncio.Queue()
+        self.clears = 0
+        self.__class__.instances.append(self)
+
+    async def start(self):
+        pass
+
+    async def stop(self):
+        pass
+
+    def feed(self, _pcm):
+        pass
+
+    def clear_buffer(self):
+        self.clears += 1
+
+    async def events(self):
+        while True:
+            yield await self.events_queue.get()
+
+
+class _Settings:
+    asr_model = "fake"
+    asr_chunk_ms = 10
+    asr_language = "auto"
+
+
+async def _run_ws(monkeypatch, messages, run_turn_impl):
+    manager = _Manager()
+    websocket = _WebSocket(messages)
+    _Worker.instances.clear()
+    monkeypatch.setattr(router, "get_manager", lambda: manager)
+    monkeypatch.setattr(router, "ASRWorker", _Worker)
+    monkeypatch.setattr(router, "run_turn", run_turn_impl)
+    monkeypatch.setattr("phase_b.config.get_settings", lambda: _Settings())
+    task = asyncio.create_task(router._ws_session_impl(websocket, "session-1"))
+    while not _Worker.instances:
+        await asyncio.sleep(0)
+    return task, websocket, manager, _Worker.instances[0]
+
+
+async def _reply_turn(**_kwargs):
+    yield {"kind": "reply_end"}
+
+
+def test_utterance_end_auto_commits_once_and_max_duration_does_not(monkeypatch):
+    async def scenario():
+        task, websocket, manager, worker = await _run_ws(monkeypatch, [], _reply_turn)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": False}
+        )
+        await worker.events_queue.put(
+            {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": True}
+        )
+        await asyncio.sleep(0)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "持续说话", "audio_ms": 800, "is_utterance_end": True}
+        )
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return websocket, manager
+
+    websocket, manager = asyncio.run(scenario())
+    utterances = [x for x in manager.state.recorder.dialogue if x.get("event") == "utterance"]
+    assert [x["text"] for x in utterances] == ["持续说话"]
+    assert not any(x.get("event") == "warn" for x in websocket.sent)
+
+
+def test_active_auto_turn_warns_and_turn_error_clears_guard(monkeypatch):
+    async def scenario():
+        release = asyncio.Event()
+        calls = []
+
+        async def failing_then_blocking(**kwargs):
+            calls.append(kwargs["client_text"])
+            if len(calls) == 1:
+                raise RuntimeError("llm down")
+            await release.wait()
+            if False:
+                yield {}
+
+        task, websocket, manager, worker = await _run_ws(monkeypatch, [], failing_then_blocking)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "第一回合", "audio_ms": 500, "is_utterance_end": True}
+        )
+        await asyncio.sleep(0)
+        await websocket.inbound.put({"cmd": "speak", "text": "第二回合"})
+        await asyncio.sleep(0)
+        await worker.events_queue.put(
+            {"event": "partial", "text": "活动中", "audio_ms": 700, "is_utterance_end": True}
+        )
+        await asyncio.sleep(0)
+        await websocket.inbound.put({"cmd": "barge_in"})
+        for _ in range(10):
+            await asyncio.sleep(0)
+            if any(x.get("event") == "barge_in_stopped" for x in websocket.sent):
+                break
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return calls, websocket, worker
+
+    calls, websocket, worker = asyncio.run(scenario())
+    assert calls == ["第一回合", "第二回合"]
+    assert any(x.get("msg") == "turn already in progress" for x in websocket.sent)
+    assert any(x.get("event") == "barge_in_stopped" for x in websocket.sent)
+    assert worker.clears >= 2

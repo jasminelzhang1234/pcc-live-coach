@@ -48,6 +48,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -72,15 +73,37 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 api_router = APIRouter(prefix="/api")
 
 
+_H1_RE = re.compile(r"^#\s+(.+?)$", re.MULTILINE)
+
+
+def _extract_name(persona: dict) -> str:
+    """Pull the H1 title from a parsed persona's preamble section."""
+    raw = (persona.get("sections") or {}).get("_title", "") or ""
+    m = _H1_RE.search(raw)
+    return m.group(1).strip() if m else persona.get("id", "")
+
+
 class SessionStartBody(BaseModel):
     persona_id: str
     topic: Optional[str] = ""
     difficulty: int = 0
 
 
-@api_router.get("/personas", response_model=List[str])
-def get_personas() -> List[str]:
-    return list_ids()
+@api_router.get("/personas", response_model=List[dict])
+def get_personas() -> List[dict]:
+    out: List[dict] = []
+    for pid in list_ids():
+        try:
+            p = load_persona(pid)
+        except FileNotFoundError:
+            continue
+        out.append({
+            "id": p.get("id", pid),
+            "name": _extract_name(p),
+            "line": p.get("line", ""),
+            "difficulty": p.get("difficulty", 0),
+        })
+    return out
 
 
 @api_router.get("/personas/{persona_id}")
@@ -119,7 +142,7 @@ def session_get(session_id: str) -> dict:
     return state.to_dict()
 
 
-@api_router.post("/session/{session_id}/audio")
+@api_router.post("/session/{session_id}/audio", include_in_schema=False)
 async def session_audio(session_id: str, request: Request) -> dict:
     state = get_manager().get(session_id)
     if state is None:
@@ -193,7 +216,10 @@ def mount_static(app) -> None:
 
     @app.get("/", include_in_schema=False)
     def root() -> FileResponse:
-        return FileResponse(_STATIC_DIR / "index.html")
+        return FileResponse(
+            _STATIC_DIR / "index.html",
+            headers={"Cache-Control": "no-cache, must-revalidate"},
+        )
 
     app.mount(
         "/static",
@@ -242,20 +268,119 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     # acceptable since the user usually waits a few seconds before speaking.
     load_task = asyncio.create_task(worker.start(), name=f"asr-load-{session_id}")
 
-    last_text = ""  # most recent partial text from ASR
+    last_text = ""  # sentinel; replaced by last_text_holder[0] updates from pump_asr
+    # The actual live value lives in last_text_holder[0] below (mutable so the
+    # pump_asr task can write it without `nonlocal`). Keep the legacy name
+    # here for diff-friendliness vs. the previous version.
     turn_count = 0
     closed_normally = False
     barge_in_count = 0
     active_turn_task: Optional[asyncio.Task] = None  # running run_turn() — cancellable on barge-in
+    last_text_holder = [""]  # most recent ASR partial text (mirrored from pump_asr)
+    last_auto_submit_key = [None]
+    audio_diag_bytes = [0]  # rolling byte counter for the audio-level diagnostic log
+
+    async def submit_turn(text: str, auto_key=None) -> bool:
+        nonlocal active_turn_task, turn_count
+        text = (text or "").strip()
+        if not text:
+            await websocket.send_json({"event": "warn", "msg": "empty transcript; nothing to commit"})
+            return False
+        if auto_key is not None:
+            if last_auto_submit_key[0] == auto_key:
+                return False
+            last_auto_submit_key[0] = auto_key
+        if active_turn_task is not None and not active_turn_task.done():
+            await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
+            return False
+
+        turn_count += 1
+        turn_started_ms = int(time.time() * 1000)
+        worker.clear_buffer()
+        last_text_holder[0] = ""
+        state.recorder.write_dialogue(
+            {
+                "role": "coach",
+                "event": "utterance",
+                "turn": turn_count,
+                "text": text,
+                "ms": turn_started_ms,
+            }
+        )
+
+        async def run_one_turn(t=text, n=turn_count, t0=turn_started_ms):
+            nonlocal active_turn_task
+            try:
+                async for ev in run_turn(
+                    session_id=session_id,
+                    persona_id=state.persona_id,
+                    client_text=t,
+                    user_difficulty=state.difficulty,
+                ):
+                    if isinstance(ev, dict):
+                        kind = ev.get("kind")
+                        if kind == "reply_text":
+                            await websocket.send_json(
+                                {"event": "reply_text", "text": ev.get("text", ""), "turn": n}
+                            )
+                            state.recorder.write_dialogue(
+                                {
+                                    "role": "client",
+                                    "event": "utterance",
+                                    "turn": n,
+                                    "text": ev.get("text", ""),
+                                    "ms": int(time.time() * 1000),
+                                }
+                            )
+                        elif kind == "reply_end":
+                            await websocket.send_json({"event": "reply_end", "turn": n})
+                            state.last_latency_ms = int(time.time() * 1000) - t0
+                        elif kind == "error":
+                            await websocket.send_json(
+                                {"event": "error", "stage": ev.get("stage"), "error": ev.get("error")}
+                            )
+                    else:
+                        try:
+                            await websocket.send_bytes(ev)
+                        except Exception:
+                            logger.warning("ws send (audio) failed; aborting turn")
+                            break
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.exception("run_turn failed")
+                try:
+                    await websocket.send_json({"event": "error", "stage": "turn", "error": str(e)})
+                except Exception:
+                    pass
+            finally:
+                if active_turn_task is asyncio.current_task():
+                    active_turn_task = None
+
+        active_turn_task = asyncio.create_task(run_one_turn(), name=f"turn-{session_id}-{turn_count}")
+        return True
 
     async def pump_asr() -> None:
-        """Forward ASRWorker events to the browser as JSON."""
+        """Forward ASRWorker events to the browser as JSON, and mirror the
+        latest partial text into ``last_text_holder`` so the speak handler can
+        read it without racing the partial pump."""
         try:
             async for ev in worker.events():
+                if ev.get("event") == "partial":
+                    last_text_holder[0] = ev.get("text", "") or ""
                 try:
                     await websocket.send_json(ev)
                 except Exception:
                     return
+                if (
+                    ev.get("event") == "partial"
+                    and ev.get("is_utterance_end") is True
+                    and (ev.get("text") or "").strip()
+                ):
+                    await submit_turn(
+                        ev.get("text", ""),
+                        auto_key=(ev.get("text", "").strip(), ev.get("audio_ms")),
+                    )
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -300,6 +425,23 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                             state.recorder.write_audio(pcm)
                         except Exception:
                             logger.exception("recorder.write_audio failed")
+                        # Diagnostic: log RMS + byte count once per second so we can
+                        # tell whether the browser is sending silent frames, quiet
+                        # audio, or real speech. Helps when partials come out as
+                        # garbage ("嗯"/"which"/"a girl is drinking coffee") — that
+                        # pattern means the server is processing audio but the
+                        # audio contains no real speech.
+                        audio_diag_bytes[0] += len(pcm)
+                        if audio_diag_bytes[0] >= 16000 * 2:  # ~1s of 16kHz int16 mono
+                            import numpy as _np
+                            samples = _np.frombuffer(pcm, dtype=_np.int16).astype(_np.float32)
+                            rms = float(_np.sqrt(_np.mean(samples ** 2))) if len(samples) else 0.0
+                            peak = float(_np.max(_np.abs(samples))) if len(samples) else 0.0
+                            logger.info(
+                                "[%s] audio-diag: %d B/s, rms=%.1f peak=%.1f (int16 units)",
+                                session_id, audio_diag_bytes[0], rms, peak,
+                            )
+                            audio_diag_bytes[0] = 0
                     continue
                 # Text = JSON control
                 if "text" in msg and msg["text"] is not None:
@@ -314,83 +456,10 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                     elif cmd == "speak":
                         # "speak" can be sent with an explicit text override
                         # ({"cmd":"speak","text":"..."}) — handy for tests and
-                        # for manual paste-in mode. Without override, the
-                        # most recent ASR partial is used.
-                        text = (obj.get("text") or "").strip() or (last_text.strip() if last_text else "")
-                        if not text:
-                            await websocket.send_json({"event": "warn", "msg": "empty transcript; nothing to commit"})
-                            continue
-                        if active_turn_task is not None and not active_turn_task.done():
-                            await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
-                            continue
-                        turn_count += 1
-                        turn_started_ms = int(time.time() * 1000)
-                        # Reset before generating so any new partials during the
-                        # reply go into the next turn's buffer, not this one.
-                        last_text = ""
-                        # Record coach utterance.
-                        state.recorder.write_dialogue(
-                            {
-                                "role": "coach",
-                                "event": "utterance",
-                                "turn": turn_count,
-                                "text": text,
-                                "ms": turn_started_ms,
-                            }
-                        )
-
-                        async def _run_one_turn(t=text, n=turn_count, t0=turn_started_ms):
-                            try:
-                                async for ev in run_turn(
-                                    session_id=session_id,
-                                    persona_id=state.persona_id,
-                                    client_text=t,
-                                ):
-                                    if isinstance(ev, dict):
-                                        kind = ev.get("kind")
-                                        if kind == "reply_text":
-                                            await websocket.send_json(
-                                                {"event": "reply_text", "text": ev.get("text", ""), "turn": n}
-                                            )
-                                            state.recorder.write_dialogue(
-                                                {
-                                                    "role": "client",
-                                                    "event": "utterance",
-                                                    "turn": n,
-                                                    "text": ev.get("text", ""),
-                                                    "ms": int(time.time() * 1000),
-                                                }
-                                            )
-                                        elif kind == "reply_end":
-                                            await websocket.send_json({"event": "reply_end", "turn": n})
-                                            state.last_latency_ms = int(time.time() * 1000) - t0
-                                        elif kind == "error":
-                                            await websocket.send_json(
-                                                {"event": "error", "stage": ev.get("stage"), "error": ev.get("error")}
-                                            )
-                                    else:
-                                        try:
-                                            await websocket.send_bytes(ev)
-                                        except Exception:
-                                            logger.warning("ws send (audio) failed; aborting turn")
-                                            break
-                            except asyncio.CancelledError:
-                                # Barge-in — silent; the barge-in handler below
-                                # already told the browser we're stopping.
-                                raise
-                            except Exception as e:
-                                logger.exception("run_turn failed")
-                                try:
-                                    await websocket.send_json({"event": "error", "stage": "turn", "error": str(e)})
-                                except Exception:
-                                    pass
-
-                        active_turn_task = asyncio.create_task(_run_one_turn(), name=f"turn-{session_id}-{turn_count}")
-                        # NOTE: do NOT await here — that would block the main
-                        # WS receive loop and prevent barge_in / end / etc from
-                        # being processed while the turn is in flight. The
-                        # turn runs concurrently; barge_in/end handlers cancel
-                        # the task below.
+                        # for manual paste-in mode. Without override, the most
+                        # recent ASR partial (mirrored by pump_asr) is used.
+                        text = (obj.get("text") or "").strip() or last_text_holder[0].strip()
+                        await submit_turn(text)
                     elif cmd == "barge_in":
                         if active_turn_task is not None and not active_turn_task.done():
                             active_turn_task.cancel()
@@ -400,6 +469,8 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                                 pass
                             active_turn_task = None
                             barge_in_count += 1
+                            worker.clear_buffer()
+                            last_auto_submit_key[0] = None
                             state.recorder.write_dialogue(
                                 {
                                     "role": "_meta",
@@ -408,7 +479,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                                     "ms": int(time.time() * 1000),
                                 }
                             )
-                            last_text = ""  # discard stale partial from before barge
+                            last_text_holder[0] = ""  # discard stale partial from before barge
                             try:
                                 await websocket.send_json({"event": "barge_in_stopped", "turn": turn_count})
                             except Exception:
@@ -432,7 +503,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         closed_normally = True
                         break
                     elif cmd == "reset_text":
-                        last_text = ""
+                        last_text_holder[0] = ""
                     else:
                         await websocket.send_json({"event": "warn", "msg": f"unknown cmd: {cmd}"})
     except WebSocketDisconnect:
