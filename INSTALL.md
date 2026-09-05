@@ -150,6 +150,22 @@ PCC_LIVE_LOG_LEVEL=info
 
 > ⚠️ **Never commit `.env` to git.** It contains your API keys. The repo's `.gitignore` excludes it by default.
 
+### Supported LLM providers
+
+The LLM client uses the standard OpenAI Chat Completions API (`POST /chat/completions` with `Authorization: Bearer ...`), so **any OpenAI-compatible endpoint** works. The default is MiniMax (placeholder); switch by editing the three `LLM_*` env vars:
+
+| Provider | `LLM_BASE_URL` | `LLM_MODEL` example | Privacy |
+|---|---|---|---|
+| **MiniMax API** (default) | `https://api.minimaxi.com/v1` | `MiniMax-M3` | Cloud — text sent to MiniMax |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` | Cloud — text sent to OpenAI |
+| **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<dep>` | `<deployment-name>` | Cloud — text sent to Azure |
+| **Ollama** (local) | `http://127.0.0.1:11434/v1` | `qwen2.5:14b` | **Fully offline** |
+| **LM Studio** (local) | `http://127.0.0.1:1234/v1` | any local model | **Fully offline**, GUI-based |
+| **vLLM** (local) | `http://127.0.0.1:8000/v1` | any served model | **Fully offline**, GPU-accelerated |
+| **OpenRouter / OneAPI** | `https://openrouter.ai/api/v1` | `anthropic/claude-3.5-sonnet` | Cloud — aggregates many providers |
+
+`LLM_API_KEY` can be any non-empty string for local providers (Ollama / LM Studio / vLLM do not check it).
+
 ### Self-hosted LLM (optional, for full privacy)
 
 To run **completely offline**, point `LLM_BASE_URL` at a local OpenAI-compatible endpoint (e.g., [Ollama](https://ollama.com), [LM Studio](https://lmstudio.ai), [vLLM](https://github.com/vllm-project/vllm)):
@@ -394,6 +410,22 @@ PCC_LIVE_LOG_LEVEL=info
 ```
 
 > ⚠️ **永远不要将 `.env` 提交到 git。** 它包含你的 API 密钥。仓库的 `.gitignore` 默认排除它。
+
+### 支持的 LLM providers
+
+LLM 客户端使用标准 OpenAI Chat Completions API(`POST /chat/completions` + `Authorization: Bearer ...`),因此**任何 OpenAI 兼容端点**都可以工作。默认是 MiniMax(占位符);通过编辑三个 `LLM_*` 环境变量切换:
+
+| Provider | `LLM_BASE_URL` | `LLM_MODEL` 示例 | 隐私 |
+|---|---|---|---|
+| **MiniMax API**(默认) | `https://api.minimaxi.com/v1` | `MiniMax-M3` | 云端 —— 文本发往 MiniMax |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` | 云端 —— 文本发往 OpenAI |
+| **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<dep>` | `<deployment-name>` | 云端 —— 文本发往 Azure |
+| **Ollama**(本地) | `http://127.0.0.1:11434/v1` | `qwen2.5:14b` | **完全离线** |
+| **LM Studio**(本地) | `http://127.0.0.1:1234/v1` | 任意本地模型 | **完全离线**,基于 GUI |
+| **vLLM**(本地) | `http://127.0.0.1:8000/v1` | 任意已服务模型 | **完全离线**,GPU 加速 |
+| **OpenRouter / OneAPI** | `https://openrouter.ai/api/v1` | `anthropic/claude-3.5-sonnet` | 云端 —— 聚合多家 provider |
+
+对于本地 provider(Ollama / LM Studio / vLLM),`LLM_API_KEY` 可以是任意非空字符串(它们不校验)。
 
 ### 自托管 LLM(可选,完全隐私)
 

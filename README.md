@@ -30,6 +30,24 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 
 ---
 
+## LLM provider flexibility
+
+The default LLM endpoint (`https://api.minimaxi.com/v1`, model `MiniMax-M3`) is a **placeholder** — the code uses the standard OpenAI Chat Completions API, so any OpenAI-compatible endpoint works. Switch by editing `.env`:
+
+| Provider | `LLM_BASE_URL` | Privacy |
+|---|---|---|
+| **MiniMax API** (default) | `https://api.minimaxi.com/v1` | Cloud — text sent to MiniMax |
+| **OpenAI** | `https://api.openai.com/v1` | Cloud — text sent to OpenAI |
+| **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<dep>` | Cloud — text sent to Azure |
+| **Ollama** (local) | `http://127.0.0.1:11434/v1` | **Fully offline** |
+| **LM Studio** (local) | `http://127.0.0.1:1234/v1` | **Fully offline** |
+| **vLLM** (local) | `http://127.0.0.1:8000/v1` | **Fully offline**, GPU-accelerated |
+| **OpenRouter / OneAPI** | `https://openrouter.ai/api/v1` | Cloud — aggregates many providers |
+
+For **fully offline** operation, choose a local provider (Ollama / LM Studio / vLLM). No conversation text leaves your machine. See [INSTALL.md § Self-hosted LLM](INSTALL.md#self-hosted-llm-optional-for-full-privacy) and [PRIVACY.md § Supported LLM providers](PRIVACY.md#supported-llm-providers).
+
+---
+
 ## Architecture (planned)
 
 ```
@@ -98,7 +116,7 @@ For full instructions, see [INSTALL.md](INSTALL.md) and [DEPLOY.md](DEPLOY.md).
 
 - [INSTALL.md](INSTALL.md) — environment setup, venv, FunASR model download
 - [DEPLOY.md](DEPLOY.md) — local deployment, ports, firewall, model cache
-- [PRIVACY.md](PRIVACY.md) — privacy guarantees, MiniMax LLM exception
+- [PRIVACY.md](PRIVACY.md) — privacy guarantees, configurable LLM endpoint
 - [DISCLAIMER.md](DISCLAIMER.md) — ICF boundary, no warranty, no liability
 - [FAQ.md](FAQ.md) — common questions
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — common errors and workarounds
@@ -158,6 +176,24 @@ Third-party attributions:
 - 🔒 **隐私优先** —— FunASR 语音识别**在你 CPU 上本地执行**,从不离开你的机器
 - 🧠 **与现有 pcc-assessor 对齐** —— 节奏特征反馈到现有的 37 标记评估流水线
 - 🌐 **基于浏览器** —— Chrome / Safari 直接使用,只需装 Python
+
+---
+
+## LLM provider 灵活性
+
+默认 LLM 端点(`https://api.minimaxi.com/v1`,模型 `MiniMax-M3`)是**占位符** —— 代码使用标准 OpenAI Chat Completions API,因此任何 OpenAI 兼容端点都可以工作。通过编辑 `.env` 切换:
+
+| Provider | `LLM_BASE_URL` | 隐私 |
+|---|---|---|
+| **MiniMax API**(默认) | `https://api.minimaxi.com/v1` | 云端 —— 文本发往 MiniMax |
+| **OpenAI** | `https://api.openai.com/v1` | 云端 —— 文本发往 OpenAI |
+| **Azure OpenAI** | `https://<resource>.openai.azure.com/openai/deployments/<dep>` | 云端 —— 文本发往 Azure |
+| **Ollama**(本地) | `http://127.0.0.1:11434/v1` | **完全离线** |
+| **LM Studio**(本地) | `http://127.0.0.1:1234/v1` | **完全离线** |
+| **vLLM**(本地) | `http://127.0.0.1:8000/v1` | **完全离线**,GPU 加速 |
+| **OpenRouter / OneAPI** | `https://openrouter.ai/api/v1` | 云端 —— 聚合多家 provider |
+
+要实现**完全离线**运行,选择本地 provider(Ollama / LM Studio / vLLM)。对话文本不会离开你的机器。详见 [INSTALL.md § 自托管 LLM](INSTALL.md#自托管-llm可选完全隐私) 和 [PRIVACY.md § 支持的 LLM providers](PRIVACY.md#支持的-llm-providers)。
 
 ---
 
@@ -235,7 +271,7 @@ python -m phase_b.server
 
 - [INSTALL.md](INSTALL.md) —— 环境设置、venv、FunASR 模型下载
 - [DEPLOY.md](DEPLOY.md) —— 本地部署、端口、防火墙、模型缓存
-- [PRIVACY.md](PRIVACY.md) —— 隐私保证、MiniMax LLM 例外说明
+- [PRIVACY.md](PRIVACY.md) —— 隐私保证、可配置的 LLM 端点
 - [DISCLAIMER.md](DISCLAIMER.md) —— ICF 边界、不作担保、责任限制
 - [FAQ.md](FAQ.md) —— 常见问题
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) —— 常见错误与解决方案
