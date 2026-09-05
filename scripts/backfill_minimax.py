@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-一次性脚本: 把历史所有 Claude Code session jsonl 补录到 progress/token-usage.csv。
+一次性脚本: 把历史所有 Claude Code session jsonl 补录到 observability/token-usage.csv。
 
 场景:Stop hook 是新装的,历史 session 都没自动入账。
      此脚本遍历 ~/.claude/projects/<workspace-hash>/*.jsonl,按 hook 同等逻辑
@@ -10,7 +10,7 @@
   - 已记录的 session_id 跳过(可重跑)
   - agent 字段从 transcript_path 或 jsonl 内容反推(同 hook 逻辑)
   - 模型按 message.model 字段统计,默认 MiniMax-M3
-  - 写在 progress/token-usage.csv
+  - 写在 observability/token-usage.csv
 
 用法:
   python3 scripts/backfill_minimax.py
@@ -27,7 +27,7 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TOKEN_CSV = ROOT / "progress" / "token-usage.csv"
+TOKEN_CSV = ROOT / "observability" / "token-usage.csv"
 PROJECTS_DIR = Path.home() / ".claude" / "projects"
 WORKSPACE_HASH_DIR = next(
     (p for p in PROJECTS_DIR.iterdir() if "Coach-Agents" in p.name),

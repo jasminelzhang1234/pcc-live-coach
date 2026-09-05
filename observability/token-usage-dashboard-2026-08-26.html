@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PCC Token 用量 Dashboard · 26 sessions (2026-08-26)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <style>
+    :root {
+      --bg: #f7f8fb; --card: #ffffff; --border: #e5e8ef;
+      --text: #1c2027; --muted: #5b6473; --accent: #2b6cb0;
+      --good: #2f855a; --warn: #d97706; --bad: #c53030;
+      --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.5;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      background: linear-gradient(135deg, #2b6cb0 0%, #4299e1 100%);
+      color: white; padding: 28px 32px; border-radius: 14px;
+      box-shadow: var(--shadow); margin-bottom: 24px;
+    }
+    header h1 { margin: 0 0 8px 0; font-size: 26px; font-weight: 600; letter-spacing: -0.5px; }
+    header .subtitle { opacity: 0.9; font-size: 14px; margin-bottom: 18px; }
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+    .kpi {
+      background: rgba(255,255,255,0.14); backdrop-filter: blur(8px);
+      padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
+    }
+    .kpi-label { font-size: 12px; opacity: 0.85; margin-bottom: 4px; }
+    .kpi-value { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+    .kpi-sub { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow);
+    }
+    .card h2 { margin: 0 0 4px 0; font-size: 18px; font-weight: 600; }
+    .card .desc { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    .chart-wrap { position: relative; height: 380px; }
+    .chart-wrap.short { height: 320px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 10px 12px; background: #f1f4f7;
+      font-weight: 600; color: var(--muted); border-bottom: 2px solid var(--border);
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    thead th.r { text-align: right; }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: #fafbfd; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: ui-monospace, "SF Mono", monospace; white-space: nowrap; }
+    .callout {
+      padding: 14px 16px; background: #fff8e6; border-left: 3px solid var(--warn);
+      border-radius: 6px; font-size: 13px; color: #5b4406; margin-top: 12px;
+    }
+    .callout.good {
+      background: #f0fff4; border-left-color: var(--good); color: #1c4532;
+    }
+    .legend-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .legend-row .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    footer { margin-top: 32px; padding: 20px; text-align: center; font-size: 12px; color: var(--muted); }
+    .pricing-note {
+      font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.6;
+      background: #f1f4f7; padding: 8px 12px; border-radius: 6px;
+    }
+    .pricing-note code { background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>PCC Token 用量 Dashboard · 26 sessions</h1>
+      <div class="subtitle">
+        数据源 <code style="background:rgba(255,255,255,0.18);padding:2px 6px;border-radius:3px;">token-usage.csv</code> ·
+        31 行 · 自动生成于 2026-08-26 ·
+        风格参照 <code style="background:rgba(255,255,255,0.18);padding:2px 6px;border-radius:3px;">trending-chart</code>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">总费用</div><div class="kpi-value">$187.69</div><div class="kpi-sub">MiniMax M3 公开 API 价估算</div></div>
+        <div class="kpi"><div class="kpi-label">总 tokens</div><div class="kpi-value">259.0M</div><div class="kpi-sub">含 cache_read</div></div>
+        <div class="kpi"><div class="kpi-label">Sessions</div><div class="kpi-value">26</div><div class="kpi-sub">unique</div></div>
+        <div class="kpi"><div class="kpi-label">平均 / session</div><div class="kpi-value">$7.22</div><div class="kpi-sub">cost / session</div></div>
+        <div class="kpi"><div class="kpi-label">Cache 命中率</div><div class="kpi-value">90.4%</div><div class="kpi-sub">cache_read / (input+cache_read)</div></div>
+        <div class="kpi"><div class="kpi-label">最大单笔</div><div class="kpi-value">$66.38</div><div class="kpi-sub">cost / single session</div></div>
+      </div>
+    </header>
+
+    <div class="card">
+      <h2>① 按 Agent 分桶</h2>
+      <p class="desc">每个 agent 累计的 token 构成(input / cache_read / output)+ 估算费用。颜色标识 agent 类型。</p>
+      <div class="chart-wrap"><canvas id="agentChart"></canvas></div>
+      <div class="pricing-note">
+        <strong>解读:</strong>最大单笔 $66.38 (pcc-coachee (陪练) / MiniMax-M3) 占 35.4%;
+        蓝色系 = pcc 三件套(陪练 / 评估 / 追踪);橙色 = 三方校准 DeepSeek。
+        费用仅 MiniMax M3 公开 API 价估算 + DeepSeek V4 Flash 公开 API 价;实际 MiniMax / DeepSeek 平台账单可能不同(取决于订阅优惠)。
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>② 按 Model 占比</h2>
+        <p class="desc">各 model 的费用占比与 token 占比。</p>
+        <div class="chart-wrap short"><canvas id="modelChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>③ 按 Date 趋势</h2>
+        <p class="desc">每天的 token 构成(input / output / cache_read)+ 累计 sessions 数。</p>
+        <div class="chart-wrap short"><canvas id="dateChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>④ 每 session 详情(按 cost 降序)</h2>
+      <p class="desc">31 行数据,只显示前 20 行(点击列头排序见浏览器)。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>session_id</th>
+            <th>agent</th>
+            <th>model</th>
+            <th class="r">input</th>
+            <th class="r">output</th>
+            <th class="r">cache_read</th>
+            <th class="r">total</th>
+            <th class="r">cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-21T13:24:57</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">cf9309f6-1bbf-4c8a-971b-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">6.9M</td>
+            <td style="text-align: right;">1.1M</td>
+            <td style="text-align: right;">95.5M</td>
+            <td style="text-align: right; font-weight: 600;">103.6M</td>
+            <td style="text-align: right; font-weight: 600;">$66.38</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-25T01:32:51</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">b2634fca-9a18-406c-9277-…</td>
+            <td><span class="badge" style="background: #4e79a722; color: #4e79a7;">pcc-assessor (评估)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">4.0M</td>
+            <td style="text-align: right;">509.3K</td>
+            <td style="text-align: right;">30.9M</td>
+            <td style="text-align: right; font-weight: 600;">35.4M</td>
+            <td style="text-align: right; font-weight: 600;">$28.81</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-26T04:20:43</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">26096f98-034a-4bb8-bc37-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">3.7M</td>
+            <td style="text-align: right;">464.6K</td>
+            <td style="text-align: right;">30.3M</td>
+            <td style="text-align: right; font-weight: 600;">34.5M</td>
+            <td style="text-align: right; font-weight: 600;">$27.27</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-23T11:38:36</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">82e6eda4-5a9e-4044-a081-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">1.2M</td>
+            <td style="text-align: right;">240.9K</td>
+            <td style="text-align: right;">14.1M</td>
+            <td style="text-align: right; font-weight: 600;">15.5M</td>
+            <td style="text-align: right; font-weight: 600;">$11.31</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-26T04:21:09</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">f5294067-f0ef-4774-b055-…</td>
+            <td><span class="badge" style="background: #94a3b822; color: #94a3b8;">(unknown)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">823.0K</td>
+            <td style="text-align: right;">236.1K</td>
+            <td style="text-align: right;">9.8M</td>
+            <td style="text-align: right; font-weight: 600;">10.9M</td>
+            <td style="text-align: right; font-weight: 600;">$8.95</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-24T02:21:24</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">df20ce63-f09d-478b-b61c-…</td>
+            <td><span class="badge" style="background: #4e79a722; color: #4e79a7;">pcc-assessor (评估)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">1.7M</td>
+            <td style="text-align: right;">148.5K</td>
+            <td style="text-align: right;">5.6M</td>
+            <td style="text-align: right; font-weight: 600;">7.4M</td>
+            <td style="text-align: right; font-weight: 600;">$8.92</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-23T09:40:03</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">c482458d-afca-4cd9-8510-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">1.1M</td>
+            <td style="text-align: right;">131.7K</td>
+            <td style="text-align: right;">10.6M</td>
+            <td style="text-align: right; font-weight: 600;">11.9M</td>
+            <td style="text-align: right; font-weight: 600;">$8.48</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-22T13:04:55</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">8676b5c9-c9aa-4ca2-8afe-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">312.8K</td>
+            <td style="text-align: right;">116.1K</td>
+            <td style="text-align: right;">8.1M</td>
+            <td style="text-align: right; font-weight: 600;">8.5M</td>
+            <td style="text-align: right; font-weight: 600;">$5.09</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-23T06:08:07</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">ba1ab438-a05d-4244-ba0f-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">195.7K</td>
+            <td style="text-align: right;">98.6K</td>
+            <td style="text-align: right;">9.4M</td>
+            <td style="text-align: right; font-weight: 600;">9.7M</td>
+            <td style="text-align: right; font-weight: 600;">$4.89</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-22T06:11:41</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">fb2e3fe0-c392-47e7-8b7c-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">472.7K</td>
+            <td style="text-align: right;">85.8K</td>
+            <td style="text-align: right;">5.9M</td>
+            <td style="text-align: right; font-weight: 600;">6.5M</td>
+            <td style="text-align: right; font-weight: 600;">$4.48</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-26T04:20:44</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">091fd469-2c88-4a85-994a-…</td>
+            <td><span class="badge" style="background: #94a3b822; color: #94a3b8;">(unknown)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">836.5K</td>
+            <td style="text-align: right;">46.6K</td>
+            <td style="text-align: right;">1.8M</td>
+            <td style="text-align: right; font-weight: 600;">2.7M</td>
+            <td style="text-align: right; font-weight: 600;">$3.74</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-23T01:15:02</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">8cc35f1b-8b2e-4421-afac-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">459.2K</td>
+            <td style="text-align: right;">92.3K</td>
+            <td style="text-align: right;">2.1M</td>
+            <td style="text-align: right; font-weight: 600;">2.6M</td>
+            <td style="text-align: right; font-weight: 600;">$3.39</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-21T14:07:27</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">432f1c39-4995-4bec-9994-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">571.7K</td>
+            <td style="text-align: right;">57.6K</td>
+            <td style="text-align: right;">2.4M</td>
+            <td style="text-align: right; font-weight: 600;">3.0M</td>
+            <td style="text-align: right; font-weight: 600;">$3.30</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-23T04:00:58</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">484e52cf-db05-4a21-98f2-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">deepseek-v4-flash</td>
+            <td style="text-align: right;">674.7K</td>
+            <td style="text-align: right;">464.9K</td>
+            <td style="text-align: right;">684.0K</td>
+            <td style="text-align: right; font-weight: 600;">1.8M</td>
+            <td style="text-align: right; font-weight: 600;">$0.69</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-23T01:23:53</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">8813879d-f24c-4eac-a6ce-…</td>
+            <td><span class="badge" style="background: #94a3b822; color: #94a3b8;">(unknown)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">154.7K</td>
+            <td style="text-align: right;">12.5K</td>
+            <td style="text-align: right;">90.8K</td>
+            <td style="text-align: right; font-weight: 600;">258.0K</td>
+            <td style="text-align: right; font-weight: 600;">$0.68</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-22T05:05:09</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">c61268be-45a4-4bf5-9086-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">deepseek-v4-flash</td>
+            <td style="text-align: right;">695.1K</td>
+            <td style="text-align: right;">191.8K</td>
+            <td style="text-align: right;">504.6K</td>
+            <td style="text-align: right; font-weight: 600;">1.4M</td>
+            <td style="text-align: right; font-weight: 600;">$0.40</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-22T06:19:21</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">fb1834a0-77aa-463d-961a-…</td>
+            <td><span class="badge" style="background: #94a3b822; color: #94a3b8;">(unknown)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">94.4K</td>
+            <td style="text-align: right;">2.8K</td>
+            <td style="text-align: right;">92.2K</td>
+            <td style="text-align: right; font-weight: 600;">189.4K</td>
+            <td style="text-align: right; font-weight: 600;">$0.35</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-26T04:20:44</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">168fd19f-6476-42e7-aa96-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">MiniMax-M3</td>
+            <td style="text-align: right;">25.8K</td>
+            <td style="text-align: right;">5.9K</td>
+            <td style="text-align: right;">358.9K</td>
+            <td style="text-align: right; font-weight: 600;">390.6K</td>
+            <td style="text-align: right; font-weight: 600;">$0.27</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-21T13:24:57</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">cf9309f6-1bbf-4c8a-971b-…</td>
+            <td><span class="badge" style="background: #2b6cb022; color: #2b6cb0;">pcc-coachee (陪练)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">deepseek-v4-flash</td>
+            <td style="text-align: right;">524.8K</td>
+            <td style="text-align: right;">107.3K</td>
+            <td style="text-align: right;">2.2M</td>
+            <td style="text-align: right; font-weight: 600;">2.8M</td>
+            <td style="text-align: right; font-weight: 600;">$0.26</td>
+          </tr>
+          <tr>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">2026-08-24T12:00:00</td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">vec01-deepseek-01-2026-0…</td>
+            <td><span class="badge" style="background: #f28e2b22; color: #f28e2b;">pcc-second-judge-deepseek (三方校准)</span></td>
+            <td style="font-family: ui-monospace, monospace; font-size: 11px;">deepseek-v4-flash</td>
+            <td style="text-align: right;">5.5K</td>
+            <td style="text-align: right;">3.0K</td>
+            <td style="text-align: right;">0</td>
+            <td style="text-align: right; font-weight: 600;">8.5K</td>
+            <td style="text-align: right; font-weight: 600;">$0.48¢</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      数据来源: <code>observability/token-usage.csv</code> · 定价表 <code>scripts/calc_token_cost.py</code> ·
+      Stop hook <code>scripts/hook_token_usage.py</code> · 生成于 2026-08-26
+    </footer>
+  </div>
+
+  <script>
+    const agentData = {"labels": ["pcc-coachee (陪练)", "pcc-assessor (评估)", "(unknown)", "pcc-second-judge-deepseek (三方校准)"], "datasets": [{"label": "input", "data": [16796852, 5633574, 1908559, 36457], "backgroundColor": ["#2b6cb0", "#4e79a7", "#94a3b8", "#f28e2b"]}, {"label": "cache_read", "data": [182170991, 36526012, 11762057, 0], "backgroundColor": ["#2b6cb0cc", "#4e79a7cc", "#94a3b8cc", "#f28e2bcc"]}, {"label": "output", "data": [3197902, 657764, 298036, 24000], "backgroundColor": ["#2b6cb088", "#4e79a788", "#94a3b888", "#f28e2b88"]}], "costs": [136.205, 37.725, 13.7248, 0.0362], "keys": ["pcc-coachee", "pcc-assessor", "(unknown)", "pcc-second-judge-deepseek"]};
+    const modelData = {"labels": ["MiniMax-M3", "deepseek-v4-flash", "<synthetic>"], "costs": [186.3029, 1.3882, 0.0], "tokens": [252914635, 6097569, 0], "colors": ["#2b6cb0", "#f28e2b", "#94a3b8"]};
+    const dateData  = {"labels": ["2026-08-21", "2026-08-22", "2026-08-23", "2026-08-24", "2026-08-25", "2026-08-26"], "data": {"input": [7966274, 1587080, 3762735, 1673405, 3965699, 5420249], "output": [1305321, 405521, 1052885, 151460, 509304, 753211], "cache_read": [100132326, 14556406, 37000362, 5615791, 30910221, 42243954], "cache_write": [0, 0, 0, 0, 0, 0], "cost": [69.937, 10.3375, 29.4547, 8.9201, 28.8097, 40.2321], "sessions": [2, 7, 10, 2, 1, 4]}};
+
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
+    Chart.defaults.color = '#5b6473';
+
+    // ===== ① 按 Agent 横向 stacked bar =====
+    new Chart(document.getElementById('agentChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: agentData.labels,
+        datasets: agentData.datasets.map((d, i) => ({
+          ...d,
+          borderRadius: 4,
+          borderSkipped: false,
+          stack: 'tokens',
+        })),
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 12 } },
+          tooltip: {
+            backgroundColor: 'rgba(28, 32, 39, 0.92)', padding: 12,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.x;
+                return `${ctx.dataset.label}: ${v >= 1000 ? (v/1000).toFixed(1) + 'K' : v}`;
+              },
+              footer: (items) => {
+                const idx = items[0].dataIndex;
+                return [
+                  `─────`,
+                  `cost: $${agentData.costs[idx].toFixed(4)}`,
+                  `sessions: ${agentData.keys.length}`,
+                ].join("\n");
+              },
+            },
+          },
+        },
+        scales: {
+          x: { stacked: true, beginAtZero: true, ticks: { callback: (v) => v >= 1000 ? (v/1000) + 'K' : v }, grid: { color: '#eef0f4' } },
+          y: { stacked: true, grid: { display: false } },
+        },
+      },
+    });
+
+    // ===== ② 按 Model bar(cost) =====
+    new Chart(document.getElementById('modelChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: modelData.labels,
+        datasets: [{
+          label: 'cost (USD)',
+          data: modelData.costs,
+          backgroundColor: modelData.colors,
+          borderRadius: 4,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(28, 32, 39, 0.92)', padding: 12,
+            callbacks: {
+              label: (ctx) => {
+                const i = ctx.dataIndex;
+                return [
+                  `cost: $${modelData.costs[i].toFixed(4)}`,
+                  `tokens: ${modelData.tokens[i].toLocaleString()}`,
+                ];
+              },
+            },
+          },
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { callback: (v) => '$' + v.toFixed(2) }, grid: { color: '#eef0f4' } },
+          y: { grid: { display: false } },
+        },
+      },
+    });
+
+    // ===== ③ 按 Date line chart =====
+    new Chart(document.getElementById('dateChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: dateData.labels,
+        datasets: [
+          { label: 'input',       data: dateData.data.input,       borderColor: '#2b6cb0', backgroundColor: 'rgba(43,108,176,0.08)', borderWidth: 2.5, tension: 0.25, pointRadius: 5, pointHoverRadius: 7, fill: false },
+          { label: 'cache_read',  data: dateData.data.cache_read,  borderColor: '#76b7b2', backgroundColor: 'rgba(118,183,178,0.08)', borderWidth: 2.5, tension: 0.25, pointRadius: 5, pointHoverRadius: 7, fill: false },
+          { label: 'output',      data: dateData.data.output,      borderColor: '#f28e2b', backgroundColor: 'rgba(242,142,43,0.08)',  borderWidth: 2.5, tension: 0.25, pointRadius: 5, pointHoverRadius: 7, fill: false },
+          { label: 'cache_write', data: dateData.data.cache_write, borderColor: '#e15759', backgroundColor: 'rgba(225,87,89,0.08)',  borderWidth: 2.5, tension: 0.25, pointRadius: 5, pointHoverRadius: 7, fill: false },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, padding: 12 } },
+          tooltip: {
+            backgroundColor: 'rgba(28, 32, 39, 0.92)', padding: 12,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                return `${ctx.dataset.label}: ${v >= 1000 ? (v/1000).toFixed(1) + 'K' : v}`;
+              },
+              footer: (items) => {
+                const idx = items[0].dataIndex;
+                return [
+                  `─────`,
+                  `cost: $${dateData.data.cost[idx].toFixed(4)}`,
+                  `sessions: ${dateData.data.sessions[idx]}`,
+                ].join("\n");
+              },
+            },
+          },
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: (v) => v >= 1000 ? (v/1000) + 'K' : v }, grid: { color: '#eef0f4' } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  </script>
+</body>
+</html>

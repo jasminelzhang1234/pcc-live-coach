@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-一次性脚本: 把历史 8 场 DeepSeek 评估补录到 progress/token-usage.csv。
+一次性脚本: 把历史 8 场 DeepSeek 评估补录到 observability/token-usage.csv。
 
 历史是手动流程(复制粘贴到 chat.deepseek.com),没有真实 token 记录。
 这里用文件大小估算(中英混合 ~4 字符/token)。
@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TOKEN_CSV = ROOT / "progress" / "token-usage.csv"
+TOKEN_CSV = ROOT / "observability" / "token-usage.csv"
 TEMPLATE = ROOT / "progress" / "prompts" / "second-judge-deepseek-template.md"
 PROMPTS_DIR = ROOT / "progress" / "prompts"
 

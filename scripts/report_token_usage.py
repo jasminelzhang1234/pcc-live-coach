@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-读 progress/token-usage.csv,生成 markdown 汇总报告。
+读 observability/token-usage.csv,生成 markdown 汇总报告。
 
-输出:progress/token-usage-report-{YYYY-MM-DD}.md
+输出:observability/token-usage-report-{YYYY-MM-DD}.md
 
 包含:
   - 总账(总 token / 总费用 / 平均每 session)
@@ -22,7 +22,7 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TOKEN_CSV = ROOT / "progress" / "token-usage.csv"
+TOKEN_CSV = ROOT / "observability" / "token-usage.csv"
 
 
 def load_rows(csv_path: Path) -> list[dict]:
@@ -129,7 +129,7 @@ def main() -> int:
     agg = aggregate(rows)
     md = render_md(rows, agg)
 
-    out_path = ROOT / "progress" / f"token-usage-report-{date.today().isoformat()}.md"
+    out_path = ROOT / "observability" / f"token-usage-report-{date.today().isoformat()}.md"
     out_path.write_text(md, encoding="utf-8")
 
     total_tokens = sum(int(r.get("total_tokens") or 0) for r in rows)

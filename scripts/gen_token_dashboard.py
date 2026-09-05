@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """gen_token_dashboard.py — 从 token-usage.csv 自动生成 token 用量 dashboard HTML。
 
-读取 progress/token-usage.csv,按 (timestamp, agent) 排序,
-输出 progress/token-usage-dashboard-{date}.html。
+读取 observability/token-usage.csv,按 (timestamp, agent) 排序,
+输出 observability/token-usage-dashboard-{date}.html。
 
 视觉风格沿用 trending-chart-2026-08-26.html(用户接受):
 - 蓝色 header + KPI 卡片
@@ -25,8 +25,8 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV = ROOT / "progress" / "token-usage.csv"
-PROGRESS = ROOT / "progress"
+CSV = ROOT / "observability" / "token-usage.csv"
+PROGRESS = ROOT / "observability"
 
 # 沿用 trending-chart palette
 AGENT_COLORS = {
@@ -432,7 +432,7 @@ __DETAIL_ROWS__
     </div>
 
     <footer>
-      数据来源: <code>progress/token-usage.csv</code> · 定价表 <code>scripts/calc_token_cost.py</code> ·
+      数据来源: <code>observability/token-usage.csv</code> · 定价表 <code>scripts/calc_token_cost.py</code> ·
       Stop hook <code>scripts/hook_token_usage.py</code> · 生成于 __TODAY__
     </footer>
   </div>

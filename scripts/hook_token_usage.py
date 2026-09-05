@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Stop hook: 每次 Claude Code session 结束,把 token 用量 + 估算费用
-append 到 progress/token-usage.csv。
+append 到 observability/token-usage.csv。
 
 注册位置:.claude/settings.json 的 hooks.Stop
 触发时机:Claude Code 用户结束,或 agent 任务跑完
@@ -38,7 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from calc_token_cost import calc_session_cost  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-TOKEN_CSV = ROOT / "progress" / "token-usage.csv"
+TOKEN_CSV = ROOT / "observability" / "token-usage.csv"
 PROJECTS_DIR = Path.home() / ".claude" / "projects"
 
 CSV_HEADER = [

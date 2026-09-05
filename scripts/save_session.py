@@ -3,7 +3,7 @@
 ⚠️  已废弃 (deprecated 2026-09-04)
 
 把一份陪练对话 + 评估报告归档到 sessions/,加 frontmatter,
-并在 progress/T11-冒烟测试.md 追加一行 L2 记录。
+并在 notes/T11-冒烟测试.md 追加一行 L2 记录。
 
 用法:
     python scripts/save_session.py \\
@@ -43,7 +43,7 @@ PRACTICE_LOGS_DIR = PROJECT_ROOT / "practice-logs"
 # 历史:sessions/assessments/ 在 2026-08-23 之前是 pcc-assessor 报告的默认落点,
 # 但已被 practice-logs/ 取代 — practice-logs/ 是权威详细报告的唯一位置。
 ASSESSMENTS_DIR = PRACTICE_LOGS_DIR
-T11_PATH = PROJECT_ROOT / "progress" / "T11-冒烟测试.md"
+T11_PATH = PROJECT_ROOT / "notes" / "T11-冒烟测试.md"
 
 # T11 表格的列定义(L2 跑分记录区);新增 row 严格对齐
 T11_COLUMNS = ["| 日期 ", " | Persona ", " | 时长 ", " | Assessor ", " | 关键发现 ", " | 归档路径 ", " | 状态 |"]
