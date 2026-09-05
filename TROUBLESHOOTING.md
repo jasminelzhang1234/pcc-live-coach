@@ -1,11 +1,11 @@
 # Troubleshooting
 
-> **状态**:stub — 详细内容待写。
+> **状态**:in progress — 内容随代码状态同步更新。
 
 ## 启动错误
 
 - **`ModuleNotFoundError`**:venv 没激活,或没跑 `pip install -e .`
-- **`port 8765 already in use`**:`PCC_LIVE_PORT=8766 python -m pcc_live_coach.server` 换一个
+- **`port 8765 already in use`**:`PCC_LIVE_PORT=8766 python -m phase_b.server` 换一个
 - **`Refusing to bind 0.0.0.0`**:默认拒绝 LAN 暴露;设 `PCC_LIVE_ALLOW_LAN=1` 才会放开
 
 ## 模型错误

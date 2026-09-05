@@ -1,6 +1,6 @@
 # Changelog
 
-> **状态**:stub — 项目变更日志待启动。隐私策略变更由 [PRIVACY.md](PRIVACY.md) 引用本文档。
+> **状态**:in progress — 变更随发布节奏登记。隐私策略变更由 [PRIVACY.md](PRIVACY.md) 引用本文档。
 
 ## 格式计划
 

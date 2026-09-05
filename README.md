@@ -43,10 +43,10 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 ┌────────────────────▼─────────────────────────────────────┐
 │  FastAPI / WebSocket server (single process, ~600 LoC)    │
 │  ├─ Audio ingest → STT queue                              │
-│  ├─ FunASR paraformer-zh-streaming (local, CPU)          │
+│  ├─ FunASR iic/SenseVoiceSmall (local, CPU)          │
 │  ├─ STT text → LLM (HTTP streaming)                       │
 │  ├─ LLM stream → TTS (WebSocket streaming)                │
-│  ├─ silero-vad barge-in: client speaks → stop TTS + LLM  │
+│  ├─ fsmn-vad barge-in: client speaks → stop TTS + LLM  │
 │  └─ Rhythm feature extraction (silence / CPM / barge-in)   │
 └────────────────────┬─────────────────────────────────────┘
                      │
@@ -62,23 +62,23 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 
 ## Status
 
-This README documents the **intended** functionality. The actual code is not yet implemented. Tracked preparation work:
+> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 2311 LoC) and frontend (`phase_b/static/`, 614 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
 
 - ✅ Technical spike complete — see [spike report](../../phase-b-spike-report-2026-09-01.md) · [GitHub research delta](../../phase-b-github-research-2026-09-01.md)
 - ✅ Environment validated — FunASR 1.4.11 on Python 3.9 + CPU torch, RTF 0.029 on M3 Pro
 - ✅ HTTP API validated — `/v1/audio/transcriptions` returns correct text for real client audio
 - ✅ MCP server validated — funasr_mcp.py imports and exposes `transcribe(audio_path, language="auto")` tool
 - ✅ Wireframe — see [phase-b-wireframe-2026-09-03.html](../../phase-b-wireframe-2026-09-03.html) (3 pages, static HTML, no JS)
-- ❌ Backend code — not started (awaiting parent project trigger conditions)
-- ❌ Frontend code — only wireframe exists
+- ⚠️ Backend code — `phase_b/` (26 .py files, 2311 LoC) + 9 test files under `tests/phase_b/`. **Shipped, not enabled.**
+- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + styles.css, 614 LoC). **Shipped, not enabled.**
 
-**Why is the code not started?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](../../../../PCC-陪练与评估-Agent-设计方案.html)) explicitly says "do not pre-develop". Trigger conditions:
+**Why "shipped but not enabled"?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](../../../../PCC-陪练与评估-Agent-设计方案.html)) defines trigger conditions for activating Phase B:
 
 1. ≥10 complete real-coach practice sessions
 2. Structural problems (issue clarification, closing design, cognitive breakthrough) consistently resolved
 3. Remaining weaknesses concentrated in 5.5 / 6.6 / 7.6
 
-We are at 1 real session. We are not there yet. These prep docs are written ahead of code so the launch process is well-understood.
+We are at 1 real session. Conditions are not yet met — the code is committed so the launch process stays well-understood, but it should not be treated as a production-ready product.
 
 ---
 
@@ -174,10 +174,10 @@ Third-party attributions:
 ┌────────────────────▼─────────────────────────────────────┐
 │  FastAPI / WebSocket server (单进程,~600 行 Python)       │
 │  ├─ 音频接收 → STT 队列                                  │
-│  ├─ FunASR paraformer-zh-streaming (本地, CPU)          │
+│  ├─ FunASR iic/SenseVoiceSmall (本地, CPU)          │
 │  ├─ STT 文本 → LLM (HTTP 流式)                           │
 │  ├─ LLM 流 → TTS (WebSocket 流式)                        │
-│  ├─ silero-vad barge-in: 客户说话 → 停 TTS + 取消 LLM    │
+│  ├─ fsmn-vad barge-in: 客户说话 → 停 TTS + 取消 LLM    │
 │  └─ 节奏特征提取 (沉默 / CPM / 打断)                     │
 └────────────────────┬─────────────────────────────────────┘
                      │
@@ -193,27 +193,27 @@ Third-party attributions:
 
 ## 当前状态
 
-本 README 描述的是**预期**功能。实际代码尚未实现。已完成的准备工作:
+> ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,2311 行)+ 前端(`phase_b/static/`,614 行)已提交且可通过 `./start.sh` 启动,但产品稳定性未根据母项目触发条件(见下)验证。如果你现在试用,预计会遇到边缘情况。
 
 - ✅ 技术 spike 完成 — 详见 [spike 报告](../../phase-b-spike-report-2026-09-01.md) · [GitHub 调研追加](../../phase-b-github-research-2026-09-01.md)
 - ✅ 环境已验证 — FunASR 1.4.11 + Python 3.9 + CPU torch,M3 Pro 上 RTF 0.029
 - ✅ HTTP API 已验证 — `/v1/audio/transcriptions` 对真实客户音频返回正确文本
 - ✅ MCP server 已验证 — funasr_mcp.py import OK,暴露 `transcribe(audio_path, language="auto")` 工具
 - ✅ Wireframe — 详见 [phase-b-wireframe-2026-09-03.html](../../phase-b-wireframe-2026-09-03.html)(3 页静态 HTML)
-- ❌ 后端代码 —— 未开工(等待母项目触发条件)
-- ❌ 前端代码 —— 只有 wireframe
+- ⚠️ 后端代码 — `phase_b/`(26 个 .py 文件,2311 行)+ `tests/phase_b/` 下 9 个测试文件。**已写、未启用。**
+- ⚠️ 前端代码 — `phase_b/static/`(index.html + app.js + styles.css,614 行)。**已写、未启用。**
 
-**为什么代码还没开工?** 母项目 spec ([`PCC-陪练与评估-Agent-设计方案.html`](../../../../PCC-陪练与评估-Agent-设计方案.html)) 明确说"不预先开发"。触发条件:
+**为什么"已写但未启用"?** 母项目 spec ([`PCC-陪练与评估-Agent-设计方案.html`](../../../../PCC-陪练与评估-Agent-设计方案.html)) 定义了 Phase B 启动的触发条件:
 
 1. Phase A 已完成 ≥10 场完整真人陪练
 2. tracker 显示结构性问题(议题澄清、结尾设计、认知突破)已稳定解决
 3. 剩余差距集中在 5.5 / 6.6 / 7.6(只有实时语音才能练的维度)
 
-当前状态:**1 场真人陪练**(2026-08-31)。条件未满足。这些准备文档先于代码写好,是为了发布流程清晰可控。
+当前状态:**1 场真人陪练**(2026-08-31)。条件未满足。代码已提交是为了发布流程清晰可控,但**不应视为生产就绪产品**。
 
 ---
 
-## 快速开始(占位 —— 代码尚未发布)
+## 快速开始(代码已写、暂未启用)
 
 代码发布后,本节将包含:
 
@@ -223,7 +223,7 @@ cd pcc-live-coach
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m pcc_live_coach.server
+python -m phase_b.server
 # 浏览器打开 http://127.0.0.1:8000
 ```
 

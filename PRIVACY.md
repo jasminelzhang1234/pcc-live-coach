@@ -24,7 +24,7 @@ The browser captures microphone audio using the Web Audio API at 16kHz mono PCM.
 
 ### 2. Speech-to-text (STT)
 
-Speech recognition runs **locally** using [FunASR](https://github.com/modelscope/FunASR) with the `paraformer-zh-streaming` model. Model weights are downloaded once from ModelScope hub (~220 MB) and cached in `~/.cache/modelscope/`. After the first download, no network connection is required for STT.
+Speech recognition runs **locally** using [FunASR](https://github.com/modelscope/FunASR) with the `iic/SenseVoiceSmall` model. Model weights are downloaded once from ModelScope hub (~220 MB) and cached in `~/.cache/modelscope/`. After the first download, no network connection is required for STT.
 
 **No audio or transcript is sent to any third-party STT service** (e.g., Alibaba Cloud ASR, iFlytek, Google Speech). If you modify the backend to use such a service, you do so at your own risk and must update this policy accordingly.
 
@@ -120,7 +120,7 @@ If the tool's privacy posture changes (e.g., optional cloud feature added), this
 
 ### 2. 语音转文字(STT)
 
-语音识别**本地运行**,使用 [FunASR](https://github.com/modelscope/FunASR) 的 `paraformer-zh-streaming` 模型。模型权重从 ModelScope hub 一次性下载(~220 MB)并缓存到 `~/.cache/modelscope/`。首次下载后,STT 无需任何网络连接。
+语音识别**本地运行**,使用 [FunASR](https://github.com/modelscope/FunASR) 的 `iic/SenseVoiceSmall` 模型。模型权重从 ModelScope hub 一次性下载(~220 MB)并缓存到 `~/.cache/modelscope/`。首次下载后,STT 无需任何网络连接。
 
 **音频和转写文本不会发送到任何第三方 STT 服务**(如阿里云 ASR、讯飞、Google Speech)。如果你修改后端使用此类服务,你需自行承担风险,并相应更新本策略。
 

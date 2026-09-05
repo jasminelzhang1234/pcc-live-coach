@@ -1,6 +1,6 @@
 # Code of Conduct
 
-> **状态**:stub — 详细内容待写。
+> **状态**:in progress — 内容随代码状态同步更新。
 
 ## Our pledge
 

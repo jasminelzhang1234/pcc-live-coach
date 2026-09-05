@@ -1,6 +1,6 @@
 # DEPLOY
 
-> **状态**:stub — 详细内容待写。基本启动方式见 [INSTALL.md](INSTALL.md)。
+> **状态**:in progress — 内容随代码状态同步更新。基本启动方式见 [INSTALL.md](INSTALL.md)。
 
 ## Local deployment
 
@@ -14,5 +14,5 @@
 
 ## Model cache
 
-- FunASR(`paraformer-zh-streaming`):`~/.cache/modelscope/`(~220 MB,首次下载后离线可用)
+- FunASR(`iic/SenseVoiceSmall`):`~/.cache/modelscope/`(~220 MB,首次下载后离线可用)
 - BGE-M3 embeddings(若启用):`~/Library/Caches/.../chroma/onnx_models/all-MiniLM-L6-v2/`

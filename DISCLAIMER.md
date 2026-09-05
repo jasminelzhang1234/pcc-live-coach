@@ -61,7 +61,7 @@ Specifically:
 
 ## 6. Speech recognition accuracy
 
-The default speech recognition model ([FunASR paraformer-zh-streaming](https://github.com/modelscope/FunASR)) achieves ~4.2% Word Error Rate on standard Mandarin benchmarks. Real-world accuracy varies with audio quality, accents, domain vocabulary, and background noise. Common failure modes include:
+The default speech recognition model ([FunASR iic/SenseVoiceSmall](https://github.com/modelscope/FunASR)) achieves the Word Error Rate published on its model card (varies by benchmark — see [ModelScope hub](https://www.modelscope.cn/models/iic/SenseVoiceSmall)). Real-world accuracy varies with audio quality, accents, domain vocabulary, and background noise. Common failure modes include:
 
 - English technical terms ("CEO", "OKR", "AI") may be misrecognized.
 - Proper nouns may be hallucinated.
@@ -154,7 +154,7 @@ ICF 要求认证申请包含**真实客户**(而非 AI 人格)的会谈录音。
 
 ## 6. 语音识别准确度
 
-默认语音识别模型([FunASR paraformer-zh-streaming](https://github.com/modelscope/FunASR))在标准普通话基准上达到约 4.2% WER(词错误率)。真实场景准确度因音频质量、口音、领域词汇和背景噪音而异。常见失败模式包括:
+默认语音识别模型([FunASR iic/SenseVoiceSmall](https://github.com/modelscope/FunASR))的 WER(词错误率)见其模型卡片(因基准而异 —— 详见 [ModelScope hub](https://www.modelscope.cn/models/iic/SenseVoiceSmall))。真实场景准确度因音频质量、口音、领域词汇和背景噪音而异。常见失败模式包括:
 
 - 英语技术术语("CEO"、"OKR"、"AI")可能被错误识别
 - 专有名词可能被幻觉生成

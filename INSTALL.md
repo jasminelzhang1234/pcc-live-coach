@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-03
 
-> ⚠️ This document describes installation of the **planned** PCC Live Coach system. The actual code has not been released yet — these instructions will become executable once the first tagged version ships.
+> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 2311 LoC) and frontend (`phase_b/static/`, 614 LoC) are committed. This document describes how to install and run them, but the product has not been validated against trigger conditions — expect rough edges.
 >
 > The instructions below are based on the environment validation report ([phase-b-env-setup-2026-09-01.md](../../phase-b-env-setup-2026-09-01.md)) which proved the stack works end-to-end on macOS M-series with Python 3.9.
 
@@ -27,7 +27,7 @@ Last updated: 2026-09-03
 
 ### Network (first run only)
 
-- ~220 MB download from ModelScope hub for the FunASR `paraformer-zh-streaming` model.
+- ~220 MB download from ModelScope hub for the FunASR `iic/SenseVoiceSmall` model.
 - HuggingFace Hub access if you switch to a non-ModelScope model.
 - Outbound HTTPS to your LLM endpoint (default: MiniMax API).
 - Outbound HTTPS to your TTS endpoint (default: MiniMax T2A).
@@ -103,10 +103,10 @@ If `pip install funasr` fails in your environment (this was observed during the 
 
 ## 5. Download the FunASR model (first run only)
 
-The default ASR model is `paraformer-zh-streaming` from ModelScope. It is downloaded automatically the first time you run the server. To pre-download:
+The default ASR model is `iic/SenseVoiceSmall` from ModelScope. It is downloaded automatically the first time you run the server. To pre-download:
 
 ```bash
-python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-streaming')"
+python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
 ```
 
 The model is cached in `~/.cache/modelscope/` (~220 MB). Subsequent runs use the cache and require no network.
@@ -117,7 +117,7 @@ If you want a different ASR model (e.g., for Cantonese, English, or code-switchi
 
 ```yaml
 asr:
-  model: "paraformer-zh-streaming"   # default
+  model: "iic/SenseVoiceSmall"   # default
   # model: "paraformer-en-streaming" # English
   # model: "SenseVoiceSmall"         # multilingual, larger
 ```
@@ -143,9 +143,9 @@ TTS_MODEL=speech-2.6-hd
 TTS_VOICE=male-qn-jingying
 
 # Server
-HOST=127.0.0.1
-PORT=8765
-LOG_LEVEL=info
+PCC_LIVE_HOST=127.0.0.1
+PCC_LIVE_PORT=8765
+PCC_LIVE_LOG_LEVEL=info
 ```
 
 > ⚠️ **Never commit `.env` to git.** It contains your API keys. The repo's `.gitignore` excludes it by default.
@@ -173,10 +173,10 @@ Once the code ships:
 python -c "import funasr, torch, fastapi, websockets; print('OK')"
 
 # Check FunASR model is downloaded
-ls ~/.cache/modelscope/hub/  # should contain paraformer-zh-streaming
+ls ~/.cache/modelscope/hub/  # should contain iic/SenseVoiceSmall
 
 # Start the server (planned command)
-python -m pcc_live_coach.server
+python -m phase_b.server
 
 # Open browser to http://127.0.0.1:8765
 ```
@@ -184,7 +184,7 @@ python -m pcc_live_coach.server
 Expected log output:
 
 ```
-[INFO] FunASR model loaded: paraformer-zh-streaming
+[INFO] FunASR model loaded: iic/SenseVoiceSmall
 [INFO] LLM endpoint: https://api.minimaxi.com/v1 (model=MiniMax-M3)
 [INFO] TTS endpoint: wss://api.minimaxi.com/ws/v1/t2a_v2 (model=speech-2.6-hd)
 [INFO] Server listening on http://127.0.0.1:8765
@@ -234,8 +234,8 @@ pip install -e . --upgrade
 FunASR models do not auto-update. To upgrade the ASR model:
 
 ```bash
-rm -rf ~/.cache/modelscope/hub/paraformer-zh-streaming
-python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-streaming')"
+rm -rf ~/.cache/modelscope/hub/iic/SenseVoiceSmall
+python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
 ```
 
 ---
@@ -247,7 +247,7 @@ python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-stre
 
 最后更新:2026-09-03
 
-> ⚠️ 本文档描述**计划中**的 PCC Live Coach 系统安装步骤。实际代码尚未发布 —— 这些说明将在第一个标记版本发布后变为可执行。
+> ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,2311 行)和前端(`phase_b/static/`,614 行)已提交。本文档说明如何安装和运行,但产品未根据触发条件验证 —— 预计会遇到边缘情况。
 >
 > 以下说明基于环境验证报告([phase-b-env-setup-2026-09-01.md](../../phase-b-env-setup-2026-09-01.md)),该报告证明该技术栈在 macOS M 系列 + Python 3.9 上端到端可用。
 
@@ -272,7 +272,7 @@ python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-stre
 
 ### 网络(仅首次运行)
 
-- 从 ModelScope hub 下载 ~220 MB 的 FunASR `paraformer-zh-streaming` 模型
+- 从 ModelScope hub 下载 ~220 MB 的 FunASR `iic/SenseVoiceSmall` 模型
 - 如果切换到非 ModelScope 模型,需要 HuggingFace Hub 访问
 - 你的 LLM 端点的出站 HTTPS(默认:MiniMax API)
 - 你的 TTS 端点的出站 HTTPS(默认:MiniMax T2A)
@@ -348,10 +348,10 @@ hydra-core
 
 ## 5. 下载 FunASR 模型(仅首次运行)
 
-默认 ASR 模型是 ModelScope 的 `paraformer-zh-streaming`。它在你第一次运行服务器时自动下载。要预下载:
+默认 ASR 模型是 ModelScope 的 `iic/SenseVoiceSmall`。它在你第一次运行服务器时自动下载。要预下载:
 
 ```bash
-python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-streaming')"
+python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
 ```
 
 模型缓存在 `~/.cache/modelscope/`(~220 MB)。后续运行使用缓存,不需要网络。
@@ -362,7 +362,7 @@ python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-stre
 
 ```yaml
 asr:
-  model: "paraformer-zh-streaming"   # 默认
+  model: "iic/SenseVoiceSmall"   # 默认
   # model: "paraformer-en-streaming" # 英语
   # model: "SenseVoiceSmall"         # 多语言,更大
 ```
@@ -388,9 +388,9 @@ TTS_MODEL=speech-2.6-hd
 TTS_VOICE=male-qn-jingying
 
 # 服务器
-HOST=127.0.0.1
-PORT=8765
-LOG_LEVEL=info
+PCC_LIVE_HOST=127.0.0.1
+PCC_LIVE_PORT=8765
+PCC_LIVE_LOG_LEVEL=info
 ```
 
 > ⚠️ **永远不要将 `.env` 提交到 git。** 它包含你的 API 密钥。仓库的 `.gitignore` 默认排除它。
@@ -418,10 +418,10 @@ LLM_API_KEY=not-used                      # 任意非空字符串
 python -c "import funasr, torch, fastapi, websockets; print('OK')"
 
 # 检查 FunASR 模型已下载
-ls ~/.cache/modelscope/hub/  # 应包含 paraformer-zh-streaming
+ls ~/.cache/modelscope/hub/  # 应包含 iic/SenseVoiceSmall
 
 # 启动服务器(计划中的命令)
-python -m pcc_live_coach.server
+python -m phase_b.server
 
 # 浏览器打开 http://127.0.0.1:8765
 ```
@@ -429,7 +429,7 @@ python -m pcc_live_coach.server
 预期日志输出:
 
 ```
-[INFO] FunASR model loaded: paraformer-zh-streaming
+[INFO] FunASR model loaded: iic/SenseVoiceSmall
 [INFO] LLM endpoint: https://api.minimaxi.com/v1 (model=MiniMax-M3)
 [INFO] TTS endpoint: wss://api.minimaxi.com/ws/v1/t2a_v2 (model=speech-2.6-hd)
 [INFO] Server listening on http://127.0.0.1:8765
@@ -479,6 +479,6 @@ pip install -e . --upgrade
 FunASR 模型不会自动更新。要升级 ASR 模型:
 
 ```bash
-rm -rf ~/.cache/modelscope/hub/paraformer-zh-streaming
-python -c "from funasr import AutoModel; m = AutoModel(model='paraformer-zh-streaming')"
+rm -rf ~/.cache/modelscope/hub/iic/SenseVoiceSmall
+python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
 ```
