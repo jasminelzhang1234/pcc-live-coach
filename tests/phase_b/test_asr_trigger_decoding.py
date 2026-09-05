@@ -227,7 +227,20 @@ def test_stop_runs_final_flush(fast_trigger):
     assert ev["is_utterance_end"] is True
 
 
-def test_model_not_ready_audio_is_bounded_and_replayed_in_order(caplog, monkeypatch):
+def test_model_not_ready_audio_keeps_tail_of_single_oversized_chunk(caplog, monkeypatch):
+    worker = aw.ASRWorker()
+    monkeypatch.setattr(worker, "MAX_PENDING_AUDIO_BYTES", 4)
+
+    worker.feed(b"012345")
+
+    assert worker.pending_audio_bytes() == 4
+    assert worker._buffer == bytearray()
+    assert "pending ASR audio buffer full" in caplog.text
+    assert worker.take_pending_audio() == b"2345"
+    assert worker.pending_audio_bytes() == 0
+
+
+def test_mark_ready_returns_pending_audio_for_router_replay_in_order(monkeypatch):
     worker = aw.ASRWorker()
     monkeypatch.setattr(worker, "MAX_PENDING_AUDIO_BYTES", 4)
 
@@ -235,16 +248,32 @@ def test_model_not_ready_audio_is_bounded_and_replayed_in_order(caplog, monkeypa
     worker.feed(b"bb")
     worker.feed(b"cc")
 
-    assert worker.pending_audio_bytes() == 4
-    assert worker._buffer == bytearray()
-    assert "pending ASR audio buffer full" in caplog.text
-
-    worker.mark_ready()
-    assert worker._buffer == bytearray()
-    assert worker.pending_audio_bytes() == 4
-    assert worker.take_pending_audio() == b"bbcc"
+    pending = worker.mark_ready()
+    assert pending == b"bbcc"
     assert worker.pending_audio_bytes() == 0
 
+    # Simulate the future router's ready -> feed replay sequence.
+    worker._running = True
+    worker.feed(pending)
+    assert worker._buffer == bytearray(b"bbcc")
+
+
+def test_start_replays_pending_audio_into_decode_buffer(monkeypatch):
+    fake = _FakeModel([[]])
+
+    async def fake_get_model(_model_name):
+        return fake
+
+    monkeypatch.setattr(aw, "_get_model", fake_get_model)
+    worker = aw.ASRWorker()
+    worker.feed(b"before-ready")
+
+    async def start_and_stop():
+        await worker.start()
+        assert worker._buffer == bytearray(b"before-ready")
+        await worker.stop()
+
+    asyncio.run(start_and_stop())
 
 # ---- clear_buffer ----------------------------------------------------------
 

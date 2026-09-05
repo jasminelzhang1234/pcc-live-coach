@@ -155,8 +155,10 @@ class ASRWorker:
             return
         self._events = asyncio.Queue()
         self._model = await _get_model(self._model_name)
-        self.mark_ready()
+        pending_audio = self.mark_ready()
         self._running = True
+        if pending_audio:
+            self._buffer.extend(pending_audio)
         self._task = asyncio.create_task(self._run_loop())
 
     async def stop(self) -> None:
@@ -184,18 +186,31 @@ class ASRWorker:
         if not self._model_ready:
             self._pending_audio.append(bytes(pcm_bytes))
             self._pending_audio_size += len(pcm_bytes)
-            while self._pending_audio_size > self.MAX_PENDING_AUDIO_BYTES:
-                dropped = self._pending_audio.popleft()
-                self._pending_audio_size -= len(dropped)
+            overflow = self._pending_audio_size - self.MAX_PENDING_AUDIO_BYTES
+            if overflow > 0:
                 logger.warning("pending ASR audio buffer full; dropping oldest audio")
+            while overflow > 0:
+                dropped = self._pending_audio.popleft()
+                if len(dropped) <= overflow:
+                    overflow -= len(dropped)
+                    self._pending_audio_size -= len(dropped)
+                    continue
+                kept = dropped[overflow:]
+                self._pending_audio.appendleft(kept)
+                self._pending_audio_size -= overflow
+                overflow = 0
 
     def pending_audio_bytes(self) -> int:
         """Return the number of bytes queued while the model was not ready."""
         return self._pending_audio_size
 
-    def mark_ready(self) -> None:
-        """Mark the model ready without moving pending audio into decode state."""
+    def mark_ready(self) -> bytes:
+        """Mark ready and return all pre-ready audio for ordered replay."""
         self._model_ready = True
+        pending = b"".join(self._pending_audio)
+        self._pending_audio.clear()
+        self._pending_audio_size = 0
+        return pending
 
     def take_pending_audio(self) -> bytes:
         """Take and clear pre-ready audio for the caller to feed explicitly."""
