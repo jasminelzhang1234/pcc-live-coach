@@ -55,3 +55,6 @@ PCC-陪练与评估-Agent-实施计划.html
 
 # Runtime logs
 logs/
+
+# Claude Code runtime token tracking(每次跑 python 自动 append,本地调试用,不入版本控制)
+observability/token-usage.csv
