@@ -10,6 +10,20 @@
   "use strict";
 
   const $ = (sel) => document.querySelector(sel);
+  let routeAudioFrame = null;
+  let createTurnLock = null;
+  let resetReplyAfterError = null;
+
+  async function loadAudioState() {
+    if (routeAudioFrame) return;
+    if (!window.PccAudioState) await import("/static/audio_state.js");
+    routeAudioFrame = window.PccAudioState && window.PccAudioState.routeAudioFrame;
+    createTurnLock = window.PccAudioState && window.PccAudioState.createTurnLock;
+    resetReplyAfterError = window.PccAudioState && window.PccAudioState.resetReplyAfterError;
+    if (!routeAudioFrame || !createTurnLock || !resetReplyAfterError) {
+      throw new Error("audio state helper unavailable");
+    }
+  }
 
   // ---- View switching ----------------------------------------------------
   function show(pageId) {
@@ -83,6 +97,9 @@
   let nextPlayTime = 0; // AudioContext currentTime cursor for queued PCM
   let activeSources = []; // BufferSourceNodes scheduled for playback — barge-in stops them
   let bargeInSent = false; // guard: only send one barge_in per reply
+  let replyStreamEnded = false;
+  let replyAborted = false;
+  let turnLock = null;
 
   // ---- Barge-in tuning ---------------------------------------------------
   // RMS threshold over a single 256ms frame (float32 samples, range ~[-1,1]).
@@ -99,6 +116,12 @@
     bargeInSent = false;
   }
 
+  function finishReplyPlaybackIfDrained() {
+    if (!replyStreamEnded || activeSources.length > 0) return;
+    replyPlaying = false;
+    setStatus("回复结束 — 继续说话");
+  }
+
   function stopAllAudio() {
     for (const s of activeSources) {
       try { s.stop(); } catch {}
@@ -111,7 +134,8 @@
   $("#btn-start").addEventListener("click", async () => {
     const persona = $("#persona-select").value;
     const difficulty = parseInt($("#difficulty-select").value, 10) || 2;
-    const topic = $("#topic-input").value.trim();
+    const topicInput = $("#topic-input");
+    const topic = topicInput ? topicInput.value.trim() : "";
     if (!persona) {
       alert("请先选择人格");
       return;
@@ -162,7 +186,29 @@
           setStatus("ASR 就绪 — 点击麦克风开始");
           break;
         case "partial": {
-          const t = obj.text || "";
+          // Ignore stale ASR partials during TTS playback. The server's
+          // ASRWorker still has audio buffered from BEFORE the reply
+          // started (mic bleed, environment noise, end of the previous
+          // utterance). When mic capture is muted during playback those
+          // buffered frames trigger silence-based decode and emit
+          // phantom partials like "嗯" / "你想在" — those aren't real
+          // coach speech and shouldn't show up as a new coach line.
+          if (replyPlaying) break;
+          let t = obj.text || "";
+          // SenseVoiceSmall hallucinates 1-2 char noise as actual speech
+          // ("你", "自", "y", "hello") when the buffer is mostly silence
+          // or TTS bleed. Drop those — they're not useful to display or
+          // commit, and committing one of them produced nonsensical LLM
+          // replies in the 2026-09-05 session.
+          if (t.replace(/[\s　]/g, "").length < 2) break;
+          // Don't shrink a previously-shown partial: if a new partial is
+          // shorter than the current line (model backtracked), keep the
+          // longer one so the user sees what they said, not what the model
+          // briefly guessed.
+          if (lastPartialDiv) {
+            const prev = lastPartialDiv.querySelector(".body").textContent || "";
+            if (prev.length > t.length) t = prev;
+          }
           if (!lastPartialDiv) {
             lastPartialDiv = appendLine("教练(实时)", t || "…", "partial");
           } else {
@@ -172,6 +218,7 @@
           break;
         }
         case "reply_text": {
+          if (replyAborted) break;
           if (lastPartialDiv) {
             lastPartialDiv.classList.remove("partial");
             lastPartialDiv = null;
@@ -179,18 +226,34 @@
           appendLine("客户", obj.text || "");
           setStatus("正在播放回复…说话可打断");
           replyPlaying = true;
+          replyStreamEnded = false;
           nextPlayTime = audioCtx ? audioCtx.currentTime + 0.05 : 0;
           resetBargeInDebounce();
           break;
         }
         case "reply_end":
-          replyPlaying = false;
-          stopAllAudio();
-          setStatus("回复结束 — 继续说话或点结束");
+          // reply_end means the server finished SENDING PCM, not that
+          // playback finished. The queued BufferSourceNodes will play out
+          // naturally; calling stopAllAudio() here was cutting the tail of
+          // the reply (visible when text was short — the next ~2s of audio
+          // got killed before the last chunks had a chance to play).
+          // Cleanup happens automatically via the onended handler in
+          // enqueuePcm which splices each node out of activeSources when it
+          // finishes playing.
+          replyStreamEnded = true;
+          if (turnLock) turnLock.release();
+          finishReplyPlaybackIfDrained();
           break;
         case "barge_in_stopped":
           replyPlaying = false;
+          replyStreamEnded = true;
           stopAllAudio();
+          resetBargeInDebounce();
+          if (lastPartialDiv) {
+            lastPartialDiv.classList.remove("partial");
+            lastPartialDiv = null;
+          }
+          if (turnLock) turnLock.release();
           setStatus("已打断 — 继续说话");
           break;
         case "warn":
@@ -198,6 +261,16 @@
           break;
         case "error":
           console.error("server error:", obj);
+          if (!resetReplyAfterError) break;
+          replyAborted = true;
+          const reset = resetReplyAfterError({ activeSources });
+          activeSources = reset.activeSources;
+          nextPlayTime = reset.nextPlayTime;
+          bargeInLoudFrames = reset.loudFrames;
+          bargeInSent = reset.bargeInSent;
+          replyPlaying = reset.replyPlaying;
+          replyStreamEnded = reset.replyStreamEnded;
+          if (turnLock) turnLock.release();
           setStatus(`错误(${obj.stage || "?"}):${obj.error}`);
           break;
         case "ended":
@@ -233,6 +306,13 @@
       return;
     }
     try {
+      await loadAudioState();
+    } catch (e) {
+      console.error("audio state helper failed", e);
+      setStatus("音频状态初始化失败");
+      return;
+    }
+    try {
       micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
@@ -255,26 +335,30 @@
     processor.onaudioprocess = (e) => {
       if (!micOn || !ws || ws.readyState !== WebSocket.OPEN) return;
       const f32 = e.inputBuffer.getChannelData(0);
-      // RMS-based barge-in detection (only when TTS is playing back).
-      if (replyPlaying && !bargeInSent) {
+      let rms = 0;
+      if (replyPlaying) {
         let sumSq = 0;
         for (let i = 0; i < f32.length; i++) sumSq += f32[i] * f32[i];
-        const rms = Math.sqrt(sumSq / f32.length);
-        if (rms > BARGE_IN_RMS_THRESHOLD) {
-          bargeInLoudFrames++;
-          if (bargeInLoudFrames >= BARGE_IN_DEBOUNCE_FRAMES) {
-            bargeInSent = true;
-            try {
-              ws.send(JSON.stringify({ cmd: "barge_in" }));
-              console.info("barge_in sent (rms=", rms.toFixed(3), ")");
-            } catch (err) {
-              console.warn("barge_in send failed", err);
-            }
-          }
-        } else {
-          bargeInLoudFrames = 0;
+        rms = Math.sqrt(sumSq / f32.length);
+      }
+      const route = routeAudioFrame({
+        playing: replyPlaying,
+        rms,
+        loudFrames: bargeInLoudFrames,
+        threshold: BARGE_IN_RMS_THRESHOLD,
+        debounceFrames: BARGE_IN_DEBOUNCE_FRAMES,
+      });
+      bargeInLoudFrames = route.loudFrames;
+      if (route.sendBargeIn && !bargeInSent) {
+        bargeInSent = true;
+        try {
+          ws.send(JSON.stringify({ cmd: "barge_in" }));
+          console.info("barge_in sent (rms=", rms.toFixed(3), ")");
+        } catch (err) {
+          console.warn("barge_in send failed", err);
         }
       }
+      if (!route.uploadToAsr) return;
       const i16 = new Int16Array(f32.length);
       for (let i = 0; i < f32.length; i++) {
         const s = Math.max(-1, Math.min(1, f32[i]));
@@ -295,7 +379,7 @@
 
     micOn = true;
     $("#btn-mic").classList.add("active");
-    setStatus("🎙 录音中 — 边说边看 partial,点「说」提交");
+    setStatus("🎙 录音中 — 自动识别并提交");
   }
 
   function stopMic() {
@@ -323,7 +407,7 @@
 
   // ---- TTS playback queue -------------------------------------------------
   function enqueuePcm(u8) {
-    if (!audioCtx) return;
+    if (!audioCtx || !replyPlaying || replyAborted) return;
     const i16 = new Int16Array(u8.buffer, u8.byteOffset, u8.byteLength / 2);
     const f32 = new Float32Array(i16.length);
     for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 0x8000;
@@ -339,14 +423,21 @@
     src.onended = () => {
       const idx = activeSources.indexOf(src);
       if (idx >= 0) activeSources.splice(idx, 1);
+      finishReplyPlaybackIfDrained();
     };
     nextPlayTime += buf.duration;
   }
 
   // ---- Speak commit ------------------------------------------------------
-  $("#btn-speak").addEventListener("click", () => {
+  $("#btn-speak").addEventListener("click", async () => {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (replyPlaying) return; // ignore during playback
+    if (!turnLock) {
+      try { await loadAudioState(); } catch { return; }
+      turnLock = createTurnLock();
+    }
+    if (!turnLock.trySubmit()) return;
+    replyAborted = false;
     if (lastPartialDiv) {
       lastPartialDiv.classList.remove("partial");
       lastPartialDiv = null;
@@ -377,6 +468,10 @@
     activeSession = null;
     nextPlayTime = 0;
     activeSources = [];
+    replyPlaying = false;
+    replyStreamEnded = false;
+    replyAborted = false;
+    if (turnLock) turnLock.release();
     resetBargeInDebounce();
     $("#btn-mic").classList.remove("active");
     $("#btn-start").disabled = false;
