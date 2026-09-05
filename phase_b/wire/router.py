@@ -274,25 +274,50 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     # here for diff-friendliness vs. the previous version.
     turn_count = 0
     closed_normally = False
+    closing = False
     barge_in_count = 0
     active_turn_task: Optional[asyncio.Task] = None  # running run_turn() — cancellable on barge-in
     last_text_holder = [""]  # most recent ASR partial text (mirrored from pump_asr)
     last_auto_submit_key = [None]
     audio_diag_bytes = [0]  # rolling byte counter for the audio-level diagnostic log
 
-    async def submit_turn(text: str, auto_key=None) -> bool:
+    async def cancel_task(task: Optional[asyncio.Task]) -> None:
+        if task is None:
+            return
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+
+    async def cancel_active_turn() -> bool:
+        nonlocal active_turn_task
+        task = active_turn_task
+        if task is None:
+            return False
+        was_active = not task.done()
+        await cancel_task(task)
+        if active_turn_task is task:
+            active_turn_task = None
+        return was_active
+
+    async def submit_turn(text: str, auto_event=None) -> bool:
         nonlocal active_turn_task, turn_count
+        if closing:
+            return False
         text = (text or "").strip()
         if not text:
             await websocket.send_json({"event": "warn", "msg": "empty transcript; nothing to commit"})
             return False
-        if auto_key is not None:
-            if last_auto_submit_key[0] == auto_key:
-                return False
-            last_auto_submit_key[0] = auto_key
         if active_turn_task is not None and not active_turn_task.done():
             await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
             return False
+        if auto_event is not None:
+            auto_event_key = json.dumps(auto_event, sort_keys=True, default=str)
+            if last_auto_submit_key[0] == auto_event_key:
+                return False
+            last_auto_submit_key[0] = auto_event_key
 
         turn_count += 1
         turn_started_ms = int(time.time() * 1000)
@@ -317,6 +342,8 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                     client_text=t,
                     user_difficulty=state.difficulty,
                 ):
+                    if closing:
+                        return
                     if isinstance(ev, dict):
                         kind = ev.get("kind")
                         if kind == "reply_text":
@@ -366,11 +393,15 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         read it without racing the partial pump."""
         try:
             async for ev in worker.events():
+                if closing:
+                    return
                 if ev.get("event") == "partial":
                     last_text_holder[0] = ev.get("text", "") or ""
                 try:
                     await websocket.send_json(ev)
                 except Exception:
+                    return
+                if closing:
                     return
                 if (
                     ev.get("event") == "partial"
@@ -379,7 +410,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                 ):
                     await submit_turn(
                         ev.get("text", ""),
-                        auto_key=(ev.get("text", "").strip(), ev.get("audio_ms")),
+                        auto_event=ev,
                     )
         except asyncio.CancelledError:
             raise
@@ -392,6 +423,8 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     async def _notify_when_loaded():
         try:
             await load_task
+            if closing:
+                return
             await websocket.send_json({"event": "asr_ready"})
         except Exception as e:
             logger.warning("asr load failed in background: %s", e)
@@ -462,15 +495,9 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         await submit_turn(text)
                     elif cmd == "barge_in":
                         if active_turn_task is not None and not active_turn_task.done():
-                            active_turn_task.cancel()
-                            try:
-                                await active_turn_task
-                            except (asyncio.CancelledError, Exception):
-                                pass
-                            active_turn_task = None
+                            await cancel_active_turn()
                             barge_in_count += 1
                             worker.clear_buffer()
-                            last_auto_submit_key[0] = None
                             state.recorder.write_dialogue(
                                 {
                                     "role": "_meta",
@@ -488,14 +515,10 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         else:
                             await websocket.send_json({"event": "warn", "msg": "no active turn to barge"})
                     elif cmd == "end":
-                        # Cancel any in-flight turn first so the dialogue ends cleanly.
-                        if active_turn_task is not None and not active_turn_task.done():
-                            active_turn_task.cancel()
-                            try:
-                                await active_turn_task
-                            except (asyncio.CancelledError, Exception):
-                                pass
-                            active_turn_task = None
+                        closing = True
+                        await cancel_task(pump_task)
+                        await cancel_task(notify_task)
+                        await cancel_active_turn()
                         mgr.end(session_id)
                         await websocket.send_json(
                             {"event": "ended", "turn_count": turn_count, "barge_in_count": barge_in_count}
@@ -511,12 +534,10 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     except Exception:
         logger.exception("ws_session crashed")
     finally:
-        for t in (pump_task, notify_task):
-            t.cancel()
-            try:
-                await t
-            except (asyncio.CancelledError, Exception):
-                pass
+        closing = True
+        await cancel_task(pump_task)
+        await cancel_task(notify_task)
+        await cancel_active_turn()
         try:
             await worker.stop()
         except Exception:
