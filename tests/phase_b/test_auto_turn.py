@@ -94,18 +94,29 @@ class _Worker:
             yield await self.events_queue.get()
 
 
+class _PendingLoadWorker(_Worker):
+    load_cancelled = False
+
+    async def start(self):
+        try:
+            await asyncio.Future()
+        except asyncio.CancelledError:
+            self.__class__.load_cancelled = True
+            raise
+
+
 class _Settings:
     asr_model = "fake"
     asr_chunk_ms = 10
     asr_language = "auto"
 
 
-async def _run_ws(monkeypatch, messages, run_turn_impl):
+async def _run_ws(monkeypatch, messages, run_turn_impl, worker_cls=_Worker):
     manager = _Manager()
     websocket = _WebSocket(messages)
     _Worker.instances.clear()
     monkeypatch.setattr(router, "get_manager", lambda: manager)
-    monkeypatch.setattr(router, "ASRWorker", _Worker)
+    monkeypatch.setattr(router, "ASRWorker", worker_cls)
     monkeypatch.setattr(router, "run_turn", run_turn_impl)
     monkeypatch.setattr("phase_b.config.get_settings", lambda: _Settings())
     task = asyncio.create_task(router._ws_session_impl(websocket, "session-1"))
@@ -203,6 +214,54 @@ def test_utterance_end_with_different_latency_commits_once(monkeypatch):
     utterances = [x for x in manager.state.recorder.dialogue if x.get("event") == "utterance"]
     assert calls == ["延迟变化"]
     assert [x["text"] for x in utterances] == ["延迟变化"]
+
+
+def test_utterance_end_final_upgrade_commits_once(monkeypatch):
+    async def scenario():
+        calls = []
+
+        async def record_turn(**kwargs):
+            calls.append(kwargs["client_text"])
+            yield {"kind": "reply_end"}
+
+        task, websocket, manager, worker = await _run_ws(monkeypatch, [], record_turn)
+        first = {
+            "event": "partial",
+            "text": "最终状态变化",
+            "audio_ms": 800,
+            "is_final": False,
+            "is_utterance_end": True,
+        }
+        second = {**first, "is_final": True}
+        await worker.events_queue.put(first)
+        for _ in range(10):
+            await asyncio.sleep(0)
+            if calls == ["最终状态变化"]:
+                break
+        await worker.events_queue.put(second)
+        for _ in range(10):
+            await asyncio.sleep(0)
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return calls, manager
+
+    calls, manager = asyncio.run(scenario())
+    utterances = [x for x in manager.state.recorder.dialogue if x.get("event") == "utterance"]
+    assert calls == ["最终状态变化"]
+    assert [x["text"] for x in utterances] == ["最终状态变化"]
+
+
+def test_end_cancels_pending_asr_load(monkeypatch):
+    async def scenario():
+        _PendingLoadWorker.load_cancelled = False
+        task, websocket, _manager, _worker = await _run_ws(
+            monkeypatch, [], _reply_turn, worker_cls=_PendingLoadWorker
+        )
+        await websocket.inbound.put({"cmd": "end"})
+        await task
+        return _PendingLoadWorker.load_cancelled
+
+    assert asyncio.run(scenario()) is True
 
 
 def test_end_closes_asr_submission_and_suppresses_late_turn_output(monkeypatch):

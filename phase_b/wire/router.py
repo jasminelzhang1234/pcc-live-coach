@@ -303,7 +303,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         return was_active
 
     def utterance_identity(event: dict) -> tuple:
-        return tuple(event.get(field) for field in ("text", "audio_ms", "is_final", "is_utterance_end"))
+        return tuple(event.get(field) for field in ("text", "audio_ms", "is_utterance_end"))
 
     async def submit_turn(text: str, auto_event=None) -> bool:
         nonlocal active_turn_task, turn_count
@@ -522,6 +522,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         await cancel_task(pump_task)
                         await cancel_task(notify_task)
                         await cancel_active_turn()
+                        await cancel_task(load_task)
                         mgr.end(session_id)
                         await websocket.send_json(
                             {"event": "ended", "turn_count": turn_count, "barge_in_count": barge_in_count}
@@ -541,6 +542,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         await cancel_task(pump_task)
         await cancel_task(notify_task)
         await cancel_active_turn()
+        await cancel_task(load_task)
         try:
             await worker.stop()
         except Exception:
