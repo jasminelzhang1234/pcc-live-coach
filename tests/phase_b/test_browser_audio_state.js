@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const {
   createTurnLock,
   resetReplyAfterError,
+  resetReplyAfterClose,
   routeAudioFrame,
 } = require("../../phase_b/static/audio_state.js");
 
@@ -82,12 +83,38 @@ test("continuous loud frames send barge-in only on the threshold frame", () => {
 test("turn lock blocks duplicate manual submits until a terminal event", () => {
   const lock = createTurnLock();
 
-  assert.equal(lock.trySubmit(), true);
-  assert.equal(lock.trySubmit(), false);
+  const token = lock.trySubmit();
+  assert.ok(token);
+  assert.equal(lock.trySubmit(), null);
+  lock.release(token);
+  assert.ok(lock.trySubmit());
   lock.release();
-  assert.equal(lock.trySubmit(), true);
-  lock.release();
-  assert.equal(lock.trySubmit(), true);
+  assert.ok(lock.trySubmit());
+});
+
+test("warn releases only the matching pending submit, not an active turn", () => {
+  const lock = createTurnLock();
+  const pendingToken = lock.trySubmit();
+
+  assert.equal(lock.releasePending(pendingToken), true);
+  assert.equal(lock.trySubmit() !== null, true);
+
+  const activeToken = lock.currentToken();
+  lock.markActive(activeToken);
+  assert.equal(lock.releasePending(activeToken), false);
+  assert.equal(lock.trySubmit(), null);
+  lock.release(activeToken);
+  assert.ok(lock.trySubmit());
+});
+
+test("stale warn cannot release a newer pending submit", () => {
+  const lock = createTurnLock();
+  const staleToken = lock.trySubmit();
+  lock.release(staleToken);
+  const currentToken = lock.trySubmit();
+
+  assert.equal(lock.releasePending(staleToken), false);
+  assert.equal(lock.currentToken(), currentToken);
 });
 
 test("error reset stops queued sources and clears reply playback state", () => {
@@ -100,6 +127,23 @@ test("error reset stops queued sources and clears reply playback state", () => {
   });
 
   assert.deepEqual(stopped, ["first", "second"]);
+  assert.deepEqual(result, {
+    activeSources: [],
+    nextPlayTime: 0,
+    loudFrames: 0,
+    bargeInSent: false,
+    replyPlaying: false,
+    replyStreamEnded: true,
+  });
+});
+
+test("close reset stops queued sources and clears reply playback state", () => {
+  const stopped = [];
+  const result = resetReplyAfterClose({
+    activeSources: [{ stop: () => stopped.push("source") }],
+  });
+
+  assert.deepEqual(stopped, ["source"]);
   assert.deepEqual(result, {
     activeSources: [],
     nextPlayTime: 0,

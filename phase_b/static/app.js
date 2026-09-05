@@ -13,6 +13,7 @@
   let routeAudioFrame = null;
   let createTurnLock = null;
   let resetReplyAfterError = null;
+  let resetReplyAfterClose = null;
 
   async function loadAudioState() {
     if (routeAudioFrame) return;
@@ -20,7 +21,8 @@
     routeAudioFrame = window.PccAudioState && window.PccAudioState.routeAudioFrame;
     createTurnLock = window.PccAudioState && window.PccAudioState.createTurnLock;
     resetReplyAfterError = window.PccAudioState && window.PccAudioState.resetReplyAfterError;
-    if (!routeAudioFrame || !createTurnLock || !resetReplyAfterError) {
+    resetReplyAfterClose = window.PccAudioState && window.PccAudioState.resetReplyAfterClose;
+    if (!routeAudioFrame || !createTurnLock || !resetReplyAfterError || !resetReplyAfterClose) {
       throw new Error("audio state helper unavailable");
     }
   }
@@ -100,6 +102,7 @@
   let replyStreamEnded = false;
   let replyAborted = false;
   let turnLock = null;
+  let turnToken = null;
 
   // ---- Barge-in tuning ---------------------------------------------------
   // RMS threshold over a single 256ms frame (float32 samples, range ~[-1,1]).
@@ -165,6 +168,7 @@
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
     const url = `${proto}//${location.host}/ws/session/${sessionId}`;
     ws = new WebSocket(url);
+    const socket = ws;
     ws.binaryType = "arraybuffer";
 
     ws.onopen = () => {
@@ -219,6 +223,7 @@
         }
         case "reply_text": {
           if (replyAborted) break;
+          if (turnLock && turnToken !== null) turnLock.markActive(turnToken);
           if (lastPartialDiv) {
             lastPartialDiv.classList.remove("partial");
             lastPartialDiv = null;
@@ -241,7 +246,8 @@
           // enqueuePcm which splices each node out of activeSources when it
           // finishes playing.
           replyStreamEnded = true;
-          if (turnLock) turnLock.release();
+          if (turnLock) turnLock.release(turnToken);
+          turnToken = null;
           finishReplyPlaybackIfDrained();
           break;
         case "barge_in_stopped":
@@ -253,11 +259,15 @@
             lastPartialDiv.classList.remove("partial");
             lastPartialDiv = null;
           }
-          if (turnLock) turnLock.release();
+          if (turnLock) turnLock.release(turnToken);
+          turnToken = null;
           setStatus("已打断 — 继续说话");
           break;
         case "warn":
           console.warn("server warn:", obj.msg);
+          if (turnLock && turnToken !== null && turnLock.releasePending(turnToken)) {
+            turnToken = null;
+          }
           break;
         case "error":
           console.error("server error:", obj);
@@ -270,7 +280,8 @@
           bargeInSent = reset.bargeInSent;
           replyPlaying = reset.replyPlaying;
           replyStreamEnded = reset.replyStreamEnded;
-          if (turnLock) turnLock.release();
+          if (turnLock) turnLock.release(turnToken);
+          turnToken = null;
           setStatus(`错误(${obj.stage || "?"}):${obj.error}`);
           break;
         case "ended":
@@ -286,6 +297,30 @@
     };
 
     ws.onclose = () => {
+      if (ws !== socket) return;
+      stopMic();
+      if (resetReplyAfterClose) {
+        const reset = resetReplyAfterClose({ activeSources });
+        activeSources = reset.activeSources;
+        nextPlayTime = reset.nextPlayTime;
+        bargeInLoudFrames = reset.loudFrames;
+        bargeInSent = reset.bargeInSent;
+        replyPlaying = reset.replyPlaying;
+        replyStreamEnded = reset.replyStreamEnded;
+      } else {
+        stopAllAudio();
+        replyPlaying = false;
+        replyStreamEnded = true;
+      }
+      if (lastPartialDiv) {
+        lastPartialDiv.remove();
+        lastPartialDiv = null;
+      }
+      if (turnLock) turnLock.release(turnToken);
+      turnToken = null;
+      resetBargeInDebounce();
+      replyAborted = false;
+      ws = null;
       setStatus("连接已关闭");
     };
     ws.onerror = (e) => {
@@ -436,7 +471,9 @@
       try { await loadAudioState(); } catch { return; }
       turnLock = createTurnLock();
     }
-    if (!turnLock.trySubmit()) return;
+    const token = turnLock.trySubmit();
+    if (token === null) return;
+    turnToken = token;
     replyAborted = false;
     if (lastPartialDiv) {
       lastPartialDiv.classList.remove("partial");
@@ -462,8 +499,9 @@
     stopMic();
     stopAllAudio();
     if (ws) {
-      try { ws.close(); } catch {}
+      const socket = ws;
       ws = null;
+      try { socket.close(); } catch {}
     }
     activeSession = null;
     nextPlayTime = 0;
@@ -471,7 +509,8 @@
     replyPlaying = false;
     replyStreamEnded = false;
     replyAborted = false;
-    if (turnLock) turnLock.release();
+    if (turnLock) turnLock.release(turnToken);
+    turnToken = null;
     resetBargeInDebounce();
     $("#btn-mic").classList.remove("active");
     $("#btn-start").disabled = false;

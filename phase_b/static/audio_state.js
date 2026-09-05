@@ -19,20 +19,41 @@
   }
 
   function createTurnLock() {
-    let locked = false;
+    let nextToken = 0;
+    let pendingToken = null;
+    let activeToken = null;
     return {
       trySubmit() {
-        if (locked) return false;
-        locked = true;
+        if (pendingToken !== null || activeToken !== null) return null;
+        pendingToken = ++nextToken;
+        return pendingToken;
+      },
+      markActive(token) {
+        if (pendingToken !== token) return false;
+        pendingToken = null;
+        activeToken = token;
         return true;
       },
-      release() {
-        locked = false;
+      releasePending(token) {
+        if (pendingToken !== token) return false;
+        pendingToken = null;
+        return true;
+      },
+      release(token) {
+        if (token == null || token === pendingToken || token === activeToken) {
+          pendingToken = null;
+          activeToken = null;
+          return true;
+        }
+        return false;
+      },
+      currentToken() {
+        return activeToken !== null ? activeToken : pendingToken;
       },
     };
   }
 
-  function resetReplyAfterError({ activeSources }) {
+  function resetReplyState({ activeSources }) {
     for (const source of activeSources) {
       try { source.stop(); } catch {}
     }
@@ -46,5 +67,10 @@
     };
   }
 
-  return { createTurnLock, resetReplyAfterError, routeAudioFrame };
+  return {
+    createTurnLock,
+    resetReplyAfterClose: resetReplyState,
+    resetReplyAfterError: resetReplyState,
+    routeAudioFrame,
+  };
 });
