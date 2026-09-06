@@ -134,23 +134,29 @@ def _write_dialogue(tmp_path: Path, lines: list[dict]) -> Path:
 
 
 def test_extract_single_turn_basic(tmp_path: Path):
-    """Single coach turn with 17-char reply, 1s round trip."""
+    """Single coach+client utterance pair (1 turn). Emits coach row + client row."""
     dialogue = _write_dialogue(tmp_path, [
         {"role": "coach", "event": "utterance", "turn": 1, "text": "你好", "ms": 1000},
         {"role": "client", "event": "utterance", "turn": 1, "text": "你好啊,有什么我能帮你的吗?", "ms": 2000},
     ])
     out = tmp_path / "test-rhythm.jsonl"
     features = extract_turn_features(dialogue, out_path=out)
-    assert len(features) == 1
-    f = features[0]
-    assert f["turn"] == 1
-    assert f["coach_chars"] == 2
-    assert f["coach_dur_ms"] == 1000
-    assert f["cpm"] == 120  # 2 chars in 1s
-    assert f["cpm_band"] == "ideal"
-    assert f["pre_silence_ms"] == 1000
-    assert f["silence_5_5"] is False
-    assert f["barge_in_count"] == 0
+    assert len(features) == 2
+    coach_f = features[0]
+    client_f = features[1]
+    assert coach_f["speaker_role"] == "coach"
+    assert coach_f["turn"] == 1
+    assert coach_f["coach_chars"] == 2
+    assert coach_f["coach_dur_ms"] == 1000
+    assert coach_f["cpm"] == 120  # 2 chars in 1s
+    assert coach_f["cpm_band"] == "ideal"
+    assert coach_f["pre_silence_ms"] == 1000  # prev_event_ms=0 fallback (no session_start)
+    assert coach_f["silence_5_5"] is False
+    assert coach_f["barge_in_count"] == 0
+    assert client_f["speaker_role"] == "client"
+    assert client_f["pre_silence_ms"] == 1000  # gap = 2000 - 1000
+    assert client_f["silence_5_5"] is False
+    assert client_f["barge_in_count"] == 0
     assert out.is_file()
     # file content matches returned features
     written = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -158,7 +164,8 @@ def test_extract_single_turn_basic(tmp_path: Path):
 
 
 def test_extract_three_turns_with_silence_and_barge_in(tmp_path: Path):
-    """Three coach turns: 1 long-silence (5.5), 1 with barge_in, 1 normal."""
+    """Three coach turns: 1 long-silence (5.5), 1 with barge_in, 1 normal.
+    Emits one row per utterance: 3 coach + 3 client = 6 rows in chronological order."""
     dialogue = _write_dialogue(tmp_path, [
         # Turn 1: coach commits at 1000, client reply at 3000. 2s gap (silence_5_5).
         {"role": "coach", "event": "utterance", "turn": 1, "text": "最近怎么样?", "ms": 1000},
@@ -173,11 +180,17 @@ def test_extract_three_turns_with_silence_and_barge_in(tmp_path: Path):
         {"role": "client", "event": "utterance", "turn": 3, "text": "好的", "ms": 10500},
     ])
     features = extract_turn_features(dialogue)
-    assert len(features) == 3
+    assert len(features) == 6
 
-    # Turn 1: prev_event_ms starts at 0; gap = 1000 (coach at 1000 - prev at 0).
-    # 1000 < 2000 threshold → not silence_5_5. 6 chars in 2000ms = 180 cpm → ideal.
-    f1 = features[0]
+    coach_rows = [f for f in features if f["speaker_role"] == "coach"]
+    client_rows = [f for f in features if f["speaker_role"] == "client"]
+    assert len(coach_rows) == 3
+    assert len(client_rows) == 3
+
+    # Turn 1 coach: prev_event_ms starts at 0 (no session_start in fixture);
+    # gap = 1000 (coach at 1000 - prev at 0). 1000 < 2000 → not silence_5_5.
+    # 6 chars in 2000ms = 180 cpm → ideal.
+    f1 = coach_rows[0]
     assert f1["pre_silence_ms"] == 1000
     assert f1["silence_5_5"] is False
     assert f1["barge_in_count"] == 0
@@ -185,17 +198,17 @@ def test_extract_three_turns_with_silence_and_barge_in(tmp_path: Path):
     assert f1["cpm"] == 180
     assert f1["cpm_band"] == "ideal"
 
-    # Turn 2: prev_event_ms = client_ms(turn1) = 3000; gap = 6500-3000 = 3500.
+    # Turn 2 coach: prev = client_ms(turn1) = 3000; gap = 6500-3000 = 3500.
     # silence_5_5 (>= 2000). 2 barge_ins. 13 chars in 2500ms = 312 cpm → fast.
-    f2 = features[1]
+    f2 = coach_rows[1]
     assert f2["pre_silence_ms"] == 3500
     assert f2["silence_5_5"] is True
     assert f2["barge_in_count"] == 2
     assert f2["cpm_band"] == "fast"
 
-    # Turn 3: prev_event_ms = client_ms(turn2) = 9000; gap = 9500-9000 = 500.
+    # Turn 3 coach: prev = client_ms(turn2) = 9000; gap = 9500-9000 = 500.
     # not silence_5_5. 0 barge_ins. 22 chars in 1000ms = 1320 → fast.
-    f3 = features[2]
+    f3 = coach_rows[2]
     assert f3["pre_silence_ms"] == 500
     assert f3["silence_5_5"] is False
     assert f3["barge_in_count"] == 0
@@ -214,7 +227,8 @@ def test_extract_client_filling_silence_blocks_5_5(tmp_path: Path):
         {"role": "client", "event": "utterance", "turn": 2, "text": "ok", "ms": 8000},
     ])
     features = extract_turn_features(dialogue)
-    f2 = features[1]
+    coach_rows = [f for f in features if f["speaker_role"] == "coach"]
+    f2 = coach_rows[1]
     # previous event for turn 2 = client_ms of turn 1 = 4000 (the latest client utterance
     # before coach commit at 6000 is at 4000)
     assert f2["pre_silence_ms"] == 2000
@@ -226,7 +240,7 @@ def test_extract_client_filling_silence_blocks_5_5(tmp_path: Path):
 
 
 def test_extract_handles_barge_in_with_no_text_change(tmp_path: Path):
-    """Barge-ins don't create new coach turns — turn count stays at 1."""
+    """Barge-ins don't create new coach turns — coach row count stays at 1."""
     dialogue = _write_dialogue(tmp_path, [
         {"role": "coach", "event": "utterance", "turn": 1, "text": "x", "ms": 1000},
         {"role": "_meta", "event": "barge_in", "turn": 1, "ms": 1100},
@@ -234,8 +248,10 @@ def test_extract_handles_barge_in_with_no_text_change(tmp_path: Path):
         {"role": "client", "event": "utterance", "turn": 1, "text": "y", "ms": 1500},
     ])
     features = extract_turn_features(dialogue)
-    assert len(features) == 1
-    assert features[0]["barge_in_count"] == 2
+    coach_rows = [f for f in features if f["speaker_role"] == "coach"]
+    assert len(coach_rows) == 1
+    assert coach_rows[0]["barge_in_count"] == 2
+    assert len(features) == 2  # 1 coach + 1 client
 
 
 def test_extract_returns_in_memory_when_no_out(tmp_path: Path):
@@ -244,7 +260,7 @@ def test_extract_returns_in_memory_when_no_out(tmp_path: Path):
         {"role": "client", "event": "utterance", "turn": 1, "text": "hey", "ms": 2000},
     ])
     features = extract_turn_features(dialogue)
-    assert len(features) == 1
+    assert len(features) == 2  # 1 coach + 1 client
     # No file should be written since neither out_path nor out_fh was given.
     out_files = list(tmp_path.glob("*.jsonl"))
     assert len(out_files) == 1  # only the input file

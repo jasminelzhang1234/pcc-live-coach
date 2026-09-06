@@ -47,11 +47,13 @@
         sel.innerHTML = '<option value="">(无可用人格)</option>';
         return;
       }
-      for (const id of ids) {
+      for (const persona of ids) {
         const opt = document.createElement("option");
-        opt.value = id;
-        opt.textContent = id;
-        if (id === "vec-01") opt.selected = true;
+        opt.value = persona.id;
+        const line = persona.line ? ` · ${persona.line}` : "";
+        const diff = persona.difficulty ? ` (难度 ${persona.difficulty})` : "";
+        opt.textContent = `${persona.name || persona.id}${line}${diff}`;
+        if (persona.id === "vec-01") opt.selected = true;
         sel.appendChild(opt);
       }
     } catch (e) {
@@ -285,11 +287,13 @@
           setStatus(`错误(${obj.stage || "?"}):${obj.error}`);
           break;
         case "ended":
+          // Capture session_id BEFORE teardownSession() nulls activeSession.
+          const endedSid = obj.session_id || (activeSession && activeSession.id);
           await teardownSession();
           show("page-dashboard");
           $("#dashboard-session-id").textContent =
-            `${obj.session_id || activeSession.id} · ${obj.turn_count || 0} turns · ${obj.barge_in_count || 0} barge-in`;
-          await loadRhythm(obj.session_id || activeSession && activeSession.id);
+            `${endedSid || "?"} · ${obj.turn_count || 0} turns · ${obj.barge_in_count || 0} barge-in`;
+          if (endedSid) await loadRhythm(endedSid);
           break;
         default:
           // ignore unknown

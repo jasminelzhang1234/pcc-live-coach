@@ -1,10 +1,12 @@
 # Installation Guide
 
-Last updated: 2026-09-03
+Last updated: 2026-09-06
 
-> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 2311 LoC) and frontend (`phase_b/static/`, 614 LoC) are committed. This document describes how to install and run them, but the product has not been validated against trigger conditions — expect rough edges.
+> ✅ **Phase B is enabled as of 2026-09-06.** Backend (`phase_b/`) and frontend (`phase_b/static/`) are committed and end-to-end working (browser → Aliyun ASR → MiniMax LLM → MiniMax TTS → browser). 
 >
-> The instructions below are based on the environment validation report ([phase-b-env-setup-2026-09-01.md](../../phase-b-env-setup-2026-09-01.md)) which proved the stack works end-to-end on macOS M-series with Python 3.9.
+> 🆕 **ASR switched from FunASR to Aliyun NLS on 2026-09-06.** The FunASR sections below are historical (kept for reference). For the current ASR setup, see [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md).
+>
+> 📂 **Where files live after a session runs:** see [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md) (transcripts / audio / rhythm / tracker files).
 
 ---
 
@@ -192,8 +194,9 @@ python -c "import funasr, torch, fastapi, websockets; print('OK')"
 # Check FunASR model is downloaded
 ls ~/.cache/modelscope/hub/  # should contain iic/SenseVoiceSmall
 
-# Start the server (planned command)
-python -m phase_b.server
+# Start the server
+./start.sh                       # 推荐 — 自动检查端口/venv/.env
+# 或: python -m phase_b
 
 # Open browser to http://127.0.0.1:8765
 ```
@@ -210,6 +213,20 @@ Expected log output:
 ---
 
 ## 8. Troubleshooting
+
+### Port 8765 already in use
+
+`./start.sh` now refuses to start when the port is bound and prints the holder's PID. Two common cases:
+
+1. **Previous run was not stopped cleanly** (terminal closed, logout, crash):
+   ```bash
+   lsof -nP -iTCP:8765 -sTCP:LISTEN      # find the PID
+   kill <pid>                             # then ./start.sh again
+   ```
+2. **You want two servers side-by-side** (dev + prod, or test new code):
+   ```bash
+   PCC_LIVE_PORT=8766 ./start.sh
+   ```
 
 ### `pip install funasr` fails or hangs
 
@@ -262,11 +279,15 @@ python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmal
 
 # 安装指南
 
-最后更新:2026-09-03
+最后更新:2026-09-06
 
-> ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,2311 行)和前端(`phase_b/static/`,614 行)已提交。本文档说明如何安装和运行,但产品未根据触发条件验证 —— 预计会遇到边缘情况。
+> ✅ **Phase B 已于 2026-09-06 启用。** 后端(`phase_b/`)和前端(`phase_b/static/`)已提交,端到端跑通(浏览器 → 阿里云 ASR → MiniMax LLM → MiniMax TTS → 浏览器)。
 >
-> 以下说明基于环境验证报告([phase-b-env-setup-2026-09-01.md](../../phase-b-env-setup-2026-09-01.md)),该报告证明该技术栈在 macOS M 系列 + Python 3.9 上端到端可用。
+> 🆕 **ASR 已于 2026-09-06 从 FunASR 切换到阿里云 NLS。** 下方的 FunASR 章节保留作历史参考。当前 ASR 注册见 [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md)。
+>
+> 📂 **对话结束后文件落在哪:** 见 [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md)(transcript / 录音 / rhythm / tracker 文件位置)。
+>
+> 以下说明基于 spike 期间的环境验证(详见 [spike 报告](./plans/phase-b/spike-report-2026-09-01.md)),该报告证明该技术栈在 macOS M 系列 + Python 3.9 上端到端可用。
 
 ---
 
@@ -454,8 +475,9 @@ python -c "import funasr, torch, fastapi, websockets; print('OK')"
 # 检查 FunASR 模型已下载
 ls ~/.cache/modelscope/hub/  # 应包含 iic/SenseVoiceSmall
 
-# 启动服务器(计划中的命令)
-python -m phase_b.server
+# 启动服务器
+./start.sh                       # 推荐 — 自动检查端口/venv/.env
+# 或: python -m phase_b
 
 # 浏览器打开 http://127.0.0.1:8765
 ```
@@ -472,6 +494,20 @@ python -m phase_b.server
 ---
 
 ## 8. 故障排除
+
+### 端口 8765 已被占用
+
+`./start.sh` 现在会在端口被占时拒绝启动,并打印占用进程的 PID。两个常见情况:
+
+1. **上一次未正常停止**(终端关闭、登出、崩溃):
+   ```bash
+   lsof -nP -iTCP:8765 -sTCP:LISTEN      # 找到 PID
+   kill <pid>                              # 然后重新 ./start.sh
+   ```
+2. **想同时跑两个 server**(开发+生产、或新旧代码对比):
+   ```bash
+   PCC_LIVE_PORT=8766 ./start.sh
+   ```
 
 ### `pip install funasr` 失败或挂起
 

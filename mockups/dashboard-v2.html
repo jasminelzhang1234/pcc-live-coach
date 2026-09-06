@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard v2 原型 · PCC Live Coach</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-soft: #283549;
+    --line: #334155;
+    --text: #e2e8f0;
+    --text-soft: #94a3b8;
+    --accent: #fbbf24;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 880px; margin: 0 auto; }
+
+  /* Header */
+  .hdr {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+  }
+  .hdr h1 { font-size: 26px; font-weight: 700; }
+  .hdr .meta { color: var(--text-soft); font-size: 13px; margin-top: 6px; }
+  .hdr .meta b { color: var(--text); }
+  .pill {
+    display: inline-block; padding: 3px 10px;
+    background: var(--card-soft); border-radius: 999px;
+    font-size: 12px; color: var(--accent);
+    margin-right: 6px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 14px; font-weight: 600; color: var(--text-soft);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+
+  /* KPI row */
+  .kpis {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .kpi {
+    background: var(--card-soft); border-radius: 10px;
+    padding: 18px; text-align: center;
+    border-top: 3px solid var(--accent);
+  }
+  .kpi .num { font-size: 32px; font-weight: 700; color: var(--accent); }
+  .kpi .lbl { font-size: 12px; color: var(--text-soft); margin-top: 4px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--text-soft); font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+  .badge.ideal { background: #065f46; color: #6ee7b7; }
+  .badge.slow  { background: #78350f; color: #fcd34d; }
+  .badge.fast  { background: #7f1d1d; color: #fca5a5; }
+  .check { color: var(--green); font-weight: 700; }
+  .dot   { color: var(--text-soft); }
+
+  /* Toggle sections */
+  details { cursor: pointer; }
+  details summary {
+    list-style: none; display: flex; align-items: center;
+    justify-content: space-between; padding: 4px 0;
+    color: var(--text); font-size: 14px;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  .arrow { color: var(--accent); font-size: 18px; transition: transform .2s; }
+  details[open] .arrow { transform: rotate(90deg); }
+  .body { padding-top: 14px; }
+
+  /* Transcript */
+  .ts-scroll {
+    max-height: 320px; overflow-y: auto;
+    background: var(--card-soft); border-radius: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+  }
+  .turn { margin-bottom: 12px; display: flex; gap: 10px; }
+  .turn:last-child { margin-bottom: 0; }
+  .turn .who {
+    flex-shrink: 0; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px;
+    text-transform: uppercase; height: fit-content;
+    margin-top: 2px;
+  }
+  .turn.coach .who { background: #1e3a8a; color: #93c5fd; }
+  .turn.client .who { background: #831843; color: #f9a8d4; }
+  .turn .msg { flex: 1; line-height: 1.5; font-size: 14px; }
+  .turn .ts { color: var(--text-soft); font-size: 11px; margin-top: 4px; }
+
+  /* Audio player */
+  audio { width: 100%; margin-top: 10px; height: 36px; }
+
+  /* Buttons */
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    background: var(--accent); color: #1f2937;
+    border: none; border-radius: 8px;
+    padding: 12px 22px; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: transform .1s, opacity .1s;
+  }
+  .btn:hover { transform: translateY(-1px); opacity: .9; }
+  .btn.secondary {
+    background: var(--card-soft); color: var(--text);
+    border: 1px solid var(--line);
+  }
+  .btn.ghost { background: transparent; color: var(--text-soft); }
+
+  /* Footer */
+  .footer { display: flex; justify-content: space-between; margin-top: 24px; }
+
+  /* Mockup banner */
+  .banner {
+    background: #7f1d1d; color: #fee2e2;
+    padding: 10px 16px; border-radius: 8px;
+    margin-bottom: 20px; font-size: 13px; text-align: center;
+  }
+
+  .assess-result {
+    background: var(--card-soft); border-radius: 8px; padding: 14px;
+    margin-top: 14px; border-left: 3px solid var(--green);
+  }
+  .assess-result h3 { font-size: 13px; color: var(--text-soft); margin-bottom: 8px; }
+  .marker {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13px;
+  }
+  .marker:last-child { border-bottom: none; }
+  .marker .v { font-weight: 700; padding: 1px 8px; border-radius: 4px; font-size: 12px; }
+  .marker .v.pass { background: #065f46; color: #6ee7b7; }
+  .marker .v.warn { background: #78350f; color: #fcd34d; }
+  .marker .v.fail { background: #7f1d1d; color: #fca5a5; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="banner">
+    ⚠ 这是 dashboard v2 视觉原型,不是真实页面。数据是占位的。文件:<code>mockups/dashboard-v2.html</code>
+  </div>
+
+  <!-- Header -->
+  <div class="hdr">
+    <div>
+      <h1>本场练习档案</h1>
+      <div class="meta">
+        <span class="pill">vec-01</span>
+        <b>real-2026-09-06-08</b> · 12 turns · 1 barge-in · 5m 03s<br>
+        2026-09-06 12:43 → 12:48
+      </div>
+    </div>
+  </div>
+
+  <!-- 节奏概览 -->
+  <div class="card">
+    <h2>节奏概览</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="num">178</div><div class="lbl">平均 CPM</div></div>
+      <div class="kpi"><div class="num">4</div><div class="lbl">5.5 沉默命中</div></div>
+      <div class="kpi"><div class="num">1</div><div class="lbl">6.6 打断事件</div></div>
+    </div>
+  </div>
+
+  <!-- 逐句特征 -->
+  <div class="card">
+    <h2>逐句特征</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>角色</th><th>CPM</th>
+          <th>前沉默 ms</th><th>5.5 沉默</th><th>打断</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>教练</td><td>171 <span class="badge ideal">ideal</span></td><td>0</td><td><span class="dot">·</span></td><td>0</td></tr>
+        <tr><td>2</td><td>客户</td><td>55 <span class="badge slow">slow</span></td><td>10707</td><td><span class="check">✔</span></td><td>0</td></tr>
+        <tr><td>3</td><td>教练</td><td>178 <span class="badge ideal">ideal</span></td><td>14072</td><td><span class="check">✔</span></td><td>0</td></tr>
+        <tr><td>4</td><td>客户</td><td>20 <span class="badge slow">slow</span></td><td>20462</td><td><span class="check">✔</span></td><td>0</td></tr>
+        <tr><td>5</td><td>客户</td><td>207 <span class="badge ideal">ideal</span></td><td>22107</td><td><span class="check">✔</span></td><td>0</td></tr>
+        <tr><td>6</td><td>教练</td><td>349 <span class="badge fast">fast</span></td><td>16250</td><td><span class="check">✔</span></td><td>0</td></tr>
+        <tr><td>7</td><td>客户</td><td>191 <span class="badge ideal">ideal</span></td><td>17003</td><td><span class="check">✔</span></td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 本场对话 -->
+  <div class="card">
+    <h2>本场对话</h2>
+
+    <details>
+      <summary>
+        <span>🎙 听录音</span><span class="arrow">▶</span>
+      </summary>
+      <div class="body">
+        <audio controls preload="metadata">
+          <source src="about:blank" type="audio/wav">
+        </audio>
+        <div style="color: var(--text-soft); font-size: 12px; margin-top: 6px;">
+          real-2026-09-06-08.wav · 5m 03s · 16kHz mono
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>
+        <span>📝 Transcript (12 turns)</span><span class="arrow">▶</span>
+      </summary>
+      <div class="body">
+        <div class="ts-scroll">
+          <div class="turn coach">
+            <span class="who">教练</span>
+            <div>
+              <div class="msg">你好,今天你想聊什么话题?</div>
+              <div class="ts">12:43:31 · 3.1s · CPM 171</div>
+            </div>
+          </div>
+          <div class="turn client">
+            <span class="who">客户</span>
+            <div>
+              <div class="msg">……你这么一问,我还真没想过。大概就是……方向清楚,别天天变。能扛事儿,别一出问题就往下甩。其他的不重要。</div>
+              <div class="ts">12:44:04 · 7.6s · CPM 55 (slow)</div>
+            </div>
+          </div>
+          <div class="turn coach">
+            <span class="who">教练</span>
+            <div>
+              <div class="msg">假设你是你底下的人,你期望这个老板是一个怎么样的老板?</div>
+              <div class="ts">12:44:08 · 9.1s · CPM 178</div>
+            </div>
+          </div>
+          <div class="turn client">
+            <span class="who">客户</span>
+            <div>
+              <div class="msg">(停顿)嗯……方向清楚,具体就是……不要每天换一个方向,让我做的东西明天就被推翻。</div>
+              <div class="ts">12:44:24 · 17.4s · CPM 20 (slow)</div>
+            </div>
+          </div>
+          <div class="turn coach">
+            <span class="who">教练</span>
+            <div>
+              <div class="msg">方向清楚,你具体指的是什么。</div>
+              <div class="ts">12:44:37 · 2.1s · CPM 349 (fast)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- 下一步 -->
+  <div class="card">
+    <h2>下一步</h2>
+    <div class="actions">
+      <button class="btn">▶ 运行 PCC 评估 (37 markers)</button>
+      <button class="btn secondary">+ 追加到追踪 + 刷新成长曲线</button>
+      <button class="btn ghost" style="margin-left: auto;">📊 查看成长曲线</button>
+    </div>
+    <!-- 占位:评估按钮点了之后会在这个 card 里展开结果 -->
+    <div class="assess-result" style="margin-top: 14px;">
+      <h3>PCC 评估结果 · 12 turns · 5 markers ⚠</h3>
+      <div class="marker"><span>2.1 道德与伦理协议</span><span class="v pass">✔</span></div>
+      <div class="marker"><span>5.1 教练临在</span><span class="v warn">△</span></div>
+      <div class="marker"><span>7.6 收集信息</span><span class="v warn">△</span></div>
+      <div class="marker"><span>8.7 唤起觉察</span><span class="v pass">✔</span></div>
+      <div class="marker"><span>9.3 设计行动</span><span class="v fail">✘</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="btn secondary">↩ 返回首页</button>
+    <div style="color: var(--text-soft); font-size: 11px; align-self: center;">
+      session_id: real-2026-09-06-08
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

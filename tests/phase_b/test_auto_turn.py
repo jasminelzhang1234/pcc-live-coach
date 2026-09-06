@@ -499,7 +499,7 @@ def test_raised_turn_has_no_tail_messages_and_next_turn_can_run(monkeypatch):
     )
     assert {"event": "reply_text", "text": "second reply", "turn": 2} in websocket.sent[sent_after_error:]
     assert {"event": "reply_end", "turn": 2} in websocket.sent[sent_after_error:]
-    assert websocket.sent[-1] == {"event": "ended", "turn_count": 2, "barge_in_count": 0}
+    assert websocket.sent[-1] == {"event": "ended", "session_id": "session-1", "turn_count": 2, "barge_in_count": 0}
     assert [
         x["text"]
         for x in manager.state.recorder.dialogue

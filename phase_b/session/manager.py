@@ -19,13 +19,14 @@ Each session has:
 - rhythm jsonl writer (sessions/rhythm/<id>.jsonl) — created in Step 8
 - start_ms / end_ms timestamps
 
-Sessions are stored under sessions/ (gitignored). After session.end(), the
+Sessions are stored under practice-logs/真人练习/ (gitignored). After session.end(), the
 manager keeps the record until process exit; /api/session/{id} can still
 return metadata for dashboard rendering.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -97,7 +98,7 @@ def _today_seq(existing: List[str]) -> int:
 
 
 class SessionManager:
-    def __init__(self, sessions_dir: str = "sessions") -> None:
+    def __init__(self, sessions_dir: str = "practice-logs/真人练习") -> None:
         self._sessions_dir = Path(sessions_dir).resolve()
         self._sessions: Dict[str, SessionState] = {}
         self._lock = threading.Lock()
@@ -162,6 +163,39 @@ class SessionManager:
             }
         )
         state.recorder.close()
+        # Probe-session fast path: no audio bytes AND no client/coach utterance
+        # lines (e.g. health-check or front-end wiring test). Skip rhythm and
+        # CSV row, then unlink the empty artifacts so they don't pile up.
+        try:
+            has_audio = state.recorder.audio_bytes() > 0
+            has_turn = False
+            dlg_path = Path(state.recorder.dialogue_path)
+            if dlg_path.is_file():
+                for line in dlg_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except ValueError:
+                        continue
+                    if obj.get("role") in ("client", "coach"):
+                        has_turn = True
+                        break
+            if not has_audio and not has_turn:
+                for p in (
+                    state.recorder.audio_path,
+                    state.recorder.dialogue_path,
+                    state.recorder.rhythm_path,
+                ):
+                    Path(p).unlink(missing_ok=True)
+                logger.info(
+                    "session %s had no audio/turns; artifacts removed, skipping downstream",
+                    session_id,
+                )
+                return state
+        except Exception:
+            logger.exception("orphan check failed for %s; continuing", session_id)
         # Step 8: post-process the dialogue into rhythm features. Done
         # synchronously after close so the JSONL files are fully flushed.
         # Failures are logged but do not break the end() return value.

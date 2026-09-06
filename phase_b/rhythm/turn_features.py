@@ -70,6 +70,11 @@ def extract_turn_features(
 ) -> List[Dict[str, Any]]:
     """Compute per-turn features for a session dialogue.
 
+    Emits one JSONL row per utterance (chronological order, both coach
+    and client). Coach rows carry full rhythm features (CPM, silence 5.5,
+    barge-in); client rows carry role + chars + gap from prior event.
+    KPIs should filter to coach-only rows (see router._compute_kpis).
+
     Either `out_path` (writes a JSONL file) or `out_fh` (writes to an
     already-open file handle) must be provided to capture the output.
     Pass both=None to get the list in memory only.
@@ -83,86 +88,96 @@ def extract_turn_features(
         out_fh_target = out_fh
 
     features: List[Dict[str, Any]] = []
-    # Per-turn accumulators (keyed by turn number).
+    events = list(_iter_dialogue(dialogue_path))
+
+    # Read session_start wall-clock ms from _meta, so the first row's
+    # "前沉默 ms" is real gap from session start (not wall-clock ms - 0,
+    # which would be ~1.79e12 on 2026-09-06).
+    session_start_ms: Optional[int] = None
+    barge_in_by_turn: Dict[int, List[int]] = {}
+    for ev in events:
+        if ev.get("role") == "_meta" and ev.get("event") == "session_start":
+            session_start_ms = ev.get("started_ms")
+        elif ev.get("role") == "_meta" and ev.get("event") == "barge_in":
+            barge_in_by_turn.setdefault(ev.get("turn", 0), []).append(ev.get("ms", 0))
+
+    # Chronological utterance order (both roles).
+    utterance_order: List[Dict[str, Any]] = []
+    for ev in events:
+        if ev.get("event") == "utterance" and ev.get("role") in ("coach", "client"):
+            if isinstance(ev.get("ms"), int) and isinstance(ev.get("turn"), int):
+                utterance_order.append(ev)
+    utterance_order.sort(key=lambda e: (e["ms"], e.get("turn", 0), e.get("role", "")))
+
+    # Per-turn lookup for coach text + client reply time.
     coach_text_by_turn: Dict[int, str] = {}
     coach_ms_by_turn: Dict[int, int] = {}
     client_ms_by_turn: Dict[int, int] = {}
-    barge_in_by_turn: Dict[int, List[int]] = {}
-
-    # We must process events in order to know which client utterances
-    # intervene before each coach commit (for silence_5_5 detection).
-    events = list(_iter_dialogue(dialogue_path))
-
-    # First pass: bucket events by turn number.
-    for ev in events:
-        role = ev.get("role")
-        turn = ev.get("turn")
-        if not isinstance(turn, int):
-            continue
-        ms = ev.get("ms")
-        if not isinstance(ms, int):
-            continue
-        if role == "coach" and ev.get("event") == "utterance":
+    for ev in utterance_order:
+        turn = ev["turn"]
+        if ev["role"] == "coach":
             coach_text_by_turn[turn] = ev.get("text", "")
-            coach_ms_by_turn[turn] = ms
-        elif role == "client" and ev.get("event") == "utterance":
-            client_ms_by_turn[turn] = ms
-        elif role == "_meta" and ev.get("event") == "barge_in":
-            barge_in_by_turn.setdefault(turn, []).append(ms)
+            coach_ms_by_turn[turn] = ev["ms"]
+        else:
+            client_ms_by_turn[turn] = ev["ms"]
 
-    # Determine chronological order of events (so we can find client
-    # utterances that intervene between two coach turns).
-    event_order: List[Dict[str, Any]] = []
-    for ev in events:
-        if isinstance(ev.get("turn"), int) and isinstance(ev.get("ms"), int):
-            event_order.append(ev)
-    event_order.sort(key=lambda e: (e["ms"], e.get("turn", 0)))
+    prev_event_ms = session_start_ms if isinstance(session_start_ms, int) else 0
 
-    # Second pass: emit one feature line per coach turn in turn order.
-    turn_numbers = sorted(coach_ms_by_turn.keys())
-    prev_event_ms = 0
-    for turn in turn_numbers:
-        coach_text = coach_text_by_turn.get(turn, "")
-        coach_ms = coach_ms_by_turn[turn]
-        client_ms = client_ms_by_turn.get(turn, coach_ms)
-        barge_in_events = barge_in_by_turn.get(turn, [])
-        # Find intervening client utterances: any client whose ms falls
-        # in (prev_event_ms, coach_ms).
-        intervening_client = [
-            ev["ms"] for ev in event_order
-            if ev.get("role") == "client"
-            and ev.get("event") == "utterance"
-            and prev_event_ms < ev["ms"] < coach_ms
-        ]
-        silence = detect_silence(
-            coach_turn_ms=coach_ms,
-            previous_event_ms=prev_event_ms,
-            intervening_client_ms=intervening_client,
-        )
-        chars = count_chars(coach_text)
-        dur_ms = max(0, client_ms - coach_ms)
-        cpm_val = cpm(chars, dur_ms)
-        barge_stats = collect_barge_ins(barge_in_events)
-        feature = {
-            "turn": turn,
-            "ts": coach_ms,
-            "coach_chars": chars,
-            "coach_dur_ms": dur_ms,
-            "cpm": cpm_val,
-            "cpm_band": cpm_band(cpm_val),
-            "pre_silence_ms": silence.pre_silence_ms,
-            "silence_5_5": silence.silence_5_5,
-            "client_filled_silence": silence.client_filled,
-            "barge_in_count": barge_stats.barge_in_count,
-            "client_interruption_by_coach_ms": client_interruption_by_coach_ms(coach_ms, []),
-            "speaker_role": "coach",
-        }
-        features.append(feature)
+    for ev in utterance_order:
+        role = ev["role"]
+        turn = ev["turn"]
+        ms = ev["ms"]
+        text = ev.get("text", "")
+        if role == "coach":
+            client_ms = client_ms_by_turn.get(turn, ms)
+            # Find intervening client utterances between previous event and this coach turn.
+            intervening_client = [
+                e["ms"] for e in utterance_order
+                if e["role"] == "client" and prev_event_ms < e["ms"] < ms
+            ]
+            silence = detect_silence(
+                coach_turn_ms=ms,
+                previous_event_ms=prev_event_ms,
+                intervening_client_ms=intervening_client,
+            )
+            chars = count_chars(text)
+            dur_ms = max(0, client_ms - ms)
+            cpm_val = cpm(chars, dur_ms)
+            barge_events = barge_in_by_turn.get(turn, [])
+            barge_stats = collect_barge_ins(barge_events)
+            row = {
+                "turn": turn,
+                "ts": ms,
+                "coach_chars": chars,
+                "coach_dur_ms": dur_ms,
+                "cpm": cpm_val,
+                "cpm_band": cpm_band(cpm_val),
+                "pre_silence_ms": silence.pre_silence_ms,
+                "silence_5_5": silence.silence_5_5,
+                "client_filled_silence": silence.client_filled,
+                "barge_in_count": barge_stats.barge_in_count,
+                "client_interruption_by_coach_ms": client_interruption_by_coach_ms(ms, []),
+                "speaker_role": "coach",
+            }
+            # After coach row, "previous event" is this coach utterance itself,
+            # so the upcoming client row sees the coach→client gap.
+            prev_event_ms = ms
+        else:  # client
+            gap = max(0, ms - prev_event_ms)
+            row = {
+                "turn": turn,
+                "ts": ms,
+                "client_chars": count_chars(text),
+                "pre_silence_ms": gap,
+                "silence_5_5": False,  # marker 5.5 is a coach-side metric
+                "barge_in_count": 0,
+                "speaker_role": "client",
+            }
+            prev_event_ms = ms
+        features.append(row)
         if out_fh_target is not None:
-            out_fh_target.write(json.dumps(feature, ensure_ascii=False) + "\n")
+            out_fh_target.write(json.dumps(row, ensure_ascii=False) + "\n")
             out_fh_target.flush()
-        # Next coach turn's previous event is this turn's client reply time.
-        prev_event_ms = client_ms
 
     if out_fh_target is not None and out_path is not None:
         out_fh_target.close()

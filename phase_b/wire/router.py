@@ -196,17 +196,26 @@ def session_rhythm(session_id: str) -> dict:
 
 
 def _compute_kpis(turns: List[dict]) -> dict:
-    """Aggregate per-turn features into dashboard KPI tiles."""
+    """Aggregate per-turn features into dashboard KPI tiles.
+
+    Marker 5.5 silence and CPM are coach-side metrics, so KPIs are
+    computed over coach rows only. Client rows are still rendered in
+    the table (so the user sees alternating coach/client) but excluded
+    from KPI aggregation.
+    """
     if not turns:
         return {"mean_cpm": 0, "silence_5_5_count": 0, "barge_in_count": 0, "turn_count": 0}
-    mean_cpm = sum(t.get("cpm", 0) for t in turns) / len(turns)
-    silence_5_5_count = sum(1 for t in turns if t.get("silence_5_5"))
-    barge_in_count = sum(int(t.get("barge_in_count", 0)) for t in turns)
+    coach_turns = [t for t in turns if t.get("speaker_role") == "coach"]
+    if not coach_turns:
+        return {"mean_cpm": 0, "silence_5_5_count": 0, "barge_in_count": 0, "turn_count": len(turns)}
+    mean_cpm = sum(t.get("cpm", 0) for t in coach_turns) / len(coach_turns)
+    silence_5_5_count = sum(1 for t in coach_turns if t.get("silence_5_5"))
+    barge_in_count = sum(int(t.get("barge_in_count", 0)) for t in coach_turns)
     return {
         "mean_cpm": int(mean_cpm),
         "silence_5_5_count": silence_5_5_count,
         "barge_in_count": barge_in_count,
-        "turn_count": len(turns),
+        "turn_count": len(coach_turns),
     }
 
 
@@ -562,7 +571,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         await cancel_task(load_task)
                         mgr.end(session_id)
                         await websocket.send_json(
-                            {"event": "ended", "turn_count": turn_count, "barge_in_count": barge_in_count}
+                            {"event": "ended", "session_id": session_id, "turn_count": turn_count, "barge_in_count": barge_in_count}
                         )
                         closed_normally = True
                         break

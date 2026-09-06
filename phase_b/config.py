@@ -24,6 +24,24 @@ from typing import Optional
 
 
 # Best-effort .env load (no python-dotenv required).
+# .env always wins over inherited shell env: shell LLM_API_KEY from another
+# project silently broke MiniMax auth on 2026-09-06 (got 401 instead of the
+# .env-stored key).
+# Project-local config keys whose .env value must always win over any
+# stale shell value left over from another project. 2026-09-06 hits:
+#   LLM_API_KEY  → MiniMax 401 (stale key from another project)
+#   LLM_MODEL    → MiniMax 400 ("unknown model 'deepseek-chat'")
+# Non-credential env vars (TRACKER_CSV, host/port) keep shell-or-test
+# precedence so test fixtures can override them.
+_DOTENV_OVERRIDE_KEYS = frozenset({
+    "LLM_API_KEY",
+    "LLM_MODEL",
+    "ALIYUN_ASR_APPKEY",
+    "ALIYUN_ACCESS_KEY_ID",
+    "ALIYUN_ACCESS_KEY_SECRET",
+})
+
+
 def _load_dotenv(path: Path) -> None:
     if not path.is_file():
         return
@@ -36,7 +54,11 @@ def _load_dotenv(path: Path) -> None:
         key, _, value = line.partition("=")
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
+        if not key or not value:
+            continue
+        if key in _DOTENV_OVERRIDE_KEYS:
+            os.environ[key] = value
+        elif key not in os.environ:
             os.environ[key] = value
 
 
@@ -70,12 +92,18 @@ class Settings:
     log_level: str = "info"
     allow_lan: bool = False  # refuse 0.0.0.0 unless explicitly enabled
 
-    # ASR (FunASR) — in-process chunked offline (SenseVoiceSmall validated).
-    asr_model: str = "iic/SenseVoiceSmall"
-    asr_vad_model: str = "fsmn-vad"
-    asr_punc_model: str = "ct-punc"
-    asr_chunk_ms: int = 100  # poll interval for ASR flush checks (decoupled from decode triggers)
-    asr_language: str = "zh"
+    # ASR (FunASR legacy, kept for back-compat with router.py ASRWorker ctor).
+    # 2026-09-06: switched to Aliyun NLS streaming (see phase_b/asr/aliyun_client.py).
+    asr_model: str = "iic/SenseVoiceSmall"   # legacy; ignored when Aliyun creds are set
+    asr_vad_model: str = "fsmn-vad"          # legacy
+    asr_punc_model: str = "ct-punc"          # legacy
+    asr_chunk_ms: int = 100                  # legacy; no longer used for decode trigger
+    asr_language: str = "zh"                 # legacy; Aliyun picks via project settings
+
+    # ASR — 阿里云智能语音交互(实时语音识别)
+    aliyun_asr_appkey: str = ""              # ALIYUN_ASR_APPKEY
+    aliyun_access_key_id: str = ""           # ALIYUN_ACCESS_KEY_ID
+    aliyun_access_key_secret: str = ""       # ALIYUN_ACCESS_KEY_SECRET
 
     # LLM (MiniMax by default; switchable to local OpenAI-compatible)
     llm_base_url: str = "https://api.minimaxi.com/v1"
@@ -124,6 +152,9 @@ def get_settings() -> Settings:
         asr_punc_model=_env("FUNASR_PUNC_MODEL", "ct-punc"),
         asr_chunk_ms=_env_int("ASR_CHUNK_MS", 100),
         asr_language=_env("ASR_LANGUAGE", "zh"),
+        aliyun_asr_appkey=_env("ALIYUN_ASR_APPKEY", ""),
+        aliyun_access_key_id=_env("ALIYUN_ACCESS_KEY_ID", ""),
+        aliyun_access_key_secret=_env("ALIYUN_ACCESS_KEY_SECRET", ""),
         llm_base_url=_env("LLM_BASE_URL", "https://api.minimaxi.com/v1"),
         llm_api_key=_env("LLM_API_KEY", ""),
         llm_model=_env("LLM_MODEL", "MiniMax-M3"),
