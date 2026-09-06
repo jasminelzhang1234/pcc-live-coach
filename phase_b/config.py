@@ -91,6 +91,14 @@ class Settings:
     port: int = 8765
     log_level: str = "info"
     allow_lan: bool = False  # refuse 0.0.0.0 unless explicitly enabled
+    # WebSocket ping tuning — must cover MiniMax-M3 reasoning_split latency
+    # (30-60s typical, 70-80s peak). Default uvicorn 20/20 is too short;
+    # the WS gets killed mid-LLM-reply and the browser sees "回复结束 —
+    # 继续说话" without ever receiving the reply_text / TTS frames.
+    # 60/60 covers p99 reasoning with a buffer; if the client truly dies,
+    # server still detects within ~120s. (2026-09-06 dashboard v2)
+    ws_ping_interval_s: float = 60.0
+    ws_ping_timeout_s: float = 60.0
 
     # ASR (FunASR legacy, kept for back-compat with router.py ASRWorker ctor).
     # 2026-09-06: switched to Aliyun NLS streaming (see phase_b/asr/aliyun_client.py).
@@ -147,6 +155,8 @@ def get_settings() -> Settings:
         port=_env_int("PCC_LIVE_PORT", 8765),
         log_level=_env("PCC_LIVE_LOG_LEVEL", "info"),
         allow_lan=_env_bool("PCC_LIVE_ALLOW_LAN", False),
+        ws_ping_interval_s=float(_env("WS_PING_INTERVAL_S", "60")),
+        ws_ping_timeout_s=float(_env("WS_PING_TIMEOUT_S", "60")),
         asr_model=_env("FUNASR_MODEL", "iic/SenseVoiceSmall"),
         asr_vad_model=_env("FUNASR_VAD_MODEL", "fsmn-vad"),
         asr_punc_model=_env("FUNASR_PUNC_MODEL", "ct-punc"),

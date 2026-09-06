@@ -24,6 +24,12 @@ def main() -> None:
         port=s.port,
         log_level=s.log_level,
         reload=False,
+        # WebSocket ping tuning — see phase_b.config.Settings for the
+        # rationale. Default uvicorn 20/20 is too short for MiniMax-M3
+        # reasoning_split (30-60s) which would otherwise tear down the
+        # WS before the LLM reply_text / TTS frames reach the browser.
+        ws_ping_interval=s.ws_ping_interval_s,
+        ws_ping_timeout=s.ws_ping_timeout_s,
     )
 
 
