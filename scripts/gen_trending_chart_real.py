@@ -41,6 +41,26 @@ def client_color(client_type: str) -> str:
     return mapping.get(client_type, "#ea580c")  # orange-600 fallback
 
 
+def _safe_int(row: dict, key: str, default: int = 0) -> int:
+    """Parse an integer cell, treating empty / None / whitespace as `default`.
+
+    The 95-col real-sessions tracker CSV frequently has empty strings in
+    marker-scoring columns (e.g. claude_total_✔ is blank until a /track
+    reeval fills it). Without this guard the chart regen endpoint would
+    crash on the first session whose score columns haven't been scored yet.
+    """
+    raw = row.get(key)
+    if raw is None:
+        return default
+    s = str(raw).strip()
+    if not s:
+        return default
+    try:
+        return int(s)
+    except (TypeError, ValueError):
+        return default
+
+
 def load_real_sessions(csv_path: Path) -> list[dict]:
     """读 tracker-real-sessions.csv,排序,返回 sessions dict 列表。"""
     if not csv_path.exists():
@@ -57,9 +77,9 @@ def load_real_sessions(csv_path: Path) -> list[dict]:
 
     sessions = []
     for r in rows:
-        yes = int(r["claude_total_✔"])
-        part = int(r["claude_total_△"])
-        no = int(r["claude_total_✘"])
+        yes = _safe_int(r, "claude_total_✔")
+        part = _safe_int(r, "claude_total_△")
+        no = _safe_int(r, "claude_total_✘")
         hit = round((yes + 0.5 * part) / 37 * 100, 2)
         sid = r["session_id"]
         client_type = r.get("persona", "real_unknown")  # 真人用 persona 列存 client_type
@@ -80,7 +100,7 @@ def load_real_sessions(csv_path: Path) -> list[dict]:
                 "good": yes,
                 "part": part,
                 "fail": no,
-                "mustHit": int(r["must_hit_✘_count"]),
+                "mustHit": _safe_int(r, "must_hit_✘_count"),
                 "key_weakness": r.get("key_weakness", ""),
                 "color": client_color(client_type),
             }
@@ -102,9 +122,9 @@ def compute_ai_avg() -> tuple[float, int] | None:
     hits = []
     for r in rows:
         try:
-            yes = int(r["claude_total_✔"])
-            part = int(r["claude_total_△"])
-            no = int(r["claude_total_✘"])
+            yes = _safe_int(r, "claude_total_✔")
+            part = _safe_int(r, "claude_total_△")
+            no = _safe_int(r, "claude_total_✘")
             hits.append((yes + 0.5 * part) / 37 * 100)
         except (KeyError, ValueError):
             continue

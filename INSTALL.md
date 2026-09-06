@@ -6,6 +6,8 @@ Last updated: 2026-09-06
 >
 > 🆕 **ASR switched from FunASR to Aliyun NLS on 2026-09-06.** The FunASR sections below are historical (kept for reference). For the current ASR setup, see [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md).
 >
+> 🆕 **Dashboard v2 landed on 2026-09-06.** 4 new endpoints (`/transcript` `/audio` `/assess` `/track`) + `phase_b/assess.py` (LLM-driven PCC 37-marker assessment) + idempotent `upsert_session_row()` + frontend transcript / audio / 下一步 button area. See [`docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md`](./docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md) and the implementation plan [`docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md`](./docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md).
+>
 > 📂 **Where files live after a session runs:** see [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md) (transcripts / audio / rhythm / tracker files).
 
 ---
@@ -284,6 +286,8 @@ python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmal
 > ✅ **Phase B 已于 2026-09-06 启用。** 后端(`phase_b/`)和前端(`phase_b/static/`)已提交,端到端跑通(浏览器 → 阿里云 ASR → MiniMax LLM → MiniMax TTS → 浏览器)。
 >
 > 🆕 **ASR 已于 2026-09-06 从 FunASR 切换到阿里云 NLS。** 下方的 FunASR 章节保留作历史参考。当前 ASR 注册见 [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md)。
+>
+> 🆕 **Dashboard v2 已于 2026-09-06 落地。** 4 个新 endpoint(`/transcript` `/audio` `/assess` `/track`)+ `phase_b/assess.py`(调 LLM 跑 PCC 37 marker 全评估)+ 幂等去重 `upsert_session_row()` + 前端 transcript / audio / 下一步按钮区。详见 [`docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md`](./docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md) 和实施计划 [`docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md`](./docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md)。
 >
 > 📂 **对话结束后文件落在哪:** 见 [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md)(transcript / 录音 / rhythm / tracker 文件位置)。
 >

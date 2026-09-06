@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>PCC Live Coach</title>
-<link rel="stylesheet" href="/static/styles.css?v=2026-09-05" />
+<link rel="stylesheet" href="/static/styles.css?v=2026-09-06" />
 </head>
 <body>
 <!-- Page 1: entry -->
@@ -53,22 +53,70 @@
 <!-- Page 3: dashboard -->
 <section id="page-dashboard" class="page">
   <header>
-    <h1>本场节奏指标</h1>
+    <h1>本场练习档案</h1>
     <p class="status" id="dashboard-session-id"></p>
   </header>
-  <div class="kpis">
-    <div class="kpi"><div class="kpi-value" id="kpi-cpm">—</div><div class="kpi-label">平均 CPM</div></div>
-    <div class="kpi"><div class="kpi-value" id="kpi-silence">—</div><div class="kpi-label">5.5 沉默命中</div></div>
-    <div class="kpi"><div class="kpi-value" id="kpi-barge">—</div><div class="kpi-label">6.6 打断事件</div></div>
+
+  <!-- 节奏 KPI -->
+  <div class="card">
+    <h2>节奏概览</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-value" id="kpi-cpm">—</div><div class="kpi-label">平均 CPM</div></div>
+      <div class="kpi"><div class="kpi-value" id="kpi-silence">—</div><div class="kpi-label">5.5 沉默命中</div></div>
+      <div class="kpi"><div class="kpi-value" id="kpi-barge">—</div><div class="kpi-label">6.6 打断事件</div></div>
+    </div>
   </div>
-  <h2>逐句特征</h2>
-  <table class="turn-table" id="turn-table">
-    <thead><tr><th>#</th><th>角色</th><th>CPM</th><th>前沉默 ms</th><th>5.5 ✔?</th><th>6.6 打断</th></tr></thead>
-    <tbody></tbody>
-  </table>
+
+  <!-- 逐句特征 -->
+  <div class="card">
+    <h2>逐句特征</h2>
+    <table class="turn-table" id="turn-table">
+      <thead><tr><th>#</th><th>角色</th><th>CPM</th><th>前沉默 ms</th><th>5.5 ✔?</th><th>6.6 打断</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- 本场对话(Task 5: transcript + audio) -->
+  <div class="card">
+    <h2>本场对话</h2>
+
+    <details id="dash-audio-details">
+      <summary>
+        <span>🎙 听录音</span><span class="arrow">▶</span>
+      </summary>
+      <div class="body">
+        <audio id="dash-audio-player" controls preload="metadata">
+          你的浏览器不支持 audio 标签。
+        </audio>
+        <div class="audio-meta" id="dash-audio-meta">—</div>
+      </div>
+    </details>
+
+    <details open id="dash-transcript-details">
+      <summary>
+        <span>📝 Transcript(<span id="dash-transcript-count">0</span> turns)</span><span class="arrow">▶</span>
+      </summary>
+      <div class="body">
+        <div class="ts-scroll" id="dash-transcript-list"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- 下一步(Task 5: 评估 + 追踪 + 成长曲线) -->
+  <div class="card">
+    <h2>下一步</h2>
+    <div class="actions">
+      <button id="btn-assess" class="primary">▶ 运行 PCC 评估 (37 markers)</button>
+      <button id="btn-track" class="secondary">+ 追加到追踪 + 刷新成长曲线</button>
+      <button id="btn-chart" class="ghost">📊 查看成长曲线</button>
+    </div>
+    <p class="status" id="next-step-status">—</p>
+    <div id="assess-result"></div>
+  </div>
+
   <button id="btn-back" class="secondary">返回首页</button>
 </section>
 
-<script src="/static/app.js?v=2026-09-05f"></script>
+<script src="/static/app.js?v=2026-09-06b"></script>
 </body>
 </html>

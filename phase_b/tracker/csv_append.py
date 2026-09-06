@@ -123,6 +123,55 @@ def append_row(
     logger.info("appended row session_id=%s -> %s", row.get("session_id"), csv_path)
 
 
+def upsert_session_row(
+    *,
+    csv_path: Path,
+    row: Dict[str, str],
+) -> str:
+    """Idempotent insert: if `session_id` already exists in the CSV, drop
+    the old row first; then append the new row.
+
+    Returns:
+        "inserted"  — no prior row for this session_id
+        "replaced"  — prior row was found and dropped before insert
+        "no_csv"    — csv_path missing; caller decides whether that's a 404
+    """
+    if not csv_path.is_file():
+        return "no_csv"
+    session_id = row.get("session_id", "")
+    # Read all rows, drop any matching session_id, then rewrite the file.
+    with open(csv_path, "r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        try:
+            header = next(reader)
+        except StopIteration:
+            header = list(row.keys())
+        rows = [r for r in reader if r and (len(r) == 0 or r[0] != session_id)]
+    replaced = False
+    with open(csv_path, "r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        try:
+            next(reader)  # header
+            for r in reader:
+                if r and r[0] == session_id:
+                    replaced = True
+                    break
+        except StopIteration:
+            pass
+    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        # Re-emit only the surviving rows (everything except the duplicate).
+        for r in rows:
+            if r:
+                writer.writerow(r)
+        writer.writerow([row.get(col, "") for col in header])
+    logger.info(
+        "%s row session_id=%s -> %s", "replaced" if replaced else "inserted", session_id, csv_path,
+    )
+    return "replaced" if replaced else "inserted"
+
+
 def append_session(
     *,
     session_id: str,

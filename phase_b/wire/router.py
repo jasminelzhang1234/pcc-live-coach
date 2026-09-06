@@ -18,6 +18,10 @@ REST endpoints:
   /api/session/start           POST  start a session
   /api/session/{id}            GET   session metadata
   /api/session/{id}/audio      POST  push raw PCM (legacy / fallback)
+  /api/session/{id}/audio      GET   serve the recorded wav (dashboard inline player)
+  /api/session/{id}/transcript GET   dialogue JSONL → [{role, turn, text, ms}]
+  /api/session/{id}/rhythm     GET   per-turn rhythm features + KPIs
+  /api/session/{id}/assess     POST  run pcc-assessor on the dialogue (LLM, slow)
   /api/session/{id}/end        POST  finalize session
 
 WebSocket:
@@ -49,7 +53,10 @@ import asyncio
 import json
 import logging
 import re
+import subprocess
+import sys as _sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -163,6 +170,75 @@ def session_end(session_id: str) -> dict:
     return state.to_dict()
 
 
+@api_router.get("/session/{session_id}/transcript")
+def session_transcript(session_id: str) -> dict:
+    """Return the dialogue transcript for a session.
+
+    Reads `sessions/dialogues/<id>.jsonl` (written continuously by
+    router.write_dialogue during the WS pipeline). Filters to
+    event=='utterance' rows and returns them chronologically. _meta rows
+    (session_start / session_end / barge_in) are excluded — they aren't
+    part of what the user reads as a transcript.
+
+    Returns {session_id, turns: [{role, turn, text, ms}]} or 404 if the
+    dialogue file hasn't been written yet.
+    """
+    state = get_manager().get(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
+    dialogue_path = Path(state.recorder.dialogue_path)
+    if not dialogue_path.is_file():
+        raise HTTPException(status_code=404, detail=f"transcript not yet available: {session_id}")
+    turns = []
+    with open(dialogue_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("event") != "utterance":
+                continue
+            turns.append({
+                "role": obj.get("role"),
+                "turn": obj.get("turn"),
+                "text": obj.get("text", ""),
+                "ms": obj.get("ms"),
+            })
+    # Defensive sort: dialogue JSONL is written in arrival order, but if
+    # barge_in inserts an out-of-band event, the JSONL ordering still holds
+    # (barge_in is _meta, not an utterance, so it's filtered above).
+    turns.sort(key=lambda t: (t.get("ms") or 0, t.get("turn") or 0))
+    return {
+        "session_id": session_id,
+        "turns": turns,
+    }
+
+
+@api_router.get("/session/{session_id}/audio")
+def session_audio(session_id: str):
+    """Serve the recorded wav for inline `<audio>` playback in the dashboard.
+
+    Returns the raw wav file produced by SessionRecorder.write_audio().
+    404 if the session has no audio (in-flight session or probe-session
+    that recorded nothing). The browser plays this directly via
+    `<audio controls src="/api/session/{id}/audio">`.
+    """
+    state = get_manager().get(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
+    audio_path = Path(state.recorder.audio_path)
+    if not audio_path.is_file() or state.recorder.audio_bytes() == 0:
+        raise HTTPException(status_code=404, detail=f"audio not yet available: {session_id}")
+    return FileResponse(
+        str(audio_path),
+        media_type="audio/wav",
+        filename=f"{session_id}.wav",
+    )
+
+
 @api_router.get("/session/{session_id}/rhythm")
 def session_rhythm(session_id: str) -> dict:
     """Return the per-turn rhythm features for a session.
@@ -216,6 +292,190 @@ def _compute_kpis(turns: List[dict]) -> dict:
         "silence_5_5_count": silence_5_5_count,
         "barge_in_count": barge_in_count,
         "turn_count": len(coach_turns),
+    }
+
+
+def _chart_output_path(repo_root: Path) -> str:
+    """Default trending-chart output path: progress/trending-chart-real-YYYY-MM-DD.html.
+
+    Overridable via monkeypatch in tests to point at a tmp_path chart
+    when the real script isn't being exercised.
+    """
+    return str(
+        repo_root / "progress" / f"trending-chart-real-{datetime.now().strftime('%Y-%m-%d')}.html"
+    )
+
+
+@api_router.post("/session/{session_id}/track")
+def session_track(session_id: str) -> dict:
+    """Push the session to tracker CSV + regenerate the trending chart.
+
+    Spec (Task 4, dashboard v2):
+    1. Upsert one row into `progress/tracker-real-sessions.csv` (idempotent:
+       existing session_id → drop old row, insert new).
+    2. Re-run `scripts/gen_trending_chart_real.py` so the dashboard's
+       "成长曲线" link reflects the latest tracker state.
+
+    Returns:
+        {session_id, csv_status, chart_path, kpis} where csv_status is
+        one of "inserted" | "replaced" | "no_csv" (the last means the
+        canonical CSV header is missing — caller decides how to react).
+
+    Raises:
+        404 if session / dialogue missing.
+    """
+    state = get_manager().get(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
+    dialogue_path = Path(state.recorder.dialogue_path)
+    if not dialogue_path.is_file():
+        raise HTTPException(status_code=404, detail=f"transcript not yet available: {session_id}")
+
+    # Compute KPI from rhythm jsonl (same logic as /rhythm endpoint).
+    rhythm_path = Path(state.recorder.rhythm_path)
+    kpis: dict = {"mean_cpm": 0, "silence_5_5_count": 0, "barge_in_count": 0, "turn_count": 0}
+    if rhythm_path.is_file():
+        turns: List[dict] = []
+        with open(rhythm_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    turns.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        kpis = _compute_kpis(turns)
+
+    # Upsert into the tracker CSV.
+    from phase_b.config import get_settings
+    from phase_b.tracker.csv_append import build_row, upsert_session_row
+
+    settings = get_settings()
+    csv_path = Path(settings.tracker_csv)
+    if not csv_path.is_absolute():
+        csv_path = Path(__file__).resolve().parents[2] / csv_path
+
+    # _load_header isn't exposed; we read the header inline so we can
+    # build a row matching it (build_row needs the header list).
+    csv_status = "no_csv"
+    if csv_path.is_file():
+        import csv as _csv
+        with open(csv_path, "r", encoding="utf-8", newline="") as f:
+            reader = _csv.reader(f)
+            try:
+                header = next(reader)
+            except StopIteration:
+                header = []
+        row = build_row(
+            session_id=session_id,
+            persona=state.persona_id,
+            difficulty=state.difficulty,
+            topic=state.topic,
+            audio_path=state.recorder.audio_path,
+            transcript_path=state.recorder.dialogue_path,
+            header=header,
+        )
+        csv_status = upsert_session_row(csv_path=csv_path, row=row)
+
+    # Trigger chart regeneration (subprocess; isolates script's sys.argv).
+    chart_path: Optional[str] = None
+    chart_error: Optional[str] = None
+    try:
+        repo_root = Path(__file__).resolve().parents[2]
+        script = repo_root / "scripts" / "gen_trending_chart_real.py"
+        if script.is_file():
+            proc = subprocess.run(
+                [_sys.executable, str(script)],
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if proc.returncode == 0:
+                chart_path = _chart_output_path(repo_root)
+            else:
+                chart_error = (proc.stderr or proc.stdout or "").strip()[:300]
+                logger.warning("chart regen failed (rc=%s): %s", proc.returncode, chart_error)
+        else:
+            chart_error = f"chart script not found: {script}"
+    except Exception as e:
+        chart_error = str(e)
+        logger.exception("chart regen crashed for %s", session_id)
+
+    return {
+        "session_id": session_id,
+        "csv_status": csv_status,
+        "chart_path": chart_path,
+        "chart_error": chart_error,
+        "kpis": kpis,
+    }
+
+
+@api_router.post("/session/{session_id}/assess")
+async def session_assess(session_id: str) -> dict:
+    """Run the PCC 37-marker assessment on a session's dialogue.
+
+    Strategy (Task 3, A1 路线):把 4 个 KB 文件全文塞进 system prompt,让
+    LLM 用同一份知识底座做判定。结果落盘 `assessments/<id>.json`,
+    dashboard 直接读这份 json 渲染 ✔/△/✘。
+
+    慢路径:30-90s(LLM reasoning_split + 25k token prompt)。前端通过
+    spinner 等待;如果需要更短的反馈,可以加 force=1 跳过缓存。
+
+    Returns:
+        {session_id, summary, assessment_path} — assessment_path 用于
+        dashboard 异步重读(若 LLM 之后追加了修正)。
+    Raises:
+        404 if session / dialogue missing
+        502 if LLM parse fails
+    """
+    state = get_manager().get(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
+    dialogue_path = Path(state.recorder.dialogue_path)
+    if not dialogue_path.is_file():
+        raise HTTPException(status_code=404, detail=f"transcript not yet available: {session_id}")
+
+    # Read the dialogue JSONL into turns (same filter as /transcript endpoint).
+    turns: List[dict] = []
+    with open(dialogue_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if obj.get("event") != "utterance":
+                continue
+            turns.append({
+                "role": obj.get("role"),
+                "turn": obj.get("turn"),
+                "text": obj.get("text", ""),
+                "ms": obj.get("ms"),
+            })
+
+    # Run the assessment (LLM call).
+    from phase_b.assess import run_assessment, save_assessment
+
+    try:
+        payload = await run_assessment(turns)
+    except ValueError as e:
+        # LLM returned malformed output — propagate as 502 so the dashboard
+        # can show "评估失败,请重试" rather than swallowing the error.
+        logger.exception("assess parse failed for %s", session_id)
+        raise HTTPException(status_code=502, detail=f"assess parse failed: {e}") from e
+
+    # Persist for the dashboard to read asynchronously + re-render later.
+    out_path = save_assessment(session_id, payload)
+
+    summary = payload.get("summary") or {}
+    return {
+        "session_id": session_id,
+        "summary": summary,
+        "assessment_path": str(out_path),
     }
 
 

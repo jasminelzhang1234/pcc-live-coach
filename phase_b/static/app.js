@@ -293,7 +293,14 @@
           show("page-dashboard");
           $("#dashboard-session-id").textContent =
             `${endedSid || "?"} · ${obj.turn_count || 0} turns · ${obj.barge_in_count || 0} barge-in`;
-          if (endedSid) await loadRhythm(endedSid);
+          // Stash the sid on the status element so the 下一步 buttons can read it
+          // (Task 5: assess / track / chart).
+          if (endedSid) $("#dashboard-session-id").dataset.sid = endedSid;
+          if (endedSid) {
+            await loadRhythm(endedSid);
+            await loadTranscript(endedSid);
+            loadAudio(endedSid);
+          }
           break;
         default:
           // ignore unknown
@@ -495,7 +502,13 @@
       const sid = activeSession && activeSession.id;
       await teardownSession();
       show("page-dashboard");
-      if (sid) await loadRhythm(sid);
+      if (sid) {
+        $("#dashboard-session-id").textContent = `${sid} · — turns`;
+        $("#dashboard-session-id").dataset.sid = sid;
+        await loadRhythm(sid);
+        await loadTranscript(sid);
+        loadAudio(sid);
+      }
     }
   });
 
@@ -558,6 +571,160 @@
       console.error("loadRhythm failed", e);
     }
   }
+
+  // ---- Transcript loader (Task 5) -----------------------------------------
+  async function loadTranscript(sessionId) {
+    if (!sessionId) return;
+    const list = $("#dash-transcript-list");
+    const count = $("#dash-transcript-count");
+    if (!list) return;
+    list.innerHTML = "<p style='color: var(--text-soft);'>加载中…</p>";
+    try {
+      const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}/transcript`);
+      if (!res.ok) {
+        list.innerHTML = `<p style='color: var(--red);'>加载 transcript 失败 (HTTP ${res.status})</p>`;
+        if (count) count.textContent = "0";
+        return;
+      }
+      const data = await res.json();
+      const turns = data.turns || [];
+      if (count) count.textContent = String(turns.length);
+      if (turns.length === 0) {
+        list.innerHTML = "<p style='color: var(--text-soft);'>没有对话记录</p>";
+        return;
+      }
+      list.innerHTML = "";
+      for (const t of turns) {
+        const role = t.role === "coach" ? "教练" : "客户";
+        const row = document.createElement("div");
+        row.className = `turn ${t.role}`;
+        row.innerHTML =
+          `<span class="who">${role}</span>` +
+          `<div class="msg">${escapeHtml(t.text || "")}</div>` +
+          `<div class="ts">${formatTs(t.ms)}</div>`;
+        list.appendChild(row);
+      }
+    } catch (e) {
+      console.error("loadTranscript failed", e);
+      list.innerHTML = "<p style='color: var(--red);'>加载 transcript 出错</p>";
+    }
+  }
+
+  // ---- Audio loader (Task 5) ----------------------------------------------
+  function loadAudio(sessionId) {
+    if (!sessionId) return;
+    const player = $("#dash-audio-player");
+    const meta = $("#dash-audio-meta");
+    if (!player) return;
+    // Force reload by setting src with a cache-busting query param.
+    player.src = `/api/session/${encodeURIComponent(sessionId)}/audio?_=${Date.now()}`;
+    player.load();
+    if (meta) meta.textContent = `${sessionId}.wav · 16kHz mono`;
+  }
+
+  // ---- PCC assessment runner (Task 5) -------------------------------------
+  async function runAssess(sessionId) {
+    const btn = $("#btn-assess");
+    const status = $("#next-step-status");
+    const result = $("#assess-result");
+    if (!sessionId) return;
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = "评估中… (LLM 30-90s)";
+    if (result) result.innerHTML = "";
+    try {
+      const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}/assess`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))).detail || `HTTP ${res.status}`;
+        if (status) status.textContent = `评估失败:${detail}`;
+        return;
+      }
+      const data = await res.json();
+      const summary = data.summary || {};
+      const verdictClass = (summary.verdict || "—") === "达标" ? "pass"
+        : (summary.verdict || "—") === "边缘" ? "warn" : "fail";
+      if (status) status.textContent =
+        `评估完成 · ${summary.verdict || "?"} · ✔${summary.yes_count || 0} △${summary.delta_count || 0} ✘${summary.no_count || 0}` +
+        (summary.required_missed ? ` · 必命中 ✘ ${summary.required_missed}` : "");
+      if (result) {
+        result.className = "assess-result";
+        result.innerHTML =
+          `<h3>PCC 评估结果 · ${summary.verdict || "?"}</h3>` +
+          (summary.key_weakness
+            ? `<p style='color: var(--text-soft); font-size: 12px; margin-bottom: 10px;'>短板:${escapeHtml(summary.key_weakness)}</p>`
+            : "") +
+          `<p style='color: var(--text-soft); font-size: 12px;'>完整 37 marker 详情见 <code>assessments/${sessionId}.json</code></p>` +
+          `<p style='color: var(--text-soft); font-size: 11px; margin-top: 8px;'>v verdict:${summary.verdict || "?"} <span class="v ${verdictClass}">${summary.verdict || "?"}</span></p>`;
+      }
+    } catch (e) {
+      console.error("runAssess failed", e);
+      if (status) status.textContent = `评估出错:${e.message || e}`;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // ---- Track runner (Task 5) ----------------------------------------------
+  async function runTrack(sessionId) {
+    const btn = $("#btn-track");
+    const status = $("#next-step-status");
+    if (!sessionId) return;
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = "追加到追踪 + 重生成 chart…";
+    try {
+      const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}/track`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))).detail || `HTTP ${res.status}`;
+        if (status) status.textContent = `追加失败:${detail}`;
+        return;
+      }
+      const data = await res.json();
+      const csvStatus = data.csv_status || "?";
+      const chart = data.chart_path || "(未生成)";
+      if (status) status.textContent =
+        `已 ${csvStatus} → tracker-real-sessions.csv · chart:${chart}` +
+        (data.chart_error ? ` · chart 错误:${data.chart_error}` : "");
+    } catch (e) {
+      console.error("runTrack failed", e);
+      if (status) status.textContent = `追加出错:${e.message || e}`;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // ---- Helpers ------------------------------------------------------------
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function formatTs(ms) {
+    if (ms == null) return "";
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) return String(ms);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  // ---- Wire up dashboard buttons (Task 5) ---------------------------------
+  $("#btn-assess")?.addEventListener("click", () => {
+    const sid = $("#dashboard-session-id")?.dataset?.sid;
+    runAssess(sid);
+  });
+  $("#btn-track")?.addEventListener("click", () => {
+    const sid = $("#dashboard-session-id")?.dataset?.sid;
+    runTrack(sid);
+  });
+  $("#btn-chart")?.addEventListener("click", () => {
+    // Open today's trending chart in a new tab (path is repo-root relative).
+    const today = new Date().toISOString().slice(0, 10);
+    window.open(`/../progress/trending-chart-real-${today}.html`, "_blank");
+  });
 
   populatePersonaSelect();
 })();
