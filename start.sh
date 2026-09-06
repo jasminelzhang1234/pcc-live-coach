@@ -33,6 +33,22 @@ if [ ! -f "$SCRIPT_DIR/.env" ]; then
     exit 1
 fi
 
+# Refuse to start if the port is already bound — the common silent-break case
+# when a previous start.sh was killed without Ctrl-C (terminal close, logout).
+PORT="${PCC_LIVE_PORT:-8765}"
+HOLDER=""
+if command -v lsof >/dev/null 2>&1; then
+    HOLDER="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -F pc 2>/dev/null | awk '/^p/{pid=$1; sub(/^p/,"",pid)}/^c/{print pid; exit}')"
+fi
+if [ -n "$HOLDER" ]; then
+    echo "✗ Port $PORT is already held by PID $HOLDER."
+    echo "  Likely cause: a previous start.sh was not stopped cleanly."
+    echo "  Fix one of:"
+    echo "    kill $HOLDER                # if you started it"
+    echo "    PCC_LIVE_PORT=8766 $0       # use a different port"
+    exit 1
+fi
+
 # Open browser after the server has bound the port.
 # Server cold-start (FunASR import) takes ~3-5s; we sleep a bit longer
 # so the page doesn't 502 on first paint.

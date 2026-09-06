@@ -76,6 +76,12 @@ async def chat(
         "max_tokens": max_tokens,
         "temperature": temperature,
         "stream": False,
+        # MiniMax M3 emits chain-of-thought in ``content`` by default; with
+        # ``reasoning_split: True`` the reasoning moves into a separate
+        # ``reasoning_content`` field and ``content`` holds ONLY the user-
+        # facing reply. Probed 2026-09-05 — without this flag, content was
+        # 250+ chars of preamble reasoning; with it, 23 chars of clean reply.
+        "reasoning_split": True,
     }
 
     async with httpx.AsyncClient(timeout=timeout_s, transport=transport) as client:

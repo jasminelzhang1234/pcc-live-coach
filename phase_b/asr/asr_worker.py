@@ -9,23 +9,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""In-process ASR worker using FunASR AutoModel.
+"""ASR worker — wraps AliyunASRClient with the legacy FunASR event contract.
 
-Why in-process (not `funasr.bin.realtime_ws` subprocess)?
-- The streaming model `FunAudioLLM/Fun-ASR-Nano-2512` requires vLLM, which
-  is heavy and Mac-incompatible out of the box.
-- `SenseVoiceSmall` (offline) is already validated in our venv at
-    RTF 0.029 — fast enough for V1 buffered, VAD-triggered decoding.
-- Trade-off accepted: no sub-word partial; we emit a sentence-level "partial"
-    after VAD signals end-of-utterance, then a "final" when the worker stops.
+History:
+- 2026-08: v1 used FunASR (SenseVoiceSmall offline + 1.8s silence trigger).
+  Never reached end-to-end success; see phase_b/_reports/bug-status-2026-09-05.html.
+- 2026-09-06: swapped to Aliyun NLS streaming WebSocket (real-time partial).
 
-API:
-    worker = ASRWorker(model="iic/SenseVoiceSmall")
+This module keeps the external contract stable so phase_b/wire/router.py
+and other callers don't need to change:
+
+    worker = ASRWorker(model=..., sample_rate=..., chunk_ms=..., language=...)
     await worker.start()
-    worker.feed(pcm_bytes)             # 16kHz int16 mono PCM
-    async for ev in worker.events():   # {"event": "partial", ...} or {"event": "final", ...}
+    worker.feed(pcm_bytes)              # 16kHz int16 mono PCM, non-blocking
+    async for ev in worker.events():    # {"event": "partial"|"error"|"done", ...}
         ...
+    worker.clear_buffer()               # no-op for streaming; kept for API compat
     await worker.stop()
+
+Event schema (unchanged):
+    {"event": "partial", "text", "audio_ms", "latency_ms", "is_utterance_end": bool}
+    {"event": "error",   "error": "..."}
+    {"event": "done"}
+
+is_utterance_end=True is the trigger router.py uses for auto-submit.
+With Aliyun NLS, this fires on SentenceEnd (end of sentence by max_sentence_silence).
 """
 
 from __future__ import annotations
@@ -33,446 +41,148 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections import deque
-from typing import Any, AsyncIterator, Deque, List, Optional
+from typing import AsyncIterator, Optional
 
-import numpy as np
+from phase_b.asr.aliyun_client import AliyunASRClient
 
 
 logger = logging.getLogger(__name__)
 
 
-# Process-wide cache: {model_name: model_object}. Loading AutoModel is
-# expensive (~3s); share it across all WS sessions in the same process.
-_MODEL_CACHE: dict[str, Any] = {}
-_MODEL_LOAD_LOCK = asyncio.Lock()
-
-
-async def _get_model(model_name: str) -> Any:
-    """Return a loaded AutoModel, initializing the cache entry once per process."""
-    if model_name in _MODEL_CACHE:
-        return _MODEL_CACHE[model_name]
-    # Import funasr OUTSIDE the lock so concurrent coroutines waiting on the
-    # lock don't also block each other on the import.
-    from funasr import AutoModel  # type: ignore
-
-    async with _MODEL_LOAD_LOCK:
-        if model_name in _MODEL_CACHE:
-            return _MODEL_CACHE[model_name]
-        loop = asyncio.get_running_loop()
-
-        def _load():
-            logger.info("ASR loading model %s ...", model_name)
-            t0 = time.time()
-            m = AutoModel(
-                model=model_name,
-                vad_model="fsmn-vad",
-                vad_kwargs={"max_single_segment_time": 30000},
-                device="cpu",
-                disable_update=True,
-            )
-            logger.info("ASR model loaded in %.1fs", (time.time() - t0))
-            return m
-
-        model = await loop.run_in_executor(None, _load)
-        _MODEL_CACHE[model_name] = model
-        return model
-
-
 class ASRWorker:
-    """Buffered ASR using FunASR's SenseVoiceSmall + fsmn-vad.
+    """Wrapper around AliyunASRClient preserving the legacy FunASR event schema.
 
-    Design (rewrite of the old FIFO-chunk decoder):
-
-    The previous implementation sliced the audio buffer into 1s chunks and
-    ran ``generate()`` on each chunk in isolation. FunASR's VAD runs on the
-    whole input — feeding it an isolated 1s slice meant the VAD almost
-    never saw a complete speech segment, so every chunk came back as
-    ``empty speech`` and the user was never transcribed.
-
-    New behaviour:
-
-    * Buffer all incoming PCM (no FIFO slicing).
-    * Trigger a decode when EITHER:
-      - the trailing ``silence_ms`` of the buffer is below the silence RMS
-        threshold AND the buffer already holds ``>= min_audio_ms`` of audio
-        (i.e. the user has paused long enough for the sentence to be over);
-      - OR the buffer has accumulated ``>= max_audio_ms`` of audio (backstop
-        so we never starve the UI if the user talks continuously).
-    * Each decode runs ``generate(sentence_timestamp=True)`` against the
-    *entire* current buffer. FunASR's VAD now sees the full audio and emits
-    one ``sentence_info`` per detected segment, each with absolute
-    ``start``/``end`` ms offsets into the buffer.
-    * We track the highest ``end`` ms we have already emitted
-    (``_emitted_until_ms``) and only emit segments whose ``start`` is past
-    ``_emitted_until_ms - overlap_ms`` (the overlap window). This prevents
-    double-counting the tail of the previous decode.
-    * After each partial decode, we keep the last ``overlap_ms`` of audio in
-    the buffer as VAD context for the next round; everything before that is
-    discarded.
-    * On ``stop()`` we run one last decode so the final sentence of the
-    session is never lost to the overlap window.
-
-    Events emitted on ``events()``:
-
-    * ``{"event": "partial", "text", "audio_ms", "latency_ms", "is_final"}``
-      — ``is_final`` is True only for the last decode done inside ``stop()``.
-    * ``{"event": "error", "error": str}`` on decode failure.
+    The internal client is a single AliyunASRClient (one task_id per worker).
+    Events from the client are pumped into an asyncio.Queue so callers can
+    `async for` over them without coupling to the websocket iteration directly.
     """
-
-    # Decode triggers.
-    MIN_AUDIO_MS = 1500        # need ≥1.5s of audio before silence can trigger
-    MAX_AUDIO_MS = 8000        # hard cap → flush even without silence
-    MAX_PENDING_AUDIO_BYTES = 32000  # bound audio received while model loads
-    MAX_RUNTIME_AUDIO_BYTES = 256000  # bound audio received during a slow decode
-    SILENCE_MS = 1800          # allow natural Chinese pauses without committing mid-sentence
-    OVERLAP_MS = 1500          # keep last 1.5s as VAD context for next round
-    SILENCE_RMS_THRESHOLD = 200  # int16 RMS below this counts as silence
 
     def __init__(
         self,
-        model: str = "iic/SenseVoiceSmall",
+        model: str = "iic/SenseVoiceSmall",     # legacy: ignored, kept for router.py compat
         sample_rate: int = 16000,
-        chunk_ms: int = 100,    # poll interval (was 1000); decode triggers are separate
-        language: str = "zh",
+        chunk_ms: int = 100,                    # legacy: no longer used for decode trigger
+        language: str = "zh",                   # legacy: ignored (Aliyun NLS picks via project)
     ) -> None:
-        self._model_name = model
+        # Aliyun NLS reads credentials from .env via phase_b.config.get_settings().
+        from phase_b.config import get_settings
+        s = get_settings()
+        if not (s.aliyun_asr_appkey and s.aliyun_access_key_id and s.aliyun_access_key_secret):
+            raise RuntimeError(
+                "阿里云 ASR 凭证未配置。需要在 .env 设置 ALIYUN_ASR_APPKEY / "
+                "ALIYUN_ACCESS_KEY_ID / ALIYUN_ACCESS_KEY_SECRET(见 "
+                "phase_b/_reports/aliyun-asr-setup-2026-09-06.md)"
+            )
+        self._model_legacy = model  # for diagnostics only
         self._sample_rate = sample_rate
         self._chunk_ms = chunk_ms
         self._language = language
-        self._model: Optional[Any] = None
-        self._buffer = bytearray()
-        self._pending_audio: Deque[bytes] = deque()
-        self._pending_audio_size = 0
-        self._events: Optional[asyncio.Queue] = None  # created in start() to bind to running loop
-        self._task: Optional[asyncio.Task] = None
-        self._lifecycle_lock: Optional[asyncio.Lock] = None
-        self._flush_lock: Optional[asyncio.Lock] = None
+        self._client = AliyunASRClient(
+            appkey=s.aliyun_asr_appkey,
+            ak_id=s.aliyun_access_key_id,
+            ak_secret=s.aliyun_access_key_secret,
+            sample_rate=sample_rate,
+        )
+        self._events: Optional[asyncio.Queue] = None
         self._running = False
-        self._stopping = False
-        self._model_ready = False
-        self._odd_pcm_byte = b""
-        self._feed_version = 0
-        self._emitted_segment_keys: Deque[tuple[int, int, str]] = deque(maxlen=128)
-        self._emitted_until_ms: int = 0  # highest sentence end already emitted
-        self._last_decode_audio_ms: int = 0  # buffer length at last decode attempt
+        self._lifecycle_lock: Optional[asyncio.Lock] = None
+        self._pump_task: Optional[asyncio.Task] = None
+        self._t_start: float = 0.0
 
     async def start(self) -> None:
         if self._lifecycle_lock is None:
             self._lifecycle_lock = asyncio.Lock()
         async with self._lifecycle_lock:
-            if self._running or self._stopping:
+            if self._running:
                 return
             self._events = asyncio.Queue()
-            self._model = await _get_model(self._model_name)
-            pending_audio = self.mark_ready()
+            self._t_start = time.time()
+            try:
+                await self._client.start()
+            except Exception as e:
+                logger.exception("aliyun-asr client.start failed")
+                await self._events.put({"event": "error", "error": f"start failed: {e}"})
+                raise
             self._running = True
-            if pending_audio:
-                self._append_runtime_audio(pending_audio)
-            self._task = asyncio.create_task(self._run_loop())
+            self._pump_task = asyncio.create_task(self._pump_loop(), name="asr-pump")
 
     async def stop(self) -> None:
         if self._lifecycle_lock is None:
             self._lifecycle_lock = asyncio.Lock()
         async with self._lifecycle_lock:
-            if not self._running and not self._stopping:
+            if not self._running:
                 return
-            self._stopping = True
             self._running = False
             try:
-                # A background flush may already hold this lock. Repeat only if
-                # feed() added audio while the preceding flush was in flight.
-                while True:
-                    feed_version = self._feed_version
-                    try:
-                        await self._flush(is_final=True)
-                    except Exception:
-                        logger.exception("final flush failed")
-                    if feed_version == self._feed_version:
-                        break
-            finally:
-                if self._odd_pcm_byte:
-                    logger.warning("discarding trailing odd PCM byte at ASR stop")
-                    self._odd_pcm_byte = b""
-                if self._task is not None:
-                    self._task.cancel()
-                    try:
-                        await self._task
-                    except (asyncio.CancelledError, Exception):
-                        pass
-                    self._task = None
-                self._stopping = False
+                await self._client.stop()
+            except Exception:
+                logger.exception("client.stop failed")
+            if self._pump_task is not None:
+                self._pump_task.cancel()
+                try:
+                    await self._pump_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                self._pump_task = None
 
     def feed(self, pcm_bytes: bytes) -> None:
-        """Append raw 16kHz int16 mono PCM. Called from the WS handler."""
-        if self._running or self._stopping:
-            self._append_runtime_audio(pcm_bytes)
+        """Push PCM to the underlying client. Non-blocking.
+
+        Pre-running calls are silently dropped (matches old FunASR behavior
+        where pre-load audio was queued, but Aliyun doesn't have a
+        model-loading window — credentials are read at process start).
+        """
+        if not self._running or not pcm_bytes:
             return
-        if not self._model_ready:
-            self._append_pending_audio(pcm_bytes)
-
-    def _split_pcm_bytes(self, pcm_bytes: bytes) -> bytes:
-        data = self._odd_pcm_byte + bytes(pcm_bytes)
-        self._odd_pcm_byte = b""
-        if len(data) % 2:
-            self._odd_pcm_byte = data[-1:]
-            data = data[:-1]
-            logger.warning("received odd PCM byte count; buffering the final byte")
-        return data
-
-    def _append_pending_audio(self, pcm_bytes: bytes) -> None:
-        data = self._split_pcm_bytes(pcm_bytes)
-        if not data:
-            return
-        self._pending_audio.append(data)
-        self._pending_audio_size += len(data)
-        overflow = self._pending_audio_size - self.MAX_PENDING_AUDIO_BYTES
-        if overflow > 0:
-            logger.warning("pending ASR audio buffer full; dropping oldest audio")
-        while overflow > 0:
-            dropped = self._pending_audio.popleft()
-            if len(dropped) <= overflow:
-                overflow -= len(dropped)
-                self._pending_audio_size -= len(dropped)
-                continue
-            kept = dropped[overflow:]
-            self._pending_audio.appendleft(kept)
-            self._pending_audio_size -= overflow
-            overflow = 0
-
-    def _append_runtime_audio(self, pcm_bytes: bytes) -> None:
-        data = self._split_pcm_bytes(pcm_bytes)
-        if not data:
-            return
-        self._buffer.extend(data)
-        self._feed_version += 1
-        overflow = len(self._buffer) - self.MAX_RUNTIME_AUDIO_BYTES
-        if overflow > 0:
-            overflow -= overflow % 2
-            logger.warning("runtime ASR audio buffer full; dropping oldest audio")
-            del self._buffer[:overflow]
-
-    def pending_audio_bytes(self) -> int:
-        """Return the number of bytes queued while the model was not ready."""
-        return self._pending_audio_size
-
-    def mark_ready(self) -> bytes:
-        """Mark ready and return all pre-ready audio for ordered replay."""
-        self._model_ready = True
-        pending = b"".join(self._pending_audio)
-        self._pending_audio.clear()
-        self._pending_audio_size = 0
-        return pending
-
-    def take_pending_audio(self) -> bytes:
-        """Take and clear pre-ready audio for the caller to feed explicitly."""
-        pending = b"".join(self._pending_audio)
-        self._pending_audio.clear()
-        self._pending_audio_size = 0
-        return pending
+        self._client.feed(pcm_bytes)
 
     def clear_buffer(self) -> None:
-        """Discard all buffered audio and reset the dedupe cursor.
+        """No-op for streaming ASR. Kept for API compatibility with router.py.
 
-        Call this when a new turn starts so any audio left over from the
-        previous utterance (or stale mic-bleed captured during TTS playback
-        in the gap before reply_end fired the silence trigger) doesn't get
-        committed as the first partial of the new turn.
+        Aliyun NLS doesn't have a client-side buffer to clear — it processes
+        audio in real time. To "reset" the conversation, send StopTranscription
+        and start a new task (handled by session_manager at the WS layer).
         """
-        self._buffer = bytearray()
-        self._emitted_until_ms = 0
-        self._last_decode_audio_ms = 0
-        self._emitted_segment_keys.clear()
+        return None
 
-    def _buffer_audio_ms(self) -> int:
-        return len(self._buffer) * 1000 // (self._sample_rate * 2)
-
-    def _trailing_silence_ms(self, buffer: Optional[bytes] = None) -> int:
-        """Length of the trailing silence in the buffer, in ms.
-
-        Walks back from the buffer tail in 100ms windows, returning the
-        duration of consecutive windows whose int16 RMS is below the
-        silence threshold. Returns 0 if the very last window is loud.
-        """
-        samples_per_window = self._sample_rate // 10  # 100ms
-        bytes_per_window = samples_per_window * 2
-        audio_buffer = self._buffer if buffer is None else buffer
-        if len(audio_buffer) < bytes_per_window:
-            return 0
-        n_windows = len(audio_buffer) // bytes_per_window
-        silence = 0
-        for i in range(n_windows - 1, -1, -1):
-            start = i * bytes_per_window
-            chunk = audio_buffer[start : start + bytes_per_window]
-            samples = np.frombuffer(chunk, dtype=np.int16)
-            rms = float(np.sqrt(np.mean(samples.astype(np.float32) ** 2)))
-            if rms < self.SILENCE_RMS_THRESHOLD:
-                silence += 100
-            else:
-                break
-        return silence
-
-    async def _run_loop(self) -> None:
-        loop = asyncio.get_running_loop()
-        while self._running:
-            await asyncio.sleep(self._chunk_ms / 1000.0)
-            if not self._should_flush():
-                continue
-            try:
-                await self._flush(is_final=False)
-            except Exception:
-                logger.exception("flush failed")
-
-    def _should_flush(self) -> bool:
-        audio_ms = self._buffer_audio_ms()
-        if audio_ms < self.MIN_AUDIO_MS:
-            return False
-        if audio_ms >= self.MAX_AUDIO_MS:
-            return True
-        # Need to have grown past the last decode start so we don't re-decode
-        # the same audio twice while paused.
-        if audio_ms <= self._last_decode_audio_ms:
-            return False
-        return self._trailing_silence_ms() >= self.SILENCE_MS
-
-    async def _flush(self, is_final: bool) -> None:
-        if self._flush_lock is None:
-            self._flush_lock = asyncio.Lock()
-        async with self._flush_lock:
-            loop = asyncio.get_running_loop()
-            if not self._buffer:
-                return
-            buf_copy = bytes(self._buffer)
-            self._buffer.clear()
-            audio_ms = len(buf_copy) * 1000 // (self._sample_rate * 2)
-            is_utterance_end = is_final or (
-                self._trailing_silence_ms(buf_copy) >= self.SILENCE_MS
-            )
-            self._last_decode_audio_ms = audio_ms
-            try:
-                result = await loop.run_in_executor(None, self._decode, buf_copy, is_final)
-            except Exception as e:
-                logger.exception("ASR decode failed")
-                self._restore_runtime_audio(buf_copy)
-                await self._events.put({"event": "error", "error": str(e)})
-                return
-            if result is None:
-                logger.info("asr flush → no new sentences (VAD found none)")
-                self._restore_runtime_audio(buf_copy)
-                return
-            if result.get("text"):
-                result["is_utterance_end"] = is_utterance_end
-                logger.info("asr flush → emitting partial: %r", result.get("text"))
-                await self._events.put({"event": "partial", **result})
-
-            overlap_bytes = self._sample_rate * self.OVERLAP_MS // 1000 * 2
-            context = buf_copy[-overlap_bytes:] if len(buf_copy) > overlap_bytes else buf_copy
-            trimmed_bytes = len(buf_copy) - len(context)
-            trimmed_ms = trimmed_bytes * 1000 // (self._sample_rate * 2)
-            self._emitted_until_ms = max(0, self._emitted_until_ms - trimmed_ms)
-            new_audio = bytes(self._buffer)
-            self._buffer = bytearray(context)
-            self._buffer.extend(new_audio)
-            self._bound_runtime_buffer()
-            self._last_decode_audio_ms = len(context) * 1000 // (self._sample_rate * 2)
-
-    def _restore_runtime_audio(self, decoded_audio: bytes) -> None:
-        new_audio = bytes(self._buffer)
-        self._buffer = bytearray(decoded_audio)
-        self._buffer.extend(new_audio)
-        self._bound_runtime_buffer()
-
-    def _bound_runtime_buffer(self) -> None:
-        overflow = len(self._buffer) - self.MAX_RUNTIME_AUDIO_BYTES
-        if overflow <= 0:
+    async def _pump_loop(self) -> None:
+        """Forward AliyunASRClient events to the queue until 'done' or error."""
+        if self._events is None:
             return
-        overflow -= overflow % 2
-        logger.warning("runtime ASR audio buffer full; dropping oldest audio")
-        del self._buffer[:overflow]
-
-    def _decode(self, pcm_bytes: bytes, is_final: bool) -> Optional[dict]:
-        """Run VAD-segmented ASR on the whole buffer. Returns the joined
-        text of newly-finished sentences, or None if nothing new."""
-        if len(pcm_bytes) % 2:
-            logger.warning("discarding odd PCM byte before ASR decode")
-            pcm_bytes = pcm_bytes[:-1]
-        if not pcm_bytes:
-            return None
-        audio = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-        audio_ms = int(len(pcm_bytes) / 2 / self._sample_rate * 1000)
-        t0 = time.time()
-        out = self._model.generate(
-            input=audio,
-            language=self._language,
-            batch_size=1,
-            sentence_timestamp=True,
-        )
-        latency_ms = int((time.time() - t0) * 1000)
-        if not out:
-            return None
-        sentence_info = out[0].get("sentence_info") or []
-        # sentence_info may be empty if the VAD didn't fire (pure silence).
-        if not sentence_info:
-            return None
-        import re
-
-        # Only emit sentences that start past the dedupe window.
-        threshold_ms = self._emitted_until_ms - self.OVERLAP_MS
-        new_sentences = []
-        seen_keys: set = set()  # dedupe VAD segments that share the same (start,end)
-        for s in sentence_info:
+        try:
+            async for ev in self._client.events():
+                if self._events is None:
+                    return
+                # Rewrite 'final' → 'partial' with is_utterance_end=True for
+                # backward compat with router.py pump_asr() (which only listens
+                # to event=="partial"). Aliyun's SentenceEnd already carries
+                # is_utterance_end=True.
+                if ev.get("event") == "final":
+                    ev = {
+                        "event": "partial",
+                        "text": ev.get("text", ""),
+                        "audio_ms": ev.get("audio_ms", 0),
+                        "latency_ms": ev.get("latency_ms", 0),
+                        "is_utterance_end": True,
+                        "is_final": True,
+                    }
+                await self._events.put(ev)
+                if ev.get("event") == "done":
+                    return
+                if ev.get("event") == "error" and ev.get("fatal"):
+                    return
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.exception("pump_loop crashed")
             try:
-                start = int(s["start"])
-                end = int(s["end"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if start < threshold_ms:
-                continue
-            txt = re.sub(r"<\|[^|]*\|>", "", s.get("text", "")).strip()
-            if not txt:
-                continue
-            # SenseVoiceSmall sometimes returns duplicate (start,end) segments
-            # that the naive "".join() turns into "abcabc" garbage — drop them.
-            key = (start, end, txt)
-            if key in seen_keys:
-                continue
-            if key in self._emitted_segment_keys:
-                continue
-            seen_keys.add(key)
-            new_sentences.append((start, end, txt))
-        if not new_sentences:
-            return None
-        # Overlap dedupe: FunASR sometimes returns multiple hypotheses for
-        # the same audio span (e.g. 5 overlapping segments for one user
-        # sentence). The naive "".join() concatenates them all, producing
-        # repetition like "达到一个什么成果你想拿到有个什么成果你想拿到".
-        # Sort by start, then for each cluster of overlapping segments keep
-        # only the longest text — it's the most complete ASR hypothesis.
-        if len(new_sentences) > 1:
-            new_sentences.sort(key=lambda x: x[0])
-            deduped = [new_sentences[0]]
-            for s_start, s_end, s_txt in new_sentences[1:]:
-                prev_start, prev_end, prev_txt = deduped[-1]
-                if s_start < prev_end:
-                    # Overlap with previous — keep the longer text.
-                    if len(s_txt) > len(prev_txt):
-                        deduped[-1] = (s_start, s_end, s_txt)
-                    continue
-                deduped.append((s_start, s_end, s_txt))
-            new_sentences = deduped
-        for segment in new_sentences:
-            self._emitted_segment_keys.append(segment)
-        # Advance the dedupe cursor to the end of the newest emitted sentence.
-        self._emitted_until_ms = max(end for _, end, _ in new_sentences)
-        joined = "".join(t for _, _, t in new_sentences)
-        return {
-            "text": joined,
-            "audio_ms": audio_ms,
-            "latency_ms": latency_ms,
-            "is_final": is_final,
-        }
+                await self._events.put({"event": "error", "error": str(e)})
+            except Exception:
+                pass
 
     async def events(self) -> AsyncIterator[dict]:
         while True:
+            if self._events is None:
+                return
             ev = await self._events.get()
             yield ev

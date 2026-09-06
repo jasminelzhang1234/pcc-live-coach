@@ -46,6 +46,7 @@ class SessionRecorder:
         self.rhythm_path = str(self._root / "rhythm" / f"{session_id}.jsonl")
         self._wav: Optional[wave.Wave_write] = None
         self._dlg: Optional[Any] = None
+        self._bytes_written: int = 0
 
     def open(self) -> None:
         for p in [
@@ -65,6 +66,7 @@ class SessionRecorder:
         if self._wav is None:
             raise RuntimeError("recorder not opened")
         self._wav.writeframes(pcm_bytes)
+        self._bytes_written += len(pcm_bytes)
 
     def write_dialogue(self, obj: Dict[str, Any]) -> None:
         if self._dlg is None:
@@ -82,6 +84,10 @@ class SessionRecorder:
         if self._wav is None:
             return 0
         return int(self._wav.getnframes() / self.SAMPLE_RATE * 1000)
+
+    def audio_bytes(self) -> int:
+        """Bytes of raw PCM written so far (excluding WAV header). 0 if never opened."""
+        return self._bytes_written
 
     def close(self) -> None:
         if self._wav is not None:

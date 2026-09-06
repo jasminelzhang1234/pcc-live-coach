@@ -83,15 +83,15 @@ For **fully offline** operation, choose a local provider (Ollama / LM Studio / v
 
 > ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 2311 LoC) and frontend (`phase_b/static/`, 614 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
 
-- ✅ Technical spike complete — see [spike report](../../phase-b-spike-report-2026-09-01.md) · [GitHub research delta](../../phase-b-github-research-2026-09-01.md)
+- ✅ Technical spike complete — see [spike report](./plans/phase-b/spike-report-2026-09-01.md)
 - ✅ Environment validated — FunASR 1.4.11 on Python 3.9 + CPU torch, RTF 0.029 on M3 Pro
 - ✅ HTTP API validated — `/v1/audio/transcriptions` returns correct text for real client audio
 - ✅ MCP server validated — funasr_mcp.py imports and exposes `transcribe(audio_path, language="auto")` tool
-- ✅ Wireframe — see [phase-b-wireframe-2026-09-03.html](../../phase-b-wireframe-2026-09-03.html) (3 pages, static HTML, no JS)
+- ✅ Wireframe — see [phase-b-wireframe-2026-09-03.html](./plans/phase-b/wireframe-2026-09-03.html) (3 pages, static HTML, no JS)
 - ⚠️ Backend code — `phase_b/` (26 .py files, 2311 LoC) + 9 test files under `tests/phase_b/`. **Shipped, not enabled.**
 - ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + styles.css, 614 LoC). **Shipped, not enabled.**
 
-**Why "shipped but not enabled"?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](../../../../PCC-陪练与评估-Agent-设计方案.html)) defines trigger conditions for activating Phase B:
+**Why "shipped but not enabled"?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) defines trigger conditions for activating Phase B:
 
 1. ≥10 complete real-coach practice sessions
 2. Structural problems (issue clarification, closing design, cognitive breakthrough) consistently resolved
@@ -233,15 +233,15 @@ Third-party attributions:
 
 > ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,2311 行)+ 前端(`phase_b/static/`,614 行)已提交且可通过 `./start.sh` 启动,但产品稳定性未根据母项目触发条件(见下)验证。如果你现在试用,预计会遇到边缘情况。
 
-- ✅ 技术 spike 完成 — 详见 [spike 报告](../../phase-b-spike-report-2026-09-01.md) · [GitHub 调研追加](../../phase-b-github-research-2026-09-01.md)
+- ✅ 技术 spike 完成 — 详见 [spike 报告](./plans/phase-b/spike-report-2026-09-01.md)
 - ✅ 环境已验证 — FunASR 1.4.11 + Python 3.9 + CPU torch,M3 Pro 上 RTF 0.029
 - ✅ HTTP API 已验证 — `/v1/audio/transcriptions` 对真实客户音频返回正确文本
 - ✅ MCP server 已验证 — funasr_mcp.py import OK,暴露 `transcribe(audio_path, language="auto")` 工具
-- ✅ Wireframe — 详见 [phase-b-wireframe-2026-09-03.html](../../phase-b-wireframe-2026-09-03.html)(3 页静态 HTML)
+- ✅ Wireframe — 详见 [phase-b-wireframe-2026-09-03.html](./plans/phase-b/wireframe-2026-09-03.html)(3 页静态 HTML)
 - ⚠️ 后端代码 — `phase_b/`(26 个 .py 文件,2311 行)+ `tests/phase_b/` 下 9 个测试文件。**已写、未启用。**
 - ⚠️ 前端代码 — `phase_b/static/`(index.html + app.js + styles.css,614 行)。**已写、未启用。**
 
-**为什么"已写但未启用"?** 母项目 spec ([`PCC-陪练与评估-Agent-设计方案.html`](../../../../PCC-陪练与评估-Agent-设计方案.html)) 定义了 Phase B 启动的触发条件:
+**为什么"已写但未启用"?** 母项目 spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) 定义了 Phase B 启动的触发条件:
 
 1. Phase A 已完成 ≥10 场完整真人陪练
 2. tracker 显示结构性问题(议题澄清、结尾设计、认知突破)已稳定解决
@@ -261,8 +261,8 @@ cd pcc-live-coach
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
-python -m phase_b.server
-# 浏览器打开 http://127.0.0.1:8000
+./start.sh                       # 或 python -m phase_b
+# 浏览器打开 http://127.0.0.1:8765
 ```
 
 完整说明见 [INSTALL.md](INSTALL.md) 和 [DEPLOY.md](DEPLOY.md)。
