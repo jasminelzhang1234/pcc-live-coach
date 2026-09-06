@@ -10,6 +10,12 @@ Thumbs.db
 *.swp
 *~
 
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # 云同步 sync artifacts
 ~$*
 .~lock.*
