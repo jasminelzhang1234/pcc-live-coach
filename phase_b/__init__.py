@@ -22,8 +22,8 @@ import logging
 __version__ = "0.1.0"
 __license__ = "Apache-2.0"
 
-# Make sure phase_b.* loggers emit something even when funasr/torch haven't
-# run logging.basicConfig() yet (we import those lazily). Idempotent.
+# Make sure phase_b.* loggers emit something even if no caller has run
+# logging.basicConfig() yet. Idempotent.
 if not logging.getLogger().handlers:
     logging.basicConfig(
         level=logging.INFO,

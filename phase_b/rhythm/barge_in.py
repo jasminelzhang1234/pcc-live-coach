@@ -20,9 +20,9 @@ session is the aggregate 6.6 marker signal.
 A coach-initiated interruption of the client would show up as a coach
 utterance whose `ms` precedes the previous client utterance's
 `reply_end` — but we don't record reply_end timestamps yet, so we
-cannot detect that direction in v1. This is documented as a known gap
-in the rhythm output (the `client_interruption_by_coach_ms` field is
-always 0 for now).
+cannot detect that direction in v1. This is a known gap; the
+`client_interruption_by_coach_ms` rhythm field has been dropped until
+that signal can be populated.
 """
 
 from __future__ import annotations
@@ -40,13 +40,3 @@ class BargeInStats:
 def collect_barge_ins(turn_barge_in_events: List[int]) -> BargeInStats:
     """Bundle barge_in timestamps for one coach turn into stats."""
     return BargeInStats(barge_in_count=len(turn_barge_in_events), barge_in_ms=list(turn_barge_in_events))
-
-
-def client_interruption_by_coach_ms(_coach_start_ms: int, _client_utterances: list) -> int:
-    """Return how many ms of client speech the coach barged into.
-
-    Always 0 in v1 — reply_end timestamps are not yet recorded. Kept as
-    a function so the rhythm output schema can include the field without
-    requiring a breaking change later.
-    """
-    return 0

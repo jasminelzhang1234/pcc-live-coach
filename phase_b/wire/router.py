@@ -520,12 +520,7 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     from phase_b.config import get_settings
 
     s = get_settings()
-    worker = ASRWorker(
-        model=s.asr_model,
-        sample_rate=16000,
-        chunk_ms=s.asr_chunk_ms,
-        language=s.asr_language,
-    )
+    worker = ASRWorker(sample_rate=16000)
     # Send "ready" FIRST, before any background tasks. There's a known
     # Starlette quirk where websocket.send_json blocks until outstanding
     # tasks on the same WS finish a handshake; spawning tasks before
@@ -538,16 +533,12 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     # acceptable since the user usually waits a few seconds before speaking.
     load_task = asyncio.create_task(worker.start(), name=f"asr-load-{session_id}")
 
-    last_text = ""  # sentinel; replaced by last_text_holder[0] updates from pump_asr
-    # The actual live value lives in last_text_holder[0] below (mutable so the
-    # pump_asr task can write it without `nonlocal`). Keep the legacy name
-    # here for diff-friendliness vs. the previous version.
+    last_text_holder = [""]  # most recent ASR partial text (mirrored from pump_asr)
     turn_count = 0
     closed_normally = False
     closing = False
     barge_in_count = 0
     active_turn_task: Optional[asyncio.Task] = None  # running run_turn() — cancellable on barge-in
-    last_text_holder = [""]  # most recent ASR partial text (mirrored from pump_asr)
     last_auto_submit_key = [None]
     audio_diag_bytes = [0]  # rolling byte counter for the audio-level diagnostic log
     pending_auto_task: Optional[asyncio.Task] = None
@@ -602,7 +593,6 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
 
         turn_count += 1
         turn_started_ms = int(time.time() * 1000)
-        worker.clear_buffer()
         last_text_holder[0] = ""
         state.recorder.write_dialogue(
             {
@@ -806,7 +796,6 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         if active_turn_task is not None and not active_turn_task.done():
                             await cancel_active_turn()
                             barge_in_count += 1
-                            worker.clear_buffer()
                             state.recorder.write_dialogue(
                                 {
                                     "role": "_meta",

@@ -9,22 +9,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""ASR worker — wraps AliyunASRClient with the legacy FunASR event contract.
+"""ASR worker — wraps AliyunASRClient with a stable event contract.
 
 History:
 - 2026-08: v1 used FunASR (SenseVoiceSmall offline + 1.8s silence trigger).
-  Never reached end-to-end success; see phase_b/_reports/bug-status-2026-09-05.html.
+  Never reached end-to-end success.
 - 2026-09-06: swapped to Aliyun NLS streaming WebSocket (real-time partial).
 
-This module keeps the external contract stable so phase_b/wire/router.py
-and other callers don't need to change:
+External contract:
 
-    worker = ASRWorker(model=..., sample_rate=..., chunk_ms=..., language=...)
+    worker = ASRWorker(sample_rate=...)
     await worker.start()
     worker.feed(pcm_bytes)              # 16kHz int16 mono PCM, non-blocking
     async for ev in worker.events():    # {"event": "partial"|"error"|"done", ...}
         ...
-    worker.clear_buffer()               # no-op for streaming; kept for API compat
     await worker.stop()
 
 Event schema (unchanged):
@@ -57,13 +55,7 @@ class ASRWorker:
     `async for` over them without coupling to the websocket iteration directly.
     """
 
-    def __init__(
-        self,
-        model: str = "iic/SenseVoiceSmall",     # legacy: ignored, kept for router.py compat
-        sample_rate: int = 16000,
-        chunk_ms: int = 100,                    # legacy: no longer used for decode trigger
-        language: str = "zh",                   # legacy: ignored (Aliyun NLS picks via project)
-    ) -> None:
+    def __init__(self, sample_rate: int = 16000) -> None:
         # Aliyun NLS reads credentials from .env via phase_b.config.get_settings().
         from phase_b.config import get_settings
         s = get_settings()
@@ -73,10 +65,7 @@ class ASRWorker:
                 "ALIYUN_ACCESS_KEY_ID / ALIYUN_ACCESS_KEY_SECRET(见 "
                 "phase_b/_reports/aliyun-asr-setup-2026-09-06.md)"
             )
-        self._model_legacy = model  # for diagnostics only
         self._sample_rate = sample_rate
-        self._chunk_ms = chunk_ms
-        self._language = language
         self._client = AliyunASRClient(
             appkey=s.aliyun_asr_appkey,
             ak_id=s.aliyun_access_key_id,
@@ -135,15 +124,6 @@ class ASRWorker:
         if not self._running or not pcm_bytes:
             return
         self._client.feed(pcm_bytes)
-
-    def clear_buffer(self) -> None:
-        """No-op for streaming ASR. Kept for API compatibility with router.py.
-
-        Aliyun NLS doesn't have a client-side buffer to clear — it processes
-        audio in real time. To "reset" the conversation, send StopTranscription
-        and start a new task (handled by session_manager at the WS layer).
-        """
-        return None
 
     async def _pump_loop(self) -> None:
         """Forward AliyunASRClient events to the queue until 'done' or error."""

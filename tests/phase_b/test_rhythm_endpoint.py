@@ -54,12 +54,12 @@ def client_with_session(tmp_path):
         f.write(json.dumps({"turn": 1, "ts": 1000, "coach_chars": 5, "coach_dur_ms": 2000,
                             "cpm": 150, "cpm_band": "ideal", "pre_silence_ms": 1000,
                             "silence_5_5": False, "client_filled_silence": False,
-                            "barge_in_count": 0, "client_interruption_by_coach_ms": 0,
+                            "barge_in_count": 0,
                             "speaker_role": "coach"}, ensure_ascii=False) + "\n")
         f.write(json.dumps({"turn": 2, "ts": 6500, "coach_chars": 13, "coach_dur_ms": 2500,
                             "cpm": 312, "cpm_band": "fast", "pre_silence_ms": 3500,
                             "silence_5_5": True, "client_filled_silence": False,
-                            "barge_in_count": 2, "client_interruption_by_coach_ms": 0,
+                            "barge_in_count": 2,
                             "speaker_role": "coach"}, ensure_ascii=False) + "\n")
     recorder.close()
 

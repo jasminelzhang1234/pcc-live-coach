@@ -101,7 +101,7 @@ rapidfuzz
 hydra-core
 ```
 
-If `pip install funasr` fails in your environment (this was observed during the spike — see `phase-b-env-setup-2026-09-01.md` for the workaround), use `pip install --no-deps funasr` and install the rest manually.
+If `pip install funasr` fails in your environment, use `pip install --no-deps funasr` and install the rest manually.
 
 ---
 
@@ -384,7 +384,7 @@ rapidfuzz
 hydra-core
 ```
 
-如果 `pip install funasr` 在你的环境中失败(spike 期间观察到 —— 详见 `phase-b-env-setup-2026-09-01.md` 的解决方案),使用 `pip install --no-deps funasr` 并手动安装其余依赖。
+如果 `pip install funasr` 在你的环境中失败,使用 `pip install --no-deps funasr` 并手动安装其余依赖。
 
 ---
 

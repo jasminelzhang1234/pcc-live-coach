@@ -100,14 +100,6 @@ class Settings:
     ws_ping_interval_s: float = 60.0
     ws_ping_timeout_s: float = 60.0
 
-    # ASR (FunASR legacy, kept for back-compat with router.py ASRWorker ctor).
-    # 2026-09-06: switched to Aliyun NLS streaming (see phase_b/asr/aliyun_client.py).
-    asr_model: str = "iic/SenseVoiceSmall"   # legacy; ignored when Aliyun creds are set
-    asr_vad_model: str = "fsmn-vad"          # legacy
-    asr_punc_model: str = "ct-punc"          # legacy
-    asr_chunk_ms: int = 100                  # legacy; no longer used for decode trigger
-    asr_language: str = "zh"                 # legacy; Aliyun picks via project settings
-
     # ASR — 阿里云智能语音交互(实时语音识别)
     aliyun_asr_appkey: str = ""              # ALIYUN_ASR_APPKEY
     aliyun_access_key_id: str = ""           # ALIYUN_ACCESS_KEY_ID
@@ -157,11 +149,6 @@ def get_settings() -> Settings:
         allow_lan=_env_bool("PCC_LIVE_ALLOW_LAN", False),
         ws_ping_interval_s=float(_env("WS_PING_INTERVAL_S", "60")),
         ws_ping_timeout_s=float(_env("WS_PING_TIMEOUT_S", "60")),
-        asr_model=_env("FUNASR_MODEL", "iic/SenseVoiceSmall"),
-        asr_vad_model=_env("FUNASR_VAD_MODEL", "fsmn-vad"),
-        asr_punc_model=_env("FUNASR_PUNC_MODEL", "ct-punc"),
-        asr_chunk_ms=_env_int("ASR_CHUNK_MS", 100),
-        asr_language=_env("ASR_LANGUAGE", "zh"),
         aliyun_asr_appkey=_env("ALIYUN_ASR_APPKEY", ""),
         aliyun_access_key_id=_env("ALIYUN_ACCESS_KEY_ID", ""),
         aliyun_access_key_secret=_env("ALIYUN_ACCESS_KEY_SECRET", ""),
