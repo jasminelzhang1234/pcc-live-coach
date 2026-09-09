@@ -25,6 +25,9 @@ __pycache__/
 # ===== Coach session artifacts — never commit =====
 sessions/
 
+# 他人陪练 / 评估归档(对话原文 + pcc-assessor 报告,不入版本控制)
+others-sessions/
+
 # 校准案例(真实对话记录 + 督导点评,仅本地使用)
 knowledge/校准案例/
 

@@ -101,7 +101,7 @@ rapidfuzz
 hydra-core
 ```
 
-If `pip install funasr` fails in your environment (this was observed during the spike — see `phase-b-env-setup-2026-09-01.md` for the workaround), use `pip install --no-deps funasr` and install the rest manually.
+If `pip install funasr` fails in your environment, use `pip install --no-deps funasr` and install the rest manually.
 
 ---
 
@@ -257,6 +257,34 @@ ModelScope's main endpoint is in China. If you're outside China and the download
 2. Reduce TTS model to `speech-2.6-turbo` (lower quality, faster).
 3. Check `LOG_LEVEL=debug` for network timing.
 
+### `ModuleNotFoundError` on first start
+
+Dependencies weren't installed into the active Python. Run from the project root:
+
+```bash
+.venv/bin/pip install -r requirements.txt
+```
+
+`./start.sh` already uses `.venv/bin/python` directly, so venv activation is not required.
+
+### `Refusing to bind 0.0.0.0`
+
+By default the server binds to `127.0.0.1` only (LAN exposure refused to avoid leaking audio). To bind `0.0.0.0` (e.g. when running on a remote machine and accessing from another device):
+
+```bash
+PCC_LIVE_ALLOW_LAN=1 ./start.sh
+```
+
+### `tracker.csv` rows truncated to ~95 columns when edited
+
+The Edit tool truncates very long single-line edits (the tracker.csv schema is 87 columns + extras). Append new session rows via:
+
+```bash
+python -m phase_b.tracker.csv_append ...
+```
+
+instead of editing the CSV by hand. See memory `edit-tool-long-csv-truncation`.
+
 ---
 
 ## 9. Updating
@@ -384,7 +412,7 @@ rapidfuzz
 hydra-core
 ```
 
-如果 `pip install funasr` 在你的环境中失败(spike 期间观察到 —— 详见 `phase-b-env-setup-2026-09-01.md` 的解决方案),使用 `pip install --no-deps funasr` 并手动安装其余依赖。
+如果 `pip install funasr` 在你的环境中失败,使用 `pip install --no-deps funasr` 并手动安装其余依赖。
 
 ---
 
@@ -539,6 +567,34 @@ ModelScope 的主要端点在中国。如果你在国外且下载慢:
 1. 使用有线耳机(蓝牙增加约 200 ms 延迟)
 2. 将 TTS 模型降级到 `speech-2.6-turbo`(质量更低,更快)
 3. 检查 `LOG_LEVEL=debug` 的网络时序
+
+### 启动后报 `ModuleNotFoundError`
+
+依赖没装到当前 Python。在项目根目录运行:
+
+```bash
+.venv/bin/pip install -r requirements.txt
+```
+
+`./start.sh` 已直接用 `.venv/bin/python`,无需激活 venv。
+
+### 拒绝绑定 0.0.0.0
+
+默认只绑 `127.0.0.1`(为防止音频泄漏到 LAN,默认拒绝外网暴露)。如需绑 `0.0.0.0`(例如远端机器上跑、另一台设备访问):
+
+```bash
+PCC_LIVE_ALLOW_LAN=1 ./start.sh
+```
+
+### 编辑 `tracker.csv` 时被截断到 ~95 列
+
+Edit 工具对超长单行编辑会截断(tracker.csv schema 共 87 列 + 附加字段)。追加新 session 行用:
+
+```bash
+python -m phase_b.tracker.csv_append ...
+```
+
+不要手编 CSV。详见 memory `edit-tool-long-csv-truncation`。
 
 ---
 

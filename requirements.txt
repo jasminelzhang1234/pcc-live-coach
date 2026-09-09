@@ -3,3 +3,9 @@ uvicorn==0.39.0
 websockets==15.0.1
 httpx==0.28.1
 python-multipart==0.0.20
+
+# --- Aliyun ASR/TTS (替代 FunASR,2026-09-06 起) ---
+aliyun-nls==0.0.1
+alibabacloud-nls-cloud-meta20190228==1.0.0
+# 注:aliyun-nls 0.0.1 会顺带拉 matplotlib / pillow / fonttools / pycryptodome(~54MB),
+# 本项目不实际用到。装完后可 pip uninstall 掉省盘。

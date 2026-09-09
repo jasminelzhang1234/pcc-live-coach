@@ -26,7 +26,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from phase_b.rhythm.barge_in import collect_barge_ins, client_interruption_by_coach_ms  # noqa: E402
+from phase_b.rhythm.barge_in import collect_barge_ins  # noqa: E402
 from phase_b.rhythm.cpm import cpm, cpm_band, count_chars  # noqa: E402
 from phase_b.rhythm.silence import SILENCE_THRESHOLD_MS, detect_silence  # noqa: E402
 from phase_b.rhythm.turn_features import extract_turn_features  # noqa: E402
@@ -115,11 +115,6 @@ def test_collect_barge_ins_counts():
     stats = collect_barge_ins([1000, 1500, 2300])
     assert stats.barge_in_count == 3
     assert stats.barge_in_ms == [1000, 1500, 2300]
-
-
-def test_client_interruption_by_coach_v1_always_zero():
-    # v1 doesn't record reply_end; this is a documented stub.
-    assert client_interruption_by_coach_ms(0, []) == 0
 
 
 # ---- end-to-end turn_features extraction -----------------------------------

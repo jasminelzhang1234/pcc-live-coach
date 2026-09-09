@@ -25,7 +25,6 @@ emits one JSONL line per coach turn with rhythm features:
     "silence_5_5": true,
     "client_filled_silence": false,
     "barge_in_count": 0,
-    "client_interruption_by_coach_ms": 0,
     "speaker_role": "coach"
   }
 
@@ -43,7 +42,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, TextIO
 
-from phase_b.rhythm.barge_in import collect_barge_ins, client_interruption_by_coach_ms
+from phase_b.rhythm.barge_in import collect_barge_ins
 from phase_b.rhythm.cpm import cpm, cpm_band, count_chars
 from phase_b.rhythm.silence import detect_silence
 
@@ -156,7 +155,6 @@ def extract_turn_features(
                 "silence_5_5": silence.silence_5_5,
                 "client_filled_silence": silence.client_filled,
                 "barge_in_count": barge_stats.barge_in_count,
-                "client_interruption_by_coach_ms": client_interruption_by_coach_ms(ms, []),
                 "speaker_role": "coach",
             }
             # After coach row, "previous event" is this coach utterance itself,

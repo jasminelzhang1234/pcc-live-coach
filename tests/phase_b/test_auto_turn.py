@@ -81,7 +81,6 @@ class _Worker:
 
     def __init__(self, **_kwargs):
         self.events_queue = asyncio.Queue()
-        self.clears = 0
         self.__class__.instances.append(self)
 
     async def start(self):
@@ -92,9 +91,6 @@ class _Worker:
 
     def feed(self, _pcm):
         pass
-
-    def clear_buffer(self):
-        self.clears += 1
 
     async def events(self):
         while True:
@@ -579,4 +575,3 @@ def test_active_auto_turn_warns_and_turn_error_clears_guard(monkeypatch):
     assert calls == ["第一回合", "第二回合"]
     assert any(x.get("event") == "error" and x.get("stage") == "llm/tts" for x in websocket.sent)
     assert any(x.get("event") == "barge_in_stopped" for x in websocket.sent)
-    assert worker.clears >= 2
