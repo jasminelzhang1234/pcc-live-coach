@@ -47,6 +47,11 @@ notes/
 # 真人案例评估报告(对应 knowledge/校准案例/ 已屏蔽,但产物散落)
 calibration-reports/
 
+# pcc-assessor 反偏松规则的真人案例锚点(2026-09-11 加)
+# 含真人客户原话 + 真人督导师编号 + 具体行号,作为 pcc-assessor 内部加载项
+# 公开仓库只保留规则描述,clone-only 环境降级到规则-only 判定
+knowledge/pcc-assessor-cases.md
+
 # 参考材料索引(含内部作者署名)
 Reference/
 
