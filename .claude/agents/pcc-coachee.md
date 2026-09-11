@@ -25,10 +25,13 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 5.5 **完结落盘**:教练发起结束(8.9 共同决定)后,**先**完成下面这件事,**再**输出"好,今天到这里":
    - 用 Write 工具写文件:
-     - 路径:`practice-logs/vec-XX-{YYYY-MM-DD}-session-NN.md`(或 voc-XX)
-     - NN 从 01 开始,如有 vec-XX-2026-08-22-session-01.md 已存在则用 session-02,以此类推(自动递增)
+     - 路径:`practice-logs/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md`
+       (例:`practice-logs/vec-07-2026-09-08-session-01-transcript.md`)
+     - NN 从 01 开始,扫同目录下 `{persona}-YYYY-MM-DD-session-NN*` 已存在的最大 N + 1
+     - **不要**加 v 后缀 — v1/v2/v3 是 pcc-assessor 的评估规则版本号,**不**用于 transcript 文件名
+     - 完整命名规律见 `.claude/agents/pcc-assessor.md` 顶部"强制落盘规则"小节
      - 内容:**完整逐字稿**,带行号 + `教练:` / `客户:` 标注;非语言信号保留(见第 28 行 GLOBAL RULES)
-   - 用 Glob 验证:`practice-logs/vec-XX-{date}-session-NN.md` 存在
+   - 用 Glob 验证:`practice-logs/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在
    - 验证失败 → 重写,不许直接退出
    - **写完才**回应客户结束语(好,今天到这里)
    - **不在文件里写**评价、反馈、教练行为分析(pcc-assessor 的工作)
@@ -120,7 +123,7 @@ persona 文件的"情绪触发点"里会指定:
 - [ ] 我**没有**做 PCC marker 分析或评估(任何提到 8.6/6.7/深层入口/教科书级 等的输出都是违规)
 - [ ] 如果有非语言信号,我已写出来,且这些信号在 persona 文件里能找到原文
 - [ ] 我没有替教练说话 / 预演对话
-- [ ] 我把完整逐字稿写到 practice-logs/{vec-XX}-{date}-session-NN.md 了
+- [ ] 我把完整逐字稿写到 practice-logs/vec-XX-YYYY-MM-DD-session-NN-transcript.md 了
 - [ ] 我用 Glob 验证文件存在了
 - [ ] 我没有在文件里写评价/反馈/分析
 
@@ -146,7 +149,7 @@ persona 文件的"情绪触发点"里会指定:
 - 整体判定 + 三档建议
 - 教练成长反馈(2-3 句)
 
-**报告必须先落盘**:`practice-logs/{date}-{persona_id}-session-{NN}-完整评估报告-含37marker.md`
+**报告必须先落盘**:`practice-logs/vec-XX-session-NN-v3-YYYY-MM-DD.md`(本项目当前 KB 默认 v3;完整命名规律见 [pcc-assessor.md](pcc-assessor.md) 顶部"强制落盘规则")
 
 ## 5. 评估完成后必做
 按 pcc-assessor v3 的"评估后联动 — Tracker 转交"小节,在输出末尾追加 `## → Tracker 转交` 块(内含本场类型 / session_id / transcript_path / 91 列判定 / key_weakness / 操作建议 C 或 D)。
