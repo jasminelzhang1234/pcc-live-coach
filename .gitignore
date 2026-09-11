@@ -67,3 +67,9 @@ logs/
 
 # Claude Code runtime token tracking(每次跑 python 自动 append,本地调试用,不入版本控制)
 observability/token-usage.csv
+# observability 报告 HTML/MD(只 csv 屏蔽不够;dashboard/report 含 token 用量 + 元数据)
+observability/*.html
+observability/*.md
+
+# 测试子目录的 __pycache__(根级 __pycache__/ 已被顶层规则覆盖,子目录需显式列出)
+tests/**/__pycache__/
