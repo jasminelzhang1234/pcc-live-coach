@@ -1,6 +1,6 @@
 # Phase B 大扫除 — FunASR→Aliyun NLS 留下的死代码 / 死文档清仓
 
-> 给 the maintainer · 2026-09-09 · 配套 2026-09-06 ASR 换栈决策(commit `116e268`)
+> 2026-09-09 · 配套 2026-09-06 ASR 换栈决策(commit `116e268`)
 >
 > FunASR→Aliyun NLS 重构**功能层已干净**,但留下了 6 处 back-compat surface、5 个 FunASR 专属死测试、1 份重复 troubleshooting 文档、1 个未实施的视觉原型、1 个 923 MB 肿大的 venv。本报告记录 2026-09-08 单日清仓全过程 + 留给未来的 3 条 caveat。
 

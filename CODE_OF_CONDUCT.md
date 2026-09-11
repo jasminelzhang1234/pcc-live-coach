@@ -18,4 +18,4 @@
 ## Enforcement
 
 - 违反 → 维护者私下沟通 → 必要时移除贡献权限
-- 联系:Maintainer(@the maintainerlzhang1234)
+- 报告问题:请开 [GitHub Issue](https://github.com/<owner>/<repo>/issues)(公开仓库后替换为实际链接)

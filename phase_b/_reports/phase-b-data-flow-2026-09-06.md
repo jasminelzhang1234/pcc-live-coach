@@ -161,7 +161,7 @@ if key and key not in os.environ:    # ❌ shell 有就跳过
     os.environ[key] = value
 ```
 
-后果:the maintainer shell 里有一个**过期**的 `LLM_API_KEY`(其他项目遗留),覆盖了 `.env` 里**正确**的新 key,导致 MiniMax 401 Unauthorized。
+后果:shell 里有一个**过期**的 `LLM_API_KEY`(来自其他项目),覆盖了 `.env` 里正确的新 key,导致 MiniMax 401 Unauthorized。
 
 已改为 `.env` 永远覆盖 shell(项目级 `.env` 才是 source of truth)。
 
