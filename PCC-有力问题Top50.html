@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCC 有力问题 Top 50</title>
+<style>
+  @page { size: A4; margin: 12mm 13mm 14mm; }
+
+  :root {
+    --ink: #1f2933;
+    --ink-soft: #52606d;
+    --ink-mute: #7b8794;
+    --line: #d9dde2;
+    --line-soft: #edf0f2;
+    --paper: #fffdf9;
+    --sand: #f7f5f0;
+    --blue: #315a78;
+    --blue-soft: #e9f1f5;
+    --red: #b23a32;
+    --red-soft: #fbeeea;
+    --gold: #a66b16;
+    --gold-soft: #fbf2dc;
+    --green: #3f7257;
+    --green-soft: #ebf4ee;
+    --shadow: 0 12px 34px rgba(31, 41, 51, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      linear-gradient(180deg, #f5f1e9 0, #faf9f5 420px, #fff 100%);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+      "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .shell { max-width: 1160px; margin: 0 auto; padding: 30px 24px 64px; }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 34px 38px 30px;
+    background: var(--paper);
+    border: 1px solid rgba(49, 90, 120, 0.18);
+    border-top: 5px solid var(--blue);
+    box-shadow: var(--shadow);
+  }
+
+  .hero::after {
+    content: "50";
+    position: absolute;
+    right: 22px;
+    bottom: -34px;
+    color: rgba(178, 58, 50, 0.08);
+    font: 800 150px/1 "SF Mono", "Menlo", monospace;
+    pointer-events: none;
+  }
+
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--red);
+    font: 700 12px/1.2 "SF Mono", "Menlo", monospace;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  h1, h2, h3, p { margin-top: 0; }
+  h1 { max-width: 650px; margin-bottom: 8px; color: var(--blue); font-size: clamp(28px, 4vw, 44px); line-height: 1.15; letter-spacing: 0.01em; }
+  .subtitle { max-width: 760px; margin-bottom: 20px; color: var(--ink-soft); font-size: 16px; }
+
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 8px; position: relative; z-index: 1; }
+  .pill { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); background: #fff; font-size: 12px; }
+  .pill.strong { border-color: #ddb0a9; color: var(--red); background: var(--red-soft); font-weight: 700; }
+
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 26px; }
+  .principle { min-height: 112px; padding: 15px 17px; border-top: 3px solid var(--gold); background: rgba(255, 253, 249, 0.92); box-shadow: 0 5px 18px rgba(31, 41, 51, 0.05); }
+  .principle strong { display: block; margin-bottom: 4px; color: var(--gold); font-size: 14px; }
+  .principle span { color: var(--ink-soft); font-size: 13px; }
+
+  .toolbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 -24px 24px; padding: 12px 24px; border-top: 1px solid rgba(217, 221, 226, 0.8); border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px); }
+  .search { flex: 1 1 240px; min-width: 220px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink); background: #fff; font: inherit; outline: none; }
+  .search:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(49, 90, 120, 0.12); }
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+  .filter { cursor: pointer; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; color: var(--ink-soft); background: #fff; font: 600 12px/1.2 inherit; }
+  .filter:hover, .filter.active { border-color: var(--blue); color: #fff; background: var(--blue); }
+  .count { margin-left: auto; color: var(--ink-mute); font-size: 12px; white-space: nowrap; }
+
+  .phase { margin: 30px 0 12px; scroll-margin-top: 76px; }
+  .phase-heading { display: flex; align-items: baseline; gap: 12px; margin: 0; padding: 8px 12px; border-left: 5px solid var(--blue); color: var(--blue); background: var(--blue-soft); font-size: 18px; line-height: 1.3; }
+  .phase-heading small { color: var(--ink-mute); font-size: 12px; font-weight: 400; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .question-card { position: relative; padding: 16px 17px 15px; border: 1px solid var(--line); border-left: 4px solid var(--gold); background: var(--paper); break-inside: avoid; transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+  .question-card:hover { border-color: #c69a55; box-shadow: 0 7px 18px rgba(31, 41, 51, 0.08); transform: translateY(-1px); }
+  .question-card.must { border-left-color: var(--red); background: linear-gradient(90deg, var(--red-soft), var(--paper) 42%); }
+  .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .q-number { color: var(--ink-mute); font: 700 12px/1 "SF Mono", "Menlo", monospace; }
+  .q-badge { padding: 2px 7px; border-radius: 2px; color: var(--gold); background: var(--gold-soft); font: 700 11px/1.3 "SF Mono", "Menlo", monospace; white-space: nowrap; }
+  .must .q-badge { color: var(--red); background: #fff; border: 1px solid #dfaaa3; }
+  .question { margin: 0 0 9px; color: var(--ink); font-size: 16px; font-weight: 700; line-height: 1.5; }
+  .why { margin: 0 0 10px; color: var(--ink-soft); font-size: 13px; }
+  .why b { color: var(--ink); }
+  .markers { display: flex; flex-wrap: wrap; gap: 5px; }
+  .marker { padding: 2px 6px; border: 1px solid #b8ccd7; border-radius: 2px; color: var(--blue); background: #f2f7f9; font: 700 11px/1.3 "SF Mono", "Menlo", monospace; }
+  .marker.co { border-color: #c9d9cf; color: var(--green); background: var(--green-soft); }
+  .empty { display: none; padding: 36px 18px; color: var(--ink-mute); text-align: center; }
+
+  .footer-note { margin-top: 34px; padding: 16px 18px; border-left: 4px solid var(--red); color: var(--ink-soft); background: var(--red-soft); font-size: 13px; }
+  .footer-note strong { color: var(--red); }
+  footer { margin-top: 20px; color: var(--ink-mute); font-size: 12px; }
+
+  @media (max-width: 760px) {
+    .shell { padding: 18px 14px 42px; }
+    .hero { padding: 26px 22px 24px; }
+    .principles, .cards { grid-template-columns: 1fr; }
+    .toolbar { margin: 0 -14px 18px; padding: 10px 14px; }
+    .count { width: 100%; margin-left: 0; }
+    .hero::after { right: -6px; font-size: 110px; }
+  }
+
+  @media print {
+    body { background: #fff; font-size: 10pt; }
+    .shell { max-width: none; padding: 0; }
+    .hero { box-shadow: none; }
+    .toolbar { position: static; margin: 16px 0; padding: 8px 0; background: #fff; }
+    .search, .filters { display: none; }
+    .count { margin-left: 0; }
+    .principles { gap: 8px; }
+    .principle { min-height: auto; box-shadow: none; }
+    .cards { gap: 7px; }
+    .question-card { padding: 10px 12px; }
+    .question { font-size: 11pt; }
+    .why { font-size: 9pt; }
+    .phase { break-before: auto; }
+    .phase-heading { font-size: 13pt; }
+    .question-card:hover { transform: none; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="hero">
+    <p class="eyebrow">ICF PCC · Practice Desk</p>
+    <h1>有力问题 Top 50</h1>
+    <p class="subtitle">一份按 45 分钟会话弧线整理的提问清单：先建立协议，再进入觉察，最后把学习转成客户自己的设计。</p>
+    <div class="hero-meta">
+      <span class="pill strong">37 条 PCC Markers</span>
+      <span class="pill">50 个可练习问题</span>
+      <span class="pill">支持打印 / 手机阅读</span>
+    </div>
+  </header>
+
+  <section class="principles" aria-label="使用原则">
+    <div class="principle"><strong>问题不是得分本身</strong><span>必须听到客户的回应，并根据回应继续工作，才形成可判定证据。</span></div>
+    <div class="principle"><strong>先问一个，再留白</strong><span>一次一个开放问题。不要用连环问替客户填满思考时间。</span></div>
+    <div class="principle"><strong>把方向盘交给客户</strong><span>目标、焦点、行动、问责与收尾，都要保留客户的选择权。</span></div>
+  </section>
+
+  <section class="toolbar" aria-label="问题筛选工具">
+    <input id="search" class="search" type="search" placeholder="搜索问题、marker 或关键词" aria-label="搜索问题、marker 或关键词">
+    <div class="filters" role="group" aria-label="按阶段筛选">
+      <button class="filter active" type="button" data-filter="all">全部</button>
+      <button class="filter" type="button" data-filter="协议">协议</button>
+      <button class="filter" type="button" data-filter="聆听">聆听</button>
+      <button class="filter" type="button" data-filter="觉察">觉察</button>
+      <button class="filter" type="button" data-filter="成长">成长</button>
+      <button class="filter" type="button" data-filter="收尾">收尾</button>
+    </div>
+    <span id="count" class="count">显示 50 / 50</span>
+  </section>
+
+  <div id="question-list">
+    <section class="phase" data-phase="协议">
+      <h2 class="phase-heading">01 · 建立会话协议 <small>0–10 分钟 · 3.x / 5.3</small></h2>
+      <div class="cards">
+        <article class="question-card must" data-search="今天 45 分钟 最想带走 3.1 协议 目标">
+          <div class="q-top"><span class="q-number">01</span><span class="q-badge">必命中 · 3.1</span></div>
+          <p class="question">“今天这 45 分钟，你最想带走的是什么？”</p>
+          <p class="why"><b>为什么好：</b>把长期议题收敛为本次会话目标，而不是顺着宽泛话题直接开工。</p>
+          <div class="markers"><span class="marker">3.1 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="结束时 发生什么 目标 成功 3.1 3.2">
+          <div class="q-top"><span class="q-number">02</span><span class="q-badge">目标 + 成功</span></div>
+          <p class="question">“如果今天的对话对你有价值，结束时你希望发生什么变化？”</p>
+          <p class="why"><b>为什么好：</b>把目标具体化，并指向客户真正想要的结果。</p>
+          <div class="markers"><span class="marker">3.1 主命中</span><span class="marker co">3.2 协同</span></div>
+        </article>
+        <article class="question-card" data-search="聊到什么程度 没白花 成功标准 3.2">
+          <div class="q-top"><span class="q-number">03</span><span class="q-badge">成功标准</span></div>
+          <p class="question">“聊到什么程度，你会觉得这段时间没有白花？”</p>
+          <p class="why"><b>为什么好：</b>让客户定义成功标准，而不是由教练替客户判断。</p>
+          <div class="markers"><span class="marker">3.2 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="怎样算取得进展 成功标准 3.2">
+          <div class="q-top"><span class="q-number">04</span><span class="q-badge">成功标准</span></div>
+          <p class="question">“今天我们怎样算是取得了进展？”</p>
+          <p class="why"><b>为什么好：</b>建立可观察的会话成果标准，方便后段回看进展。</p>
+          <div class="markers"><span class="marker">3.2 主命中</span><span class="marker co">8.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="这件事 对你 重要 意义 3.3 7.1 协议">
+          <div class="q-top"><span class="q-number">05</span><span class="q-badge">个人意义</span></div>
+          <p class="question">“这件事对你来说，真正重要在哪里？”</p>
+          <p class="why"><b>为什么好：</b>探索个人意义，而不是事情对公司或他人的重要性。</p>
+          <div class="markers"><span class="marker">3.3 主命中</span><span class="marker co">7.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="为什么现在 动机 意义 3.3 协议">
+          <div class="q-top"><span class="q-number">06</span><span class="q-badge">当下意义</span></div>
+          <p class="question">“为什么是现在，而不是之前或之后再谈？”</p>
+          <p class="why"><b>为什么好：</b>连接当下议题与客户此刻的意义、动机。</p>
+          <div class="markers"><span class="marker">3.3 主命中</span></div>
+        </article>
+        <article class="question-card must" data-search="最需要 先弄清楚 3.4 必命中 协议 焦点">
+          <div class="q-top"><span class="q-number">07</span><span class="q-badge">必命中 · 3.4</span></div>
+          <p class="question">“要走到你刚才说的状态，今天最需要先弄清楚什么？”</p>
+          <p class="why"><b>为什么好：</b>明确客户认为当前需要处理的焦点，避免目标确认后直接探索。</p>
+          <div class="markers"><span class="marker">3.4 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="哪一块 值得 花时间 选择 焦点 3.4 5.3">
+          <div class="q-top"><span class="q-number">08</span><span class="q-badge">客户选焦点</span></div>
+          <p class="question">“在这些事情里，你觉得哪一块最值得我们今天花时间？”</p>
+          <p class="why"><b>为什么好：</b>把选择权交给客户，同时建立探索着力点。</p>
+          <div class="markers"><span class="marker">3.4 主命中</span><span class="marker co">5.3 协同</span></div>
+        </article>
+        <article class="question-card" data-search="目标 一致 话题偏移 重新确认 3.1 5.2">
+          <div class="q-top"><span class="q-number">09</span><span class="q-badge">重新确认</span></div>
+          <p class="question">“我们现在谈到的内容，和你一开始想达成的目标还一致吗？”</p>
+          <p class="why"><b>为什么好：</b>话题发生偏移时重新确认协议，维护全程目标。</p>
+          <div class="markers"><span class="marker">3.1 主命中</span><span class="marker co">5.2 协同</span></div>
+        </article>
+        <article class="question-card" data-search="先从哪一部分 选择方向 客户决定 5.3 协议">
+          <div class="q-top"><span class="q-number">10</span><span class="q-badge">客户选择</span></div>
+          <p class="question">“你想先从哪一部分说起？”</p>
+          <p class="why"><b>为什么好：</b>支持客户选择会话方向，而不是由教练按模型推进。</p>
+          <div class="markers"><span class="marker">5.3 主命中</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="phase" data-phase="聆听">
+      <h2 class="phase-heading">02 · 积极聆听与完整的人 <small>10–20 分钟 · 4.x / 5.4 / 6.x</small></h2>
+      <div class="cards">
+        <article class="question-card" data-search="撑住 原词 词语 隐喻 6.2 聆听">
+          <div class="q-top"><span class="q-number">11</span><span class="q-badge">探索原词</span></div>
+          <p class="question">“你刚才用了‘撑住’这个词。对你来说，‘撑住’具体意味着什么？”</p>
+          <p class="why"><b>为什么好：</b>探索客户自己的原词，而不是替换成教练的诊断。</p>
+          <div class="markers"><span class="marker">6.2 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="泥里走 隐喻 词语 6.2 5.4 聆听">
+          <div class="q-top"><span class="q-number">12</span><span class="q-badge">探索隐喻</span></div>
+          <p class="question">“你说自己像是在‘泥里走’，那个‘泥’对你来说是什么？”</p>
+          <p class="why"><b>为什么好：</b>把隐喻还给客户展开，保持对客户独特经验的好奇。</p>
+          <div class="markers"><span class="marker">6.2 主命中</span><span class="marker co">5.4 协同</span></div>
+        </article>
+        <article class="question-card" data-search="心里 什么感觉 情绪 6.3 聆听">
+          <div class="q-top"><span class="q-number">13</span><span class="q-badge">探索情绪</span></div>
+          <p class="question">“说到这里的时候，你心里是什么感觉？”</p>
+          <p class="why"><b>为什么好：</b>主动探索情绪，而不急着跳到解决方案。</p>
+          <div class="markers"><span class="marker">6.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="声音低 非语言 能量 6.4 聆听">
+          <div class="q-top"><span class="q-number">14</span><span class="q-badge">探索能量</span></div>
+          <p class="question">“刚才你说到这里时声音低了下来，发生了什么？”</p>
+          <p class="why"><b>为什么好：</b>探索可观察的能量或非语言变化，而不是只听内容。</p>
+          <div class="markers"><span class="marker">6.4 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="笑了一下 发生了什么 非语言 6.4 聆听">
+          <div class="q-top"><span class="q-number">15</span><span class="q-badge">非语言线索</span></div>
+          <p class="question">“你刚才笑了一下，那一刻发生了什么？”</p>
+          <p class="why"><b>为什么好：</b>把笑声作为探索入口，而不是忽略客户表达方式的变化。</p>
+          <div class="markers"><span class="marker">6.4 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="把自己看成 什么样的人 自我感知 6.5 7.1 聆听">
+          <div class="q-top"><span class="q-number">16</span><span class="q-badge">看见自己</span></div>
+          <p class="question">“当你面对这个局面时，你把自己看成一个什么样的人？”</p>
+          <p class="why"><b>为什么好：</b>从事件转向客户的自我感知。</p>
+          <div class="markers"><span class="marker">6.5 主命中</span><span class="marker co">7.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="扮演什么角色 自我 世界 6.5 7.1 聆听">
+          <div class="q-top"><span class="q-number">17</span><span class="q-badge">角色觉察</span></div>
+          <p class="question">“在这件事里，你认为自己扮演着什么角色？”</p>
+          <p class="why"><b>为什么好：</b>探索客户如何理解自己与处境的关系。</p>
+          <div class="markers"><span class="marker">6.5 主命中</span><span class="marker co">7.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="怎么看自己的选择 判断 信念 6.5 7.1 聆听">
+          <div class="q-top"><span class="q-number">18</span><span class="q-badge">自我判断</span></div>
+          <p class="question">“你现在是怎么看待自己的这个选择的？”</p>
+          <p class="why"><b>为什么好：</b>进入客户的判断、信念和自我评价。</p>
+          <div class="markers"><span class="marker">6.5 主命中</span><span class="marker co">7.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="最触动你 情绪 价值 好奇 5.4 6.3 7.1 聆听">
+          <div class="q-top"><span class="q-number">19</span><span class="q-badge">辨识重点</span></div>
+          <p class="question">“刚才这段经历里，什么最触动你？”</p>
+          <p class="why"><b>为什么好：</b>鼓励客户自己辨识重点，可能打开情绪、价值或意义。</p>
+          <div class="markers"><span class="marker">5.4 主命中</span><span class="marker co">6.3 协同</span><span class="marker co">7.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="多说一点 支持表达 4.3 5.4 聆听">
+          <div class="q-top"><span class="q-number">20</span><span class="q-badge">给表达空间</span></div>
+          <p class="question">“你愿意再多说一点吗？”</p>
+          <p class="why"><b>为什么好：</b>对客户的感受、担忧或看法给予空间，而不是立刻转换话题。</p>
+          <div class="markers"><span class="marker">4.3 主命中</span><span class="marker co">5.4 协同</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="phase" data-phase="觉察">
+      <h2 class="phase-heading">03 · 建立觉察 <small>20–35 分钟 · 7.1–7.5</small></h2>
+      <div class="cards">
+        <article class="question-card" data-search="必须 从哪里来 假设 信念 6.2 6.5 7.2 觉察">
+          <div class="q-top"><span class="q-number">21</span><span class="q-badge">探索假设</span></div>
+          <p class="question">“你刚才说‘必须’，这个‘必须’是从哪里来的？”</p>
+          <p class="why"><b>为什么好：</b>探索客户背后的假设和信念，不替客户贴标签。</p>
+          <div class="markers"><span class="marker">6.2 主命中</span><span class="marker co">6.5 协同</span><span class="marker co">7.2 协同</span></div>
+        </article>
+        <article class="question-card" data-search="只能这样 可能性 没看见 7.2 7.3 觉察">
+          <div class="q-top"><span class="q-number">22</span><span class="q-badge">扩展可能性</span></div>
+          <p class="question">“当你说‘我只能这样做’时，还有什么可能性没有被你看见？”</p>
+          <p class="why"><b>为什么好：</b>松动单一解释，但不直接告诉客户答案。</p>
+          <div class="markers"><span class="marker">7.2 主命中</span><span class="marker co">7.3 协同</span></div>
+        </article>
+        <article class="question-card" data-search="问题 信号 告诉你 什么 7.3 觉察">
+          <div class="q-top"><span class="q-number">23</span><span class="q-badge">换框探索</span></div>
+          <p class="question">“如果这件事不只是一个问题，而是一个信号，它可能在告诉你什么？”</p>
+          <p class="why"><b>为什么好：</b>将客户从问题框架带向新的处境理解。</p>
+          <div class="markers"><span class="marker">7.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="还有什么解释 也成立 视角 7.3 觉察">
+          <div class="q-top"><span class="q-number">24</span><span class="q-badge">多重视角</span></div>
+          <p class="question">“除了现在这个解释，还有什么解释也可能成立？”</p>
+          <p class="why"><b>为什么好：</b>扩展客户对处境的理解，而不是推动某个预设答案。</p>
+          <div class="markers"><span class="marker">7.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="两个矛盾 同时保留 整合 7.3 觉察">
+          <div class="q-top"><span class="q-number">25</span><span class="q-badge">整合矛盾</span></div>
+          <p class="question">“如果同时保留你刚才说的两个看似矛盾的部分，会发生什么？”</p>
+          <p class="why"><b>为什么好：</b>帮助客户整合冲突，而不是由教练裁决哪一个正确。</p>
+          <div class="markers"><span class="marker">7.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="一年后 回头看 时间视角 7.3 觉察">
+          <div class="q-top"><span class="q-number">26</span><span class="q-badge">时间视角</span></div>
+          <p class="question">“如果站在一年后的自己回头看，你会如何理解今天的这个局面？”</p>
+          <p class="why"><b>为什么好：</b>通过时间视角产生新的观察位置。</p>
+          <div class="markers"><span class="marker">7.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="现在 看法 刚开始 不同 认知变化 7.3 8.3 觉察">
+          <div class="q-top"><span class="q-number">27</span><span class="q-badge">识别变化</span></div>
+          <p class="question">“你现在对这件事的看法，和刚开始相比有什么不同？”</p>
+          <p class="why"><b>为什么好：</b>直接邀请客户识别认知变化，而不是教练宣布客户有了什么洞察。</p>
+          <div class="markers"><span class="marker">7.3 主命中</span><span class="marker co">8.3 协同</span></div>
+        </article>
+        <article class="question-card" data-search="重新看见自己 新东西 7.2 8.2 觉察">
+          <div class="q-top"><span class="q-number">28</span><span class="q-badge">关于自己的觉察</span></div>
+          <p class="question">“这件事让你重新看见了自己的什么？”</p>
+          <p class="why"><b>为什么好：</b>从处境转向关于自己的新学习。</p>
+          <div class="markers"><span class="marker">7.2 主命中</span><span class="marker co">8.2 协同</span></div>
+        </article>
+        <article class="question-card" data-search="必须搞定一切 是谁 身份 7.2 觉察">
+          <div class="q-top"><span class="q-number">29</span><span class="q-badge">身份可能性</span></div>
+          <p class="question">“如果不需要继续做那个‘必须搞定一切的人’，你会是谁？”</p>
+          <p class="why"><b>为什么好：</b>探索身份认知之外的可能性，要求客户自己生成答案。</p>
+          <div class="markers"><span class="marker">7.2 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="保护 放弃 价值 代价 7.2 7.3 觉察">
+          <div class="q-top"><span class="q-number">30</span><span class="q-badge">看见代价</span></div>
+          <p class="question">“你正在保护什么，又可能因此放弃了什么？”</p>
+          <p class="why"><b>为什么好：</b>让客户看到行为背后的价值与代价。</p>
+          <div class="markers"><span class="marker">7.2 主命中</span><span class="marker co">7.3 协同</span></div>
+        </article>
+        <article class="question-card" data-search="关于你自己 看见 什么 7.2 7.1 觉察">
+          <div class="q-top"><span class="q-number">31</span><span class="q-badge">指向“人”</span></div>
+          <p class="question">“关于你自己，这件事最想让你看见什么？”</p>
+          <p class="why"><b>为什么好：</b>将觉察明确指向客户本人，而不是停留在外部事件。</p>
+          <div class="markers"><span class="marker">7.2 主命中</span><span class="marker co">7.1 协同</span></div>
+        </article>
+        <article class="question-card" data-search="拥有能力 资源 现在情况 7.2 7.4 觉察">
+          <div class="q-top"><span class="q-number">32</span><span class="q-badge">资源视角</span></div>
+          <p class="question">“如果你相信自己已经拥有一部分想要的能力，你会怎么看现在的情况？”</p>
+          <p class="why"><b>为什么好：</b>从缺失视角转换到资源视角，但不替客户定义资源。</p>
+          <div class="markers"><span class="marker">7.2 主命中</span><span class="marker co">7.4 协同</span></div>
+        </article>
+        <article class="question-card" data-search="接近想要状态 不一样 7.4 觉察 结果">
+          <div class="q-top"><span class="q-number">33</span><span class="q-badge">朝向结果</span></div>
+          <p class="question">“要更接近你想要的状态，需要有什么不一样？”</p>
+          <p class="why"><b>为什么好：</b>把觉察朝向客户期望结果推进，而不是停在分析问题。</p>
+          <div class="markers"><span class="marker">7.4 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="理想状态 思考 感受 行动 7.4 7.2 觉察">
+          <div class="q-top"><span class="q-number">34</span><span class="q-badge">具体化结果</span></div>
+          <p class="question">“当你处在那个理想状态时，你会以什么不同的方式思考、感受或行动？”</p>
+          <p class="why"><b>为什么好：</b>连接期望结果与客户自身的变化。</p>
+          <div class="markers"><span class="marker">7.4 主命中</span><span class="marker co">7.2 协同</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="phase" data-phase="成长">
+      <h2 class="phase-heading">04 · 促进学习与成长 <small>35–42 分钟 · 8.1–8.7</small></h2>
+      <div class="cards">
+        <article class="question-card must" data-search="目标 走到哪里 进展 8.1 必命中 成长">
+          <div class="q-top"><span class="q-number">35</span><span class="q-badge">必命中 · 8.1</span></div>
+          <p class="question">“回到你开头说的目标，现在你觉得自己走到哪里了？”</p>
+          <p class="why"><b>为什么好：</b>建立本次会话目标的进展闭环，而不是由教练宣布“我们很有收获”。</p>
+          <div class="markers"><span class="marker">8.1 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="刚开始 现在 不一样 会话变化 8.1 8.3 成长">
+          <div class="q-top"><span class="q-number">36</span><span class="q-badge">回看变化</span></div>
+          <p class="question">“和我们刚开始谈的时候相比，现在有什么不一样？”</p>
+          <p class="why"><b>为什么好：</b>邀请客户自己识别会话带来的变化。</p>
+          <div class="markers"><span class="marker">8.1 主命中</span><span class="marker co">8.3 协同</span></div>
+        </article>
+        <article class="question-card" data-search="关于你自己 新东西 学习 8.2 成长">
+          <div class="q-top"><span class="q-number">37</span><span class="q-badge">关于“人”的学习</span></div>
+          <p class="question">“今天关于你自己，你看到了什么新的东西？”</p>
+          <p class="why"><b>为什么好：</b>明确指向关于“人”的学习，而不是泛泛询问“有什么收获”。</p>
+          <div class="markers"><span class="marker">8.2 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="对自己 多知道 8.2 学习 成长">
+          <div class="q-top"><span class="q-number">38</span><span class="q-badge">关于“人”的学习</span></div>
+          <p class="question">“这段对话让你对自己多知道了些什么？”</p>
+          <p class="why"><b>为什么好：</b>探索客户关于自我的新认知，而不让教练替客户总结。</p>
+          <div class="markers"><span class="marker">8.2 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="局面 理解 刚开始 不同 8.3 事 学习 成长">
+          <div class="q-top"><span class="q-number">39</span><span class="q-badge">关于“事”的学习</span></div>
+          <p class="question">“关于这个局面，你现在的理解和一开始有什么不同？”</p>
+          <p class="why"><b>为什么好：</b>明确指向关于“事”的学习，和 8.2 区分开。</p>
+          <div class="markers"><span class="marker">8.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="这件事 现在怎么看 新理解 8.3 成长">
+          <div class="q-top"><span class="q-number">40</span><span class="q-badge">关于“事”的学习</span></div>
+          <p class="question">“这件事本身，你现在怎么看？”</p>
+          <p class="why"><b>为什么好：</b>简洁、直接地邀请客户表达新的处境理解。</p>
+          <div class="markers"><span class="marker">8.3 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="发现 用到 接下来 学习 运用 8.4 成长">
+          <div class="q-top"><span class="q-number">41</span><span class="q-badge">运用学习</span></div>
+          <p class="question">“你想把刚才这个发现用到接下来的什么地方？”</p>
+          <p class="why"><b>为什么好：</b>把新学习连接到未来运用，而不是突然切成任务布置。</p>
+          <div class="markers"><span class="marker">8.4 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="新的看法 影响 选择 行动 8.4 成长">
+          <div class="q-top"><span class="q-number">42</span><span class="q-badge">运用学习</span></div>
+          <p class="question">“这个新的看法，可能会怎样影响你接下来的选择？”</p>
+          <p class="why"><b>为什么好：</b>探索学习如何改变行为或决策。</p>
+          <div class="markers"><span class="marker">8.4 主命中</span></div>
+        </article>
+        <article class="question-card must" data-search="一周 做点什么 思考 反思 行动 8.5 必命中 成长">
+          <div class="q-top"><span class="q-number">43</span><span class="q-badge">必命中 · 8.5</span></div>
+          <p class="question">“接下来这一周，你想做点什么，或者想给自己留出什么思考？”</p>
+          <p class="why"><b>为什么好：</b>共同设计会后的行动或反思，不把行动变成教练布置的作业。</p>
+          <div class="markers"><span class="marker">8.5 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="最小 具体 步骤 行动设计 8.5 成长">
+          <div class="q-top"><span class="q-number">44</span><span class="q-badge">细化行动</span></div>
+          <p class="question">“你想从哪一个最小、最具体的步骤开始？”</p>
+          <p class="why"><b>为什么好：</b>把客户的意图细化为可执行设计，同时保留客户决定权。</p>
+          <div class="markers"><span class="marker">8.5 主命中</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="phase" data-phase="收尾">
+      <h2 class="phase-heading">05 · 资源、问责、庆祝与收尾 <small>42–45 分钟 · 8.6–8.9</small></h2>
+      <div class="cards">
+        <article class="question-card" data-search="资源 支持 容易发生 8.6 成长 收尾">
+          <div class="q-top"><span class="q-number">45</span><span class="q-badge">资源与支持</span></div>
+          <p class="question">“什么资源或支持，会让这件事更容易发生？”</p>
+          <p class="why"><b>为什么好：</b>探索客户需要的资源与支持，而不是教练替客户列方案。</p>
+          <div class="markers"><span class="marker">8.6 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="什么挡住 障碍 面对 8.6 8.5 成长 收尾">
+          <div class="q-top"><span class="q-number">46</span><span class="q-badge">潜在障碍</span></div>
+          <p class="question">“接下来可能有什么会挡住你？你想提前怎么面对它？”</p>
+          <p class="why"><b>为什么好：</b>识别障碍并让客户自己设计应对方式。</p>
+          <div class="markers"><span class="marker">8.6 主命中</span><span class="marker co">8.5 协同</span></div>
+        </article>
+        <article class="question-card" data-search="怎么知道 做到 问责 自检 8.7 收尾">
+          <div class="q-top"><span class="q-number">47</span><span class="q-badge">问责设计</span></div>
+          <p class="question">“你想用什么方式让自己知道，自己真的做到了？”</p>
+          <p class="why"><b>为什么好：</b>设计适合客户自己的问责机制，问责主体是客户自己。</p>
+          <div class="markers"><span class="marker">8.7 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="持续盯住自己 跟进 问责 8.7 收尾">
+          <div class="q-top"><span class="q-number">48</span><span class="q-badge">问责设计</span></div>
+          <p class="question">“什么方式能帮你在这件事上持续盯住自己？”</p>
+          <p class="why"><b>为什么好：</b>让客户自己设计跟进机制，避免变成“下次向教练汇报”。</p>
+          <div class="markers"><span class="marker">8.7 主命中</span></div>
+        </article>
+        <article class="question-card" data-search="变化 庆祝 进展 8.8 收尾">
+          <div class="q-top"><span class="q-number">49</span><span class="q-badge">庆祝进展</span></div>
+          <p class="question">“从刚开始到现在，你最想为自己的哪一个变化庆祝一下？”</p>
+          <p class="why"><b>为什么好：</b>让客户辨识具体进展，避免泛泛地说“你很棒”。</p>
+          <div class="markers"><span class="marker">8.8 主命中</span></div>
+        </article>
+        <article class="question-card must" data-search="几分钟 怎么用 收尾 共同结束 8.9 必命中 5.3 收尾">
+          <div class="q-top"><span class="q-number">50</span><span class="q-badge">必命中 · 8.9</span></div>
+          <p class="question">“我们还有几分钟，你希望怎么用它来结束今天的会话？”</p>
+          <p class="why"><b>为什么好：</b>把收尾权交还给客户，避免教练单方面宣布“今天就到这里”。</p>
+          <div class="markers"><span class="marker">8.9 主命中</span><span class="marker co">5.3 协同</span></div>
+        </article>
+      </div>
+    </section>
+    <p id="empty" class="empty">没有找到匹配的问题。可以换一个 marker 编号，例如 3.1、7.2 或 8.5。</p>
+  </div>
+
+  <div class="footer-note"><strong>练习提醒：</strong>7.2 / 7.3 要看到客户产生新的或扩展的认知；8.5 / 8.7 要有共同设计；8.9 要由教练把选择权交给客户。问题本身不会自动得分。</div>
+  <footer>依据工作区 knowledge/pcc-markers-2025.md 与 competency-rules.md 整理。阈值和训练规则用于内部校准，不是 ICF 官方公开通过线。</footer>
+</main>
+<script>
+  const search = document.getElementById('search');
+  const count = document.getElementById('count');
+  const empty = document.getElementById('empty');
+  const cards = [...document.querySelectorAll('.question-card')];
+  const phases = [...document.querySelectorAll('.phase')];
+  const filters = [...document.querySelectorAll('.filter')];
+  let activeFilter = 'all';
+
+  function applyFilter() {
+    const keyword = search.value.trim().toLowerCase();
+    let visible = 0;
+    cards.forEach((card) => {
+      const phase = card.closest('.phase').dataset.phase;
+      const haystack = `${card.textContent} ${card.dataset.search}`.toLowerCase();
+      const matchesFilter = activeFilter === 'all' || phase === activeFilter;
+      const matchesSearch = !keyword || haystack.includes(keyword);
+      const show = matchesFilter && matchesSearch;
+      card.hidden = !show;
+      if (show) visible += 1;
+    });
+    phases.forEach((phase) => {
+      phase.hidden = ![...phase.querySelectorAll('.question-card')].some((card) => !card.hidden);
+    });
+    empty.style.display = visible ? 'none' : 'block';
+    count.textContent = `显示 ${visible} / ${cards.length}`;
+  }
+
+  filters.forEach((button) => {
+    button.addEventListener('click', () => {
+      filters.forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      activeFilter = button.dataset.filter;
+      applyFilter();
+    });
+  });
+  search.addEventListener('input', applyFilter);
+</script>
+</body>
+</html>
