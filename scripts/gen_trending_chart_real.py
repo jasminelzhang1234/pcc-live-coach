@@ -62,11 +62,28 @@ def _safe_int(row: dict, key: str, default: int = 0) -> int:
 
 
 def load_real_sessions(csv_path: Path) -> list[dict]:
-    """读 tracker-real-sessions.csv,排序,返回 sessions dict 列表。"""
+    """读 tracker-real-sessions.csv,排序,返回 sessions dict 列表。
+
+    防御性过滤(2026-09-11 加):排除
+    - pytest 临时目录音频(/private/var/... 或路径含 pytest)
+    - AI persona 标签错标行(persona 以 vec-/voc-/vic- 开头)
+    """
     if not csv_path.exists():
         raise FileNotFoundError(f"真人练习 CSV 不存在:{csv_path}")
     with csv_path.open(newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
+
+    # 防御过滤:pytest 测试数据 + AI persona 错标行
+    rows_raw = len(rows)
+    rows = [
+        r for r in rows
+        if "pytest" not in r.get("audio_path", "")
+        and not r.get("audio_path", "").startswith("/private/var")
+        and not r.get("persona", "").startswith(("vec-", "voc-", "vic-"))
+    ]
+    rows_filtered = rows_raw - len(rows)
+    if rows_filtered > 0:
+        print(f"   ⚠ 过滤掉 {rows_filtered} 行污染行(纯 pytest 测试或 AI persona 错标)")
 
     rows.sort(
         key=lambda r: (
@@ -80,7 +97,9 @@ def load_real_sessions(csv_path: Path) -> list[dict]:
         yes = _safe_int(r, "claude_total_✔")
         part = _safe_int(r, "claude_total_△")
         no = _safe_int(r, "claude_total_✘")
-        hit = round((yes + 0.5 * part) / 37 * 100, 2)
+        # 严格命中率(只算 ✔) — 更贴近 PCC 考试逻辑(每条独立判定,不靠 △ 救分)
+        # 2026-09-11 改:之前 (yes + 0.5*part)/37 会出现 29✔+8△ = 30✔+6△ = 89.2% 撞分
+        hit = round(yes / 37 * 100, 2)
         sid = r["session_id"]
         client_type = r.get("persona", "real_unknown")  # 真人用 persona 列存 client_type
         sessions.append(
@@ -123,9 +142,7 @@ def compute_ai_avg() -> tuple[float, int] | None:
     for r in rows:
         try:
             yes = _safe_int(r, "claude_total_✔")
-            part = _safe_int(r, "claude_total_△")
-            no = _safe_int(r, "claude_total_✘")
-            hits.append((yes + 0.5 * part) / 37 * 100)
+            hits.append(yes / 37 * 100)
         except (KeyError, ValueError):
             continue
     if not hits:
@@ -265,8 +282,8 @@ def build_html(
     )
 
     narrative = (
-        f"真人练习 N={n} 场 · 加权平均 {real_avg:.1f}%"
-        + (f" · 比 AI persona 高 {real_avg - ai_avg_pct:+.1f}pp" if ai_avg else "")
+        f"真人练习 N={n} 场 · 严格命中率平均 {real_avg:.1f}%(只算 ✔,不靠 △ 救分)"
+        + (f" · 比 AI persona 严格率 {real_avg - ai_avg_pct:+.1f}pp" if ai_avg else "")
         + (f" · ⚠️ n<3,尚不构成 trend,只展示单点能力维度" if n < 3 else "")
     )
 
@@ -376,7 +393,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <h1>🤝 真人练习 PCC 趋势 · {n} 场数据{n_trend_note}</h1>
       <div class="subtitle">独立于 AI persona · 按 (conversation_date, conversation_time) 排序 · 双击可看 · 从 <code>tracker-real-sessions.csv</code> 生成</div>
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">平均命中率</div><div class="kpi-value">{real_avg}%</div><div class="kpi-sub">{n} 场真人加权</div></div>
+        <div class="kpi"><div class="kpi-label">平均严格命中率</div><div class="kpi-value">{real_avg}%</div><div class="kpi-sub">{n} 场真人 ✔/37</div></div>
         <div class="kpi"><div class="kpi-label">最高分</div>{peak_html}</div>
         <div class="kpi"><div class="kpi-label">最低分</div>{trough_html}</div>
         {delta_html}
@@ -385,8 +402,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </header>
 
     <div class="card">
-      <h2>① 命中率走势</h2>
-      <p class="desc">每场真人练习 PCC 总命中率 = (✔ + 0.5×△) / 37 · <strong style="color: var(--accent);">橙色虚线 = AI persona 11 场平均(参考线)</strong></p>
+      <h2>① 严格命中率走势</h2>
+      <p class="desc">每场真人练习 PCC 严格命中率 = ✔ / 37 · <strong style="color: var(--accent);">橙色虚线 = AI persona 严格率平均(参考线)</strong> · 2026-09-11 改:只看 ✔,避免 (29+0.5×8) 与 (30+0.5×6) 都 = 89.2% 撞分</p>
       <div class="chart-wrap tall"><canvas id="hitRateChart"></canvas></div>
       <div class="legend-row">{legend_html}</div>
       <div class="callout"><strong>解读:</strong>{narrative}</div>
@@ -407,7 +424,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <div class="card">
       <h2>④ 每场详情(按 conversation_date + time)</h2>
-      <p class="desc">{n} 场真人练习的判定构成与最终得分 · 点击"🎵 mp3 / 📝 srt"可回溯原文</p>
+      <p class="desc">{n} 场真人练习的判定构成与严格命中率 · 点击"🎵 mp3 / 📝 srt"可回溯原文</p>
       <table>
         <thead>
           <tr>
