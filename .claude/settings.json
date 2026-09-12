@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/hook_guard_writes.py"
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && python3 scripts/hook_guard_writes.py"
           }
         ]
       }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/hook_regen_chart.py"
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && python3 scripts/hook_regen_chart.py"
           }
         ]
       }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/hook_token_usage.py"
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && python3 scripts/hook_token_usage.py"
           }
         ]
       }

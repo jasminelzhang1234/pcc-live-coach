@@ -51,11 +51,21 @@ AGENT_ALLOWED_PATTERNS: dict[str, list[str]] = {
         r"^practice-logs/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
         r"^practice-logs/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
         r"^progress/real-sessions/\d{4}-\d{2}-\d{2}-session-\d+/01-.+\.md$",
+        # AI陪练/ 子目录(2026-09-11 起):vec/voc transcript + 早期直接评估 md
+        r"^practice-logs/AI陪练/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+-transcript\.md$",
+        r"^practice-logs/AI陪练/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+-transcript\.md$",
+        r"^practice-logs/AI陪练/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
+        r"^practice-logs/AI陪练/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+\.md$",
     ],
     "pcc-assessor": [
         r"^practice-logs/\d{4}-\d{2}-\d{2}-vec-\d{2}-session-\d{2}-.+\.md$",
         r"^practice-logs/\d{4}-\d{2}-\d{2}-voc-\d{2}-session-\d{2}-.+\.md$",
         r"^progress/real-sessions/\d{4}-\d{2}-\d{2}-session-\d+/02-评估\.md$",
+        # AI陪练/ 子目录(2026-09-11 起):vec/voc assessment md/html + v1/v2/v3 md
+        r"^practice-logs/AI陪练/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+.+\.md$",
+        r"^practice-logs/AI陪练/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+.+\.md$",
+        r"^practice-logs/AI陪练/vec-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+.+\.html$",
+        r"^practice-logs/AI陪练/voc-\d{2}-\d{4}-\d{2}-\d{2}-session-\d+.+\.html$",
     ],
     "pcc-tracker": [
         r"^progress/tracker\.csv$",
