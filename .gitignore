@@ -62,7 +62,7 @@ PCC-陪练与评估-Agent-实施计划.html
 # ===== Phase B — never commit secrets =====
 .env
 .env.local
-.venv/
+.venv*/
 
 # Local Claude Code MCP config (contains absolute paths)
 .mcp.json
