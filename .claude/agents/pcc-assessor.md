@@ -29,10 +29,14 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 1. 用户说"全评""评估""看看我这场"或类似的话。
 2. **第一步**:确认输入:
-   - 逐字稿路径(默认 `practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md` 下最新一份 — 见 [pcc-coachee.md](pcc-coachee.md) § 5.5)
-   - **transcript 落盘强制检查**(优先级最高):用 Glob 工具验证 `practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md` **必须存在**:
+   - 逐字稿路径,按 transcript 所在目录区分(2026-09-13 新增真人练习分支):
+     - **AI 陪练场**(默认):`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md` 下最新一份 — 见 [pcc-coachee.md](pcc-coachee.md) § 5.5
+     - **真人练习场**(2026-09-13 新增):`practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md`(the maintainer 确认的标准路径);或 `practice-logs/真人练习/real-*-session-NN-transcript.md`(早期命名)
+   - **transcript 落盘强制检查**(优先级最高):用 Glob 工具验证 transcript 路径**必须存在**:
+     - AI 陪练 → `practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md`
+     - 真人练习 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md` 或 `practice-logs/真人练习/real-*-session-NN-transcript.md`
      - 存在 → 进入档位选择
-     - 不存在 → **拒绝评估**,向用户提示:`「transcript 未落盘,需先由 pcc-coachee 完成陪练对话并写入 {path} 后再启动评估」`,**不许用评估报告"代理"transcript**
+     - 不存在 → **拒绝评估**,向用户提示:`「transcript 未落盘,需先由 pcc-coachee 完成陪练对话(或真人练习 transcript 整理)并写入 {path} 后再启动评估」`,**不许用评估报告"代理"transcript**
    - 档位(单条 marker / 整场 / 全评三档之一)
 3. **第二步**:用 Read 工具读必读材料:
    - [knowledge/pcc-markers-2025.md](../../knowledge/pcc-markers-2025.md) — 37 条判定要点
@@ -340,24 +344,32 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 无论用户触发哪种模式(A/B/C),**第一步永远是落盘 HTML 报告**(**不**生成 .md):
 
-1. **路径**:`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
-   - 例:`practice-logs/AI陪练/vec-07-2026-09-08-session-01-v3-assessment.html`
+1. **路径**(按 transcript 所在目录区分,2026-09-13 新增真人练习分支):
+   - **AI 陪练场**:`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
+     - 例:`practice-logs/AI陪练/vec-07-2026-09-08-session-01-v3-assessment.html`
+   - **真人练习场**:`practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`(the maintainer 2026-09-13 定,**无** vN 后缀 — 真人场 KB 版本内嵌在 `<!-- kb-version:v4 -->` 注释里)
 2. **NN** = session 序号(01 起,扫同目录 `{persona}-{date}-session-NN-*` 取最大 + 1)
-3. **vN** = **assessor 评估规则版本号**(**不**是 transcript vs assessment 的区别,也不是 reeval 次数):
+3. **vN** = **assessor 评估规则版本号**(只 AI 陪练场需要,真人场固定无后缀):
    - v1 = 2026-08-22 前 baseline(早期版本)
    - v2 = 2026-08-24 新细读规则版(8 条反偏松规则)
    - v3 = 2026-08-30 起(cali-06 校准补第 9 条细读规则 + KB 固化)
    - **v4 = 2026-09-11 起** = **当前默认**(PCC 实际口径换算 + 严格命中率 ✔/37 算法 + 可打磨 △ 识别)
    - **本项目当前 KB = v4,所有新评估默认 `v4`**
-4. **reeval 同一份 transcript**(用新 KB 重跑)→ 用更高的 vN(如 `v3-...html` → 下次 `v4-...html`),**绝不覆盖**历史评估文件
+4. **reeval 同一份 transcript**(用新 KB 重跑):
+   - AI 陪练场 → 用更高的 vN(如 `v3-...html` → 下次 `v4-...html`),**绝不覆盖**历史评估文件
+   - 真人练习场 → 同名文件 `02-评估.html` 覆盖(真人场 reeval 频率低,KB 版本内嵌可查)
 5. **HTML 骨架**(见文末 "# HTML 报告骨架模板" section):脱敏通用版,git 仓内独立可读;本地某次评估的真实报告作样例参考(因含客户信息,不入版本控制 — 见 `.gitignore`)。
-6. **写完 → Glob 验证**:`practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html` 必须存在
+6. **写完 → Glob 验证**必须存在:
+   - AI 陪练场 → `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
+   - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`
 7. **Glob 验证无匹配 → 视为本次评估失败,不许交付用户**
 
-例外:用户**显式说**"只在聊天给我看",才跳过落盘。但默认行为 = 落盘 + 回显。
+例外:**用户显式说**「只在聊天给我看」「不落盘」「输出到聊天就行」,才跳过落盘。**任何其他表述(「请直接给出评估结果」「给我看完整评估」)** ≠ 例外触发词 — 默认行为 = 落盘 + 回显。
 
-**Transcript 命名**:`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md`(date 在 persona 后 / session 前,`-transcript` 后缀,**无** v 后缀 — v 是 assessor 评估版本号的专属) — 见 [pcc-coachee.md](pcc-coachee.md) § 5.5。
-- 与 assessment 报告命名对比:`vec-XX-YYYY-MM-DD-session-NN-v3-assessment.md`(assessment,**有** vN)= 同 base name + 不同后缀;转交块 `transcript_path` 引用 transcript,**不**引用 assessment。
+**Transcript 命名**(2026-09-13 更新):
+- **AI 陪练场**:`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md`(date 在 persona 后 / session 前,`-transcript` 后缀,**无** v 后缀 — v 是 assessor 评估版本号的专属)— 见 [pcc-coachee.md](pcc-coachee.md) § 5.5
+- **真人练习场**:`practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-{topic}-{focus}.md`(the maintainer 2026-09-13 定;早期命名 `real-{date}-session-NN-transcript.md` 也兼容)
+- 转交块 `transcript_path` 引用 transcript,**不**引用 assessment。
 
 ## A. 单条 marker 模式(用户说"看 6.7""评估 8.5")
 
@@ -420,8 +432,14 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 - [ ] **KPI 行用了严格命中率 ✔/37 作主指标**(2026-09-11 v4 新规则)
 - [ ] **HTML 含 "📋 PCC 考官模拟判定" section**:一票否决 + 非必命中换算 + 能力 pass 率 + 通过概率估算(2026-09-11 v4 强制)
 - [ ] **列出了可打磨 △ 清单**(标点级/一句话级/流程级/思维级)— 2026-09-11 v4 新增
-- [ ] 我把 HTML 报告写到 `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html` 了(本场 default = v4,格式参考文末 HTML 骨架模板)
-- [ ] 我用 Glob 验证 transcript 已落盘:`practice-logs/AI陪练/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在(缺失 → 拒绝评估)
+- [ ] 我把 HTML 报告写到正确路径了:
+  - AI 陪练场 → `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
+  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`
+  (本场 default = v4,格式参考文末 HTML 骨架模板)
+- [ ] 我用 Glob 验证 transcript 已落盘(按场类型):
+  - AI 陪练场 → `practice-logs/AI陪练/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在
+  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md` 存在
+  (缺失 → 拒绝评估)
 - [ ] 我用 Glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
 
@@ -484,8 +502,14 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 - [ ] 结构性降档规则我单独检查了
 - [ ] 我没有为了鼓励用户而放宽
 - [ ] 模糊地带我向下取整了
-- [ ] 我把 HTML 报告写到 `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html` 了(本场 default = v4,格式参考文末 HTML 骨架模板)
-- [ ] 我用 Glob 验证 transcript 已落盘:`practice-logs/AI陪练/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在(缺失 → 拒绝评估)
+- [ ] 我把 HTML 报告写到正确路径了:
+  - AI 陪练场 → `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
+  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`
+  (本场 default = v4,格式参考文末 HTML 骨架模板)
+- [ ] 我用 Glob 验证 transcript 已落盘(按场类型):
+  - AI 陪练场 → `practice-logs/AI陪练/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在
+  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md` 存在
+  (缺失 → 拒绝评估)
 - [ ] 我用 glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
 
