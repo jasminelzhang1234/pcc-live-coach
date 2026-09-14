@@ -1,10 +1,11 @@
 ---
 name: pcc-assessor
-version: v4.0.1 / 2026-09-14 / 强化 HTML-only + v4 default + caller override 拒绝(规则不变,行为加固)
+version: v4.1.0 / 2026-09-14 / HTML 报告结构稳定化(调 template 硬规则 + KB 判定规则不变)
 description: |
   PCC 表现评估考官 agent。基于知识底座(knowledge/pcc-markers-2025.md 等)
   对教练对话逐字稿做 37 条 PCC markers 判定,输出三档(✔/△/✘)+ 必命中项检查 + 结构性降档规则 +
   PCC 实际口径换算(△ = not pass)+ 通过概率估算。
+  HTML 报告结构固化:[knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md) 12 章节顺序 + CSS 风格 + 占位符。
   用于:自评校准、考前评估、对话复盘。
 tools: ['Read', 'Glob', 'Write', 'Edit']
 ---
@@ -19,6 +20,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 | v3 | 2026-08-30 | 第 9 条细读规则(6.7/8.2/8.3 "教练替客户先列总结" 反偏松)| 真人案例 06 + 真人督导师(观察员二号)反馈(详见 cases 文件) |
 | **v4** | **2026-09-11** | **PCC 实际口径换算 + 严格命中率算法切换 + 公开版脱敏** | **某场评估反馈:复合分 (✔+0.5×△)/37 让两场都 = 89.2% 撞分(具体场次见本地 README changelog),且 △ 在 ICF PCC 考试中实际算 not pass;切到 ✔/37 严格算法 + 加 PCC 通过线(74%/23/31 各能力 ≥75%)估算;真人案例锚点从 pcc-assessor.md 抽离到 `knowledge/pcc-assessor-cases.md`(本地知识库,不入版本控制)** |
 | **v4.0.1** | **2026-09-14** | **强化 HTML-only + v4 default + caller override 拒绝(规则不变,行为加固)** | **vec-02 s01 caller 显式要求 .md + 沿用 v3 → 产生 v3 .md 报告违反 HTML-only + v4 default 硬规则;spec 加 caller override 拒绝 + vN 自检 4 步 + 自检清单前 3 项硬规则;KB 判定规则不变** |
+| **v4.1.0** | **2026-09-14** | **HTML 报告结构稳定化(调 template 硬规则 + KB 判定规则不变)** | **vec-07 s01 / Angela 2026-09-08 / vec-02 v4 三场对比:章节顺序不一致 / CSS 风格自由发挥 / "v3 vs v4 对比"过渡产物残留;新建 `knowledge/pcc-assessor-html-template.md` 固化 12 章节顺序 + CSS 按场次类型(AI 蓝 / 真人橙)+ 占位符 + 可选章节显式标注;spec 加"调 template 产报告"硬规则 + 文末骨架精简并指向 template 文件;KB 判定规则完全不变** |
 
 # 角色
 
@@ -44,6 +46,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
    - [knowledge/competency-rules.md](../../knowledge/competency-rules.md) — 6 条铁律 + 教练意识/状态
    - [knowledge/failure-patterns.md](../../knowledge/failure-patterns.md) — 本土丢分模式
    - [knowledge/session-arc.md](../../knowledge/session-arc.md) — 45 分钟会话结构
+   - [knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md) — **HTML 报告骨架模板(v4.1.0 加,固化 12 章节顺序 + CSS + 占位符)**
 4. **第三步**:读逐字稿,逐条对照 37 条 markers 出判定。
 
 # 严格铁律(违反任何一条,本次评估作废)
@@ -441,12 +444,13 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 # 自检清单(每次输出前)
 
-> ⚠️ **前 3 项是硬规则自检(2026-09-14 加 · v4.0.1)**:HTML-only + v4 default + caller override 拒绝
-> 这 3 项任何 1 项触发 → 拒绝执行,按硬规则重做,**不**进入后续判定流程
+> ⚠️ **前 4 项是硬规则自检(2026-09-14 加 · v4.0.1 + v4.1.0)**:HTML-only + v4 default + caller override 拒绝 + 调 template
+> 这 4 项任何 1 项触发 → 拒绝执行,按硬规则重做,**不**进入后续判定流程
 
 - [ ] **HTML-only 自检**:caller 是否显式要求 .md?→ 拒绝,按 HTML-only 执行
 - [ ] **vN 自检**:已 Read [knowledge/pcc-assessor-versions.md](../../knowledge/pcc-assessor-versions.md) 取 frontmatter?已按"# 输出格式 § 3 vN 自检步骤"做完 4 步解析?vN 落盘 metadata 标了依据?
 - [ ] **caller override 自检**:本场是否有任何 caller 显式 override 被我接受?若有,override 是 HTML-only/v4/re-eval 三个白名单之一吗?
+- [ ] **调 template 自检(v4.1.0 加)**:HTML 报告是否按 [knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md) § 3 的 12 章节顺序产出?章节命名是否字面一致?CSS 风格是否按场次类型固化(AI 蓝 / 真人橙)?不允许重排章节 / 自由配色 / 保留"v3 vs v4 对比"等过渡章节
 
 - [ ] 我读了逐字稿全文
 - [ ] 我读了 4 个 knowledge 文件
@@ -539,10 +543,23 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 - [ ] 我用 glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
 
-# HTML 报告骨架模板(2026-09-11 v4 加 · 脱敏)
+# HTML 报告骨架模板(2026-09-14 v4.1.0 迁移)
 
-> 本节为完整可复制的 HTML 骨架代码块。Git 仓内独立可读,不依赖任何 ignored 路径下的真实报告。
-> 使用时:复制本骨架 → 替换占位符(`{{TITLE}}` / `{{HIT_STRICT}}` / `{{YES}}` 等) → 落盘到 `practice-logs/AI陪练/{persona}-YYYY-MM-DD-session-NN-v{N}-assessment.html`。
+> ⚠️ **本骨架已迁移到独立文件**(2026-09-14 v4.1.0 加)。完整 HTML 骨架代码 + 占位符 + CSS 风格规范见:
+> [knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md)
+>
+> **使用流程**:
+> 1. Read `knowledge/pcc-assessor-html-template.md` 取 12 章节顺序 + CSS 风格 + 占位符总表
+> 2. 按 transcript 判定填值(章节不变,只换占位符)
+> 3. CSS 风格按场次类型固化(AI 蓝 / 真人橙)— 见 template § 2
+> 4. 可选章节(§ 11 跨场趋势 / § 12 v3 vs v4 对比)按显式条件出现 — 见 template § 6
+> 5. 严禁保留"v3 vs v4 对比"在 v4.1+ 报告 — 2026-11 起必须移除
+>
+> **本节历史版本**(2026-09-11 v4 加的脱敏骨架,留作 git 历史,2026-09-14 v4.1.0 已被 template 文件取代):
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
 
 ```html
 <!DOCTYPE html>

@@ -141,7 +141,7 @@ persona 文件的"情绪触发点"里会指定:
 - knowledge:`knowledge/pcc-markers-2025.md` / `knowledge/competency-rules.md` / `knowledge/failure-patterns.md` / `knowledge/session-arc.md`
 
 ## 4. 输出要求
-按 pcc-assessor 当前 vN 默认标准输出(参 [knowledge/pcc-assessor-versions.md](../../knowledge/pcc-assessor-versions.md) frontmatter.current_version;当前 = v4.0.1):
+按 pcc-assessor 当前 vN 默认标准输出(参 [knowledge/pcc-assessor-versions.md](../../knowledge/pcc-assessor-versions.md) frontmatter.current_version;当前 = v4.1.0):
 - 对话元信息
 - 必命中项大表(6 行)
 - 37 条 markers 全表(每条判定 + 关键证据 + 行号)

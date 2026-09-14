@@ -1,8 +1,8 @@
 ---
 type: versioning-metadata
 target_agent: pcc-assessor
-current_version: v4.0.1
-published_versions: [v0, v1, v2, v3, v4, v4.0.1]
+current_version: v4.1.0
+published_versions: [v0, v1, v2, v3, v4, v4.0.1, v4.1.0]
 last_updated: 2026-09-14
 ---
 
@@ -14,7 +14,7 @@ last_updated: 2026-09-14
 
 ## 当前默认
 
-**vN 默认 = `v4.0.1`**(2026-09-14)
+**vN 默认 = `v4.1.0`**(2026-09-14)
 
 ## 已发布版本(完整 changelog)
 
@@ -26,6 +26,7 @@ last_updated: 2026-09-14
 | v3 | 2026-08-30 | 累积(反偏松) | 真人案例 06 + 真人督导师(观察员二号)| 第 9 条反偏松规则(6.7/8.2/8.3 "教练替客户先列总结" 模式 B)|
 | **v4** | **2026-09-11** | **范式转变** | **09-10 撞分事故** + ICF PCC 实际口径校准 | PCC 实际口径换算(△ = not pass)+ 严格命中率 ✔/37 主指标 + 通过线 74% + 可打磨 △ 四级分类 + 公开版脱敏(389→734 行)|
 | **v4.0.1** | **2026-09-14** | **行为加固(规则不变)** | **caller 错误触发**(vec-02 s01 prompt 显式要 .md + 沿用 v3)| HTML-only 硬规则 + v4 default 硬规则 + caller override 拒绝;KB 判定规则不变 |
+| **v4.1.0** | **2026-09-14** | **行为加固(规则不变)** | **结构不稳定触发**(vec-07 s01 / Angela 2026-09-08 / vec-02 v4 三场章节顺序 + CSS 风格不一致 + "v3 vs v4 对比"过渡残留)| 新建 `knowledge/pcc-assessor-html-template.md` 固化 12 章节顺序 + CSS 按场次类型(AI 蓝 / 真人橙)+ 占位符 + 可选章节显式标注;spec 加"调 template 产报告"硬规则 + 文末骨架精简并指向 template 文件;KB 判定规则完全不变 |
 
 ## 变更类型分类(供未来 v5 决策参考)
 
@@ -68,8 +69,9 @@ last_updated: 2026-09-14
 
 | 引用位置 | 当前值 | 来源 |
 |---|---|---|
-| `.claude/agents/pcc-assessor.md` § 版本史 | v4.0.1(本文件后)| spec 副本 |
-| `.claude/agents/pcc-assessor.md` § 输出格式 vN | v4.0.1(本文件后)| spec 副本 |
+| `.claude/agents/pcc-assessor.md` § 版本史 | v4.1.0(本文件后)| spec 副本 |
+| `.claude/agents/pcc-assessor.md` § 输出格式 vN | v4.1.0(本文件后)| spec 副本 |
+| `knowledge/pcc-assessor-html-template.md` | v4.1.0 配套 template | template 文件 |
 | `.claude/agents/pcc-coachee.md` 转交块 | **v3(过期!需修)** | coachee spec |
 | `.claude/agents/pcc-tracker.md` schema eval_version | v2.5(tracker 内部 schema,非 KB 版本)| tracker spec |
 

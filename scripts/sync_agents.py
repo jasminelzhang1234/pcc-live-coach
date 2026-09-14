@@ -45,12 +45,14 @@ CLAUDE_DIR = PROJECT_ROOT / ".claude" / "agents"  # 源
 GITHUB_DIR = PROJECT_ROOT / ".github" / "agents"  # 镜像
 
 # 额外同步:运行时 metadata 文件(2026-09-14 加)
-# 用途:agent 运行时依赖的 metadata(如 pcc-assessor-versions.md)同步到 .github/knowledge/,
-#      让公开版 GitHub Copilot 也能读到;source-of-truth 仍在源位置
+# 用途:agent 运行时依赖的 metadata(如 pcc-assessor-versions.md / html-template)同步到
+#      .github/knowledge/,让公开版 GitHub Copilot 也能读到;source-of-truth 仍在源位置
 # 添加新文件:加一行 tuple(源绝对路径, 目标绝对路径)
 EXTRA_SYNC_FILES: list[tuple[Path, Path]] = [
     (PROJECT_ROOT / "knowledge" / "pcc-assessor-versions.md",
      PROJECT_ROOT / ".github" / "knowledge" / "pcc-assessor-versions.md"),
+    (PROJECT_ROOT / "knowledge" / "pcc-assessor-html-template.md",
+     PROJECT_ROOT / ".github" / "knowledge" / "pcc-assessor-html-template.md"),
 ]
 
 # 已知 Claude Code 工具名的大小写映射(扩展时在此追加)
