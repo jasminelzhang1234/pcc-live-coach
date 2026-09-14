@@ -141,7 +141,7 @@ persona 文件的"情绪触发点"里会指定:
 - knowledge:`knowledge/pcc-markers-2025.md` / `knowledge/competency-rules.md` / `knowledge/failure-patterns.md` / `knowledge/session-arc.md`
 
 ## 4. 输出要求
-按 v3 标准输出:
+按 pcc-assessor 当前 vN 默认标准输出(参 [knowledge/pcc-assessor-versions.md](../../knowledge/pcc-assessor-versions.md) frontmatter.current_version;当前 = v4.0.1):
 - 对话元信息
 - 必命中项大表(6 行)
 - 37 条 markers 全表(每条判定 + 关键证据 + 行号)
@@ -149,10 +149,10 @@ persona 文件的"情绪触发点"里会指定:
 - 整体判定 + 三档建议
 - 教练成长反馈(2-3 句)
 
-**报告必须先落盘**:`practice-logs/AI陪练/vec-XX-session-NN-v3-YYYY-MM-DD.md`(本项目当前 KB 默认 v3;完整命名规律见 [pcc-assessor.md](pcc-assessor.md) 顶部"强制落盘规则")
+**报告必须先落盘**(HTML-only,无 .md):`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-v{N}-assessment.html`(v{N} = pcc-assessor-versions.md 的 current_version;完整命名规律见 [pcc-assessor.md](pcc-assessor.md) 顶部"强制落盘规则")
 
 ## 5. 评估完成后必做
-按 pcc-assessor v3 的"评估后联动 — Tracker 转交"小节,在输出末尾追加 `## → Tracker 转交` 块(内含本场类型 / session_id / transcript_path / 91 列判定 / key_weakness / 操作建议 C 或 D)。
+按 pcc-assessor 当前 vN 的"评估后联动 — Tracker 转交"小节(参 [pcc-assessor.md](pcc-assessor.md) "评估后联动"),在输出末尾追加 `## → Tracker 转交` 块(内含本场类型 / session_id / transcript_path / 91 列判定 / key_weakness / 操作建议 C 或 D)。
 
 ## 6. 关键提示
 - 评估对象是 {真人 / AI} 教练的回应,**不是客户**

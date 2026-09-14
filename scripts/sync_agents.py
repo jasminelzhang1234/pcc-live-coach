@@ -10,6 +10,9 @@
 - 工具名大小写:`['Read','Glob']` → `['read','glob']`
   (Claude Code 使用 PascalCase 工具名;GitHub Copilot 用 lowercase)
 
+额外同步(2026-09-14 加):knowledge/ 下的 metadata 文件(如 pcc-assessor-versions.md)
+也会被镜像到 .github/knowledge/,让公开版 agent 也能读到运行时 metadata。
+
 默认行为:每次 sync 完整覆盖 .github/agents/(不允许在 .github/agents/ 改后再 sync,
 否则会被冲掉——这是 source-of-truth 约束)。
 
@@ -26,6 +29,7 @@
     2026-08-22: 初版,方向为 .github → .claude(当时 .github/agents/ 是 source)
     2026-09-11: 方向翻转为 .claude → .github(因 v4 隐私脱敏工作流在 .claude 完成,
               且 .github/agents/ 的 v3 旧版含未脱敏真人案例锚点)
+    2026-09-14: 加 EXTRA_SYNC_FILES,镜像运行时 metadata 文件(如 pcc-assessor-versions.md)
 """
 
 from __future__ import annotations
@@ -39,6 +43,15 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CLAUDE_DIR = PROJECT_ROOT / ".claude" / "agents"  # 源
 GITHUB_DIR = PROJECT_ROOT / ".github" / "agents"  # 镜像
+
+# 额外同步:运行时 metadata 文件(2026-09-14 加)
+# 用途:agent 运行时依赖的 metadata(如 pcc-assessor-versions.md)同步到 .github/knowledge/,
+#      让公开版 GitHub Copilot 也能读到;source-of-truth 仍在源位置
+# 添加新文件:加一行 tuple(源绝对路径, 目标绝对路径)
+EXTRA_SYNC_FILES: list[tuple[Path, Path]] = [
+    (PROJECT_ROOT / "knowledge" / "pcc-assessor-versions.md",
+     PROJECT_ROOT / ".github" / "knowledge" / "pcc-assessor-versions.md"),
+]
 
 # 已知 Claude Code 工具名的大小写映射(扩展时在此追加)
 # Claude Code 用 PascalCase,GitHub Copilot 用 lowercase — 此映射做转换
@@ -87,7 +100,7 @@ def claude_to_github(source: Path) -> str:
 
 
 def sync_all() -> list[tuple[Path, Path]]:
-    """把所有 .claude/agents/*.md 完整覆盖到 .github/agents/*.agent.md。"""
+    """把所有 .claude/agents/*.md 完整覆盖到 .github/agents/*.agent.md,以及 EXTRA_SYNC_FILES。"""
     if not CLAUDE_DIR.is_dir():
         print(f"error: 源目录不存在 {CLAUDE_DIR}", file=sys.stderr)
         sys.exit(2)
@@ -101,11 +114,21 @@ def sync_all() -> list[tuple[Path, Path]]:
         dst = GITHUB_DIR / f"{stem}.agent.md"
         dst.write_text(claude_to_github(src), encoding="utf-8")
         results.append((src, dst))
+
+    # 额外同步运行时 metadata(2026-09-14 加)
+    for src, dst in EXTRA_SYNC_FILES:
+        if not src.exists():
+            print(f"warn: 额外源文件不存在 {src}(跳过)", file=sys.stderr)
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        results.append((src, dst))
+
     return results
 
 
 def check_drift() -> list[tuple[Path, Path]]:
-    """检查 .github/agents/ 是否与 .claude/agents/ 一致;不一致的文件对返回。"""
+    """检查 .github/agents/ 是否与 .claude/agents/ 一致,以及 EXTRA_SYNC_FILES。"""
     drift: list[tuple[Path, Path]] = []
     for src in sorted(CLAUDE_DIR.glob("*.md")):
         stem = src.name[: -len(".md")]
@@ -117,6 +140,20 @@ def check_drift() -> list[tuple[Path, Path]]:
         actual = dst.read_text(encoding="utf-8")
         if actual != expected:
             drift.append((src, dst))
+
+    # 额外检查运行时 metadata(2026-09-14 加)
+    for src, dst in EXTRA_SYNC_FILES:
+        if not src.exists():
+            drift.append((src, dst))
+            continue
+        if not dst.exists():
+            drift.append((src, dst))
+            continue
+        expected = src.read_text(encoding="utf-8")
+        actual = dst.read_text(encoding="utf-8")
+        if actual != expected:
+            drift.append((src, dst))
+
     return drift
 
 
@@ -142,9 +179,9 @@ def main() -> None:
 
     pairs = sync_all()
     if not pairs:
-        print(f"warn: .claude/agents/ 下没有 *.md", file=sys.stderr)
+        print(f"warn: .claude/agents/ 下没有 *.md 且无 EXTRA_SYNC_FILES", file=sys.stderr)
         return
-    print(f"synced {len(pairs)} agent(s):")
+    print(f"synced {len(pairs)} file(s):")
     for src, dst in pairs:
         print(f"  {src.relative_to(PROJECT_ROOT)} → {dst.relative_to(PROJECT_ROOT)}")
 
