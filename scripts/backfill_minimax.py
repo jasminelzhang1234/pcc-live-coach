@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TOKEN_CSV = ROOT / "observability" / "token-usage.csv"
 PROJECTS_DIR = Path.home() / ".claude" / "projects"
 WORKSPACE_HASH_DIR = next(
-    (p for p in PROJECTS_DIR.iterdir() if "Coach-Agents" in p.name),
+    (p for p in PROJECTS_DIR.iterdir() if "PCC-Live-Coach" in p.name),
     PROJECTS_DIR,  # fallback
 )
 

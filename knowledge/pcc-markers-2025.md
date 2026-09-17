@@ -1,7 +1,7 @@
 ---
 标准版本: ICF 2025 版 PCC Markers（37 条）
 提取日期: 2026-08-21
-来源: Coach Agents/Reference/2025-PCC-Markers-37条-中英对照.html
+来源: PCC Live Coach/Reference/2025-PCC-Markers-37条-中英对照.html
 说明: 英文原文版权归 ICF；中文为工作翻译，歧义以英文为准。
 用途: pcc-assessor 的唯一判定依据。每条的「✔ 算证据 / ✘ 不算证据 / 判定要点」是本文件的核心价值，
       只有英文原文的话，模型会做字面匹配，把任何提问都算成 7.2。

@@ -100,7 +100,9 @@ def competency_stats(rows: list[dict]) -> list[tuple[str, int, int, int, int, fl
                 elif v == "△": part += 1
                 elif v == "✘": no += 1
         total = yes + part + no
-        hit_rate = (yes + 0.5 * part) / total * 100 if total else 0
+        # 严格命中率(v4.1.0 主指标,与 chart 蓝实线 / 橙实线对齐)只看 ✔,不靠 △ 救分
+        # 2026-09-17 改:之前 (yes + 0.5*part)/total 会出现 29✔+8△ = 30✔+6△ 撞分
+        hit_rate = yes / total * 100 if total else 0
         out.append((comp, yes, part, no, total, hit_rate))
     return out
 
@@ -160,10 +162,11 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") ->
     total_part = sum(s[2] for s in comp_stats)
     total_no = sum(s[3] for s in comp_stats)
     total_all = total_yes + total_part + total_no
-    weighted = (total_yes + 0.5 * total_part) / total_all * 100 if total_all else 0
+    # 严格口径(只看 ✔),与 chart 主指标 + 能力维度表对齐
+    weighted = total_yes / total_all * 100 if total_all else 0
     md += [
         "",
-        f"**总命中率(按权重,✔ + 0.5△):{weighted:.1f}%**",
+        f"**总命中率(严格,只看 ✔):{weighted:.1f}%** — 与 trending chart 主指标(严格 ✔/37)对齐,v4.1.0",
         "",
         "---",
         "",

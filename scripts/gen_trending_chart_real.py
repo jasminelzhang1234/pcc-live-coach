@@ -97,9 +97,12 @@ def load_real_sessions(csv_path: Path) -> list[dict]:
         yes = _safe_int(r, "claude_total_✔")
         part = _safe_int(r, "claude_total_△")
         no = _safe_int(r, "claude_total_✘")
-        # 严格命中率(只算 ✔) — 更贴近 PCC 考试逻辑(每条独立判定,不靠 △ 救分)
-        # 2026-09-11 改:之前 (yes + 0.5*part)/37 会出现 29✔+8△ = 30✔+6△ = 89.2% 撞分
+        # 双口径命中率(2026-09-17 起与 AI persona 同步展示双线双列):
+        # 严格 = ✔/37(v4.1.0 主指标,PCC 实际口径,只算 ✔,每条独立判定,不靠 △ 救分)
+        # 复合 = (✔+0.5×△)/37(辅指标,历史口径)
+        # 2026-09-11 改严格为主(避免 29✔+8△ = 30✔+6△ = 89.2% 撞分)
         hit = round(yes / 37 * 100, 2)
+        hit_composite = round((yes + 0.5 * part) / 37 * 100, 2)
         sid = r["session_id"]
         client_type = r.get("persona", "real_unknown")  # 真人用 persona 列存 client_type
         sessions.append(
@@ -116,6 +119,7 @@ def load_real_sessions(csv_path: Path) -> list[dict]:
                 "transcript_path": r.get("transcript_path", ""),
                 "audio_quality_notes": r.get("audio_quality_notes", ""),
                 "hit": hit,
+                "hit_composite": hit_composite,
                 "good": yes,
                 "part": part,
                 "fail": no,
@@ -245,6 +249,7 @@ def build_html(
             <td>{s["good"]}</td><td>{s["part"]}</td><td>{s["fail"]}</td>
             <td>{s["mustHit"]}</td>
             <td>{bar_html}{strong}</td>
+            <td>{s["hit_composite"]:.2f}%</td>
             <td>{audio_link} {srt_link}</td>
             <td style="font-size:11px; color: var(--muted);">{notes_short}</td>
           </tr>"""
@@ -393,17 +398,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <h1>🤝 真人练习 PCC 趋势 · {n} 场数据{n_trend_note}</h1>
       <div class="subtitle">独立于 AI persona · 按 (conversation_date, conversation_time) 排序 · 双击可看 · 从 <code>tracker-real-sessions.csv</code> 生成</div>
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">平均严格命中率</div><div class="kpi-value">{real_avg}%</div><div class="kpi-sub">{n} 场真人 ✔/37</div></div>
-        <div class="kpi"><div class="kpi-label">最高分</div>{peak_html}</div>
-        <div class="kpi"><div class="kpi-label">最低分</div>{trough_html}</div>
+        <div class="kpi"><div class="kpi-label">平均严格命中率 (主·v4.1.0)</div><div class="kpi-value">{real_avg}%</div><div class="kpi-sub">{n} 场真人 ✔/37</div></div>
+        <div class="kpi"><div class="kpi-label">最高分 (严格)</div>{peak_html}</div>
+        <div class="kpi"><div class="kpi-label">最低分 (严格)</div>{trough_html}</div>
         {delta_html}
         <div class="kpi"><div class="kpi-label">生成时间</div><div class="kpi-value" style="font-size:14px;">{today}</div><div class="kpi-sub">自动化</div></div>
       </div>
     </header>
 
     <div class="card">
-      <h2>① 严格命中率走势</h2>
-      <p class="desc">每场真人练习 PCC 严格命中率 = ✔ / 37 · <strong style="color: var(--accent);">橙色虚线 = AI persona 严格率平均(参考线)</strong> · 2026-09-11 改:只看 ✔,避免 (29+0.5×8) 与 (30+0.5×6) 都 = 89.2% 撞分</p>
+      <h2>① 命中率双线走势(严格 vs 复合)</h2>
+      <p class="desc">每场真人练习 PCC marker 命中率:<strong style="color: var(--accent);">橙实 = 严格 ✔/37(v4.1.0 主)</strong> · <strong style="color: var(--accent);">橙虚 = 复合 (✔+0.5×△)/37(辅·历史口径)</strong> · <strong style="color: var(--accent);">橙横线 = AI persona 严格率平均(参考线)</strong> · 2026-09-11 起只看 ✔,避免 (29+0.5×8) 与 (30+0.5×6) 都 = 89.2% 撞分</p>
       <div class="chart-wrap tall"><canvas id="hitRateChart"></canvas></div>
       <div class="legend-row">{legend_html}</div>
       <div class="callout"><strong>解读:</strong>{narrative}</div>
@@ -430,7 +435,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <tr>
             <th>#</th><th>实际时间</th><th>客户来源</th><th>议题</th>
             <th>✔</th><th>△</th><th>✘</th><th>必命中✘</th>
-            <th>命中率</th><th>回溯</th><th>音频/转写备注</th>
+            <th>严格 (主·v4.1.0)</th><th>复合 (辅)</th><th>回溯</th><th>音频/转写备注</th>
           </tr>
         </thead>
         <tbody>
@@ -452,7 +457,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const aiAvg = {ai_avg_pct};
 
     const labels = sessions.map(s => s.label_short);
-    const hits = sessions.map(s => s.hit);
+    const strictHits = sessions.map(s => s.hit);          // 严格(主)
+    const compositeHits = sessions.map(s => s.hit_composite);  // 复合(辅)
     const clientFills = sessions.map(s => s.color);
 
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
@@ -489,17 +495,31 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       type: 'line',
       data: {{
         labels: labels,
-        datasets: [{{
-          label: '命中率 (%)',
-          data: hits,
-          borderColor: '#d97706',
-          backgroundColor: 'rgba(217, 119, 6, 0.10)',
-          borderWidth: 2.5, tension: 0.25,
-          pointRadius: 8, pointHoverRadius: 10,
-          pointBackgroundColor: clientFills,
-          pointBorderColor: '#fff', pointBorderWidth: 2,
-          fill: true,
-        }}],
+        datasets: [
+          {{
+            label: '严格命中率(主·v4.1.0)',
+            data: strictHits,
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217, 119, 6, 0.10)',
+            borderWidth: 2.5, tension: 0.25,
+            pointRadius: 8, pointHoverRadius: 10,
+            pointBackgroundColor: clientFills,
+            pointBorderColor: '#fff', pointBorderWidth: 2,
+            fill: true,
+          }},
+          {{
+            label: '复合命中率(辅·历史口径)',
+            data: compositeHits,
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217, 119, 6, 0.03)',
+            borderWidth: 1.8, tension: 0.25,
+            pointRadius: 4, pointHoverRadius: 6,
+            pointBackgroundColor: '#d97706',
+            pointBorderColor: '#fff', pointBorderWidth: 1.5,
+            fill: false,
+            borderDash: [6, 4],
+          }},
+        ],
       }},
       options: {{
         responsive: true, maintainAspectRatio: false,
@@ -510,11 +530,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             callbacks: {{
               label: (ctx) => {{
                 const s = sessions[ctx.dataIndex];
+                const isStrict = ctx.dataset.label.indexOf('严格') >= 0;
+                let tag, num;
+                if (isStrict) {{
+                  tag = '严格';
+                  num = s.hit.toFixed(2);
+                }} else {{
+                  tag = '复合';
+                  num = s.hit_composite.toFixed(2);
+                }}
+                const diff = (s.hit_composite - s.hit).toFixed(2);
                 return [
-                  `命中率: ${{s.hit.toFixed(2)}}%`,
-                  `✔ ${{s.good}} · △ ${{s.part}} · ✘ ${{s.fail}}`,
-                  `必命中✘: ${{s.mustHit}}`,
-                  `议题: ${{s.topic}}`,
+                  '实际: ' + s.conv_date + ' ' + s.conv_time,
+                  tag + ': ' + num + '%',
+                  '复-严差值: ' + diff + 'pp',
+                  '✔ ' + s.good + ' · △ ' + s.part + ' · ✘ ' + s.fail,
+                  '必命中✘: ' + s.mustHit,
+                  '议题: ' + s.topic,
                 ];
               }},
             }},
@@ -633,8 +665,9 @@ def main() -> int:
     args.out.write_text(html, encoding="utf-8")
 
     real_avg = sum(s["hit"] for s in sessions) / len(sessions)
+    composite_avg = sum(s["hit_composite"] for s in sessions) / len(sessions)
     print(f"✅ 真人练习 trending chart 已生成:{args.out}")
-    print(f"   场数:{len(sessions)} · 平均 {real_avg:.1f}%")
+    print(f"   场数:{len(sessions)} · 平均 严格 {real_avg:.1f}% / 复合 {composite_avg:.1f}%")
     if ai_avg:
         delta = real_avg - ai_avg[0]
         print(f"   AI persona 参考:{ai_avg[0]:.1f}% ({ai_avg[1]} 场) · 差值 {delta:+.1f}pp")

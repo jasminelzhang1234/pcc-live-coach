@@ -76,7 +76,7 @@ def _knowledge_dir() -> Path:
     """Locate the knowledge/ directory (project root).
 
     phase_b/assess.py → phase_b/ → project root → knowledge/.
-    On macOS the 云同步 path contains a literal space ('Coach Agents'),
+    On macOS the 云同步 path contains a literal space ('PCC Live Coach'),
     so resolve() preserves the full path; parents[1] is the project root.
     """
     return Path(__file__).resolve().parents[1] / "knowledge"

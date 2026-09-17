@@ -10,7 +10,7 @@
 
 ### Step 1 — 启动 pcc-coachee
 
-1. 打开 VS Code,打开 `Coach Agents/` 文件夹(workspace trust 信任)
+1. 打开 VS Code,打开 `PCC Live Coach/` 文件夹(workspace trust 信任)
 2. 命令面板(⇧⌘P) → 输入 `Agents: Switch to Agent` → 选 `pcc-coachee`
 3. 在对话框输入:`开始陪练,选 vec-08`
 4. **预期**:agent 读 `personas/vec-08.md` → 输出人设摘要(见下) → 等你确认

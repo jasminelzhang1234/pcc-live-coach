@@ -64,6 +64,7 @@ def load_sessions() -> list[dict]:
         part = int(r["claude_total_△"])
         no = int(r["claude_total_✘"])
         hit = round((yes + 0.5 * part) / 37 * 100, 2)
+        strict_hit = round(yes / 37 * 100, 2)
         sid = r["session_id"]
         # short_label = e.g. "vec-06 s01"
         parts = sid.split("-")
@@ -82,6 +83,7 @@ def load_sessions() -> list[dict]:
                 "diff_label": DIFF_LABEL[int(r["difficulty"])],
                 "diff_class": DIFF_CLASS[int(r["difficulty"])],
                 "hit": hit,
+                "hit_strict": strict_hit,
                 "good": yes,
                 "part": part,
                 "fail": no,
@@ -133,7 +135,7 @@ def competency_stats(sessions: list[dict]) -> list[tuple[str, float]]:
 def build_html(sessions: list[dict], today: str) -> str:
     n = len(sessions)
     hits = [s["hit"] for s in sessions]
-    avg = sum(hits) / n if n else 0
+    avg = sum(s["hit_strict"] for s in sessions) / n if n else 0
 
     # KPI 计算
     peak = max(sessions, key=lambda s: s["hit"]) if sessions else None
@@ -165,13 +167,13 @@ def build_html(sessions: list[dict], today: str) -> str:
         bg = ' style="background: #fff8e6;"' if is_reeval else ""
         bar_color = (
             "background: linear-gradient(90deg, #c53030, #f56565);"
-            if s["hit"] < 50
+            if s["hit_strict"] < 50
             else "background: linear-gradient(90deg, #2f855a, #48bb78);"
-            if s["hit"] >= 90
+            if s["hit_strict"] >= 90
             else ""
         )
-        bar_html = f'<div class="score-bar"><span style="width: {s["hit"]}%; {bar_color}"></span></div>'
-        strong = "<strong>" + f'{s["hit"]:.2f}%' + "</strong>" if s["hit"] >= 85 or s["hit"] < 50 else f'{s["hit"]:.2f}%'
+        bar_html = f'<div class="score-bar"><span style="width: {s["hit_strict"]}%; {bar_color}"></span></div>'
+        strong = "<strong>" + f'{s["hit_strict"]:.2f}%' + "</strong>" if s["hit_strict"] >= 85 or s["hit_strict"] < 50 else f'{s["hit_strict"]:.2f}%'
         session_id_note = (
             f"{s['date']} (但记作 {s['date']})" if is_reeval and s["date"] != s["conv_date"] else s["date"]
         )
@@ -191,14 +193,15 @@ def build_html(sessions: list[dict], today: str) -> str:
             <td>{s['good']}</td><td>{s['part']}</td><td>{s['fail']}</td>
             <td>{s['mustHit']}</td>
             <td>{bar_html}{strong}</td>
+            <td>{s['hit']:.2f}%</td>
           </tr>"""
         )
     table_rows_str = "\n".join(table_rows)
 
     # KPI 卡片
-    peak_html = f'<div class="kpi-value">{peak["hit"]:.1f}%</div><div class="kpi-sub">{peak["short_label"]} (难 {peak["diff"]})</div>' if peak else ""
+    peak_html = f'<div class="kpi-value">{peak["hit_strict"]:.1f}%</div><div class="kpi-sub">{peak["short_label"]} (难 {peak["diff"]})</div>' if peak else ""
     trough_html = (
-        f'<div class="kpi-value">{trough["hit"]:.1f}%</div><div class="kpi-sub">{trough["short_label"]} ({trough["conv_date"]} {trough["conv_time"]})</div>'
+        f'<div class="kpi-value">{trough["hit_strict"]:.1f}%</div><div class="kpi-sub">{trough["short_label"]} ({trough["conv_date"]} {trough["conv_time"]})</div>'
         if trough
         else ""
     )
@@ -210,8 +213,8 @@ def build_html(sessions: list[dict], today: str) -> str:
     # narrative(按 n 变化)
     if n <= 3:
         narrative = "样本太少,趋势仅供参考。"
-    elif sessions[0]["hit"] < sessions[-1]["hit"] - 10:
-        narrative = f"整体上升:{sessions[0]['hit']:.2f}% → {sessions[-1]['hit']:.2f}%(+{sessions[-1]['hit']-sessions[0]['hit']:.1f}pp)"
+    elif sessions[0]["hit_strict"] < sessions[-1]["hit_strict"] - 10:
+        narrative = f"整体上升:{sessions[0]['hit_strict']:.2f}% → {sessions[-1]['hit_strict']:.2f}%(+{sessions[-1]['hit_strict']-sessions[0]['hit_strict']:.1f}pp)"
     else:
         narrative = "波动期,稳定区间 ~70-93%。"
 
@@ -319,9 +322,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <h1>PCC 陪练趋势 · {n} 场数据</h1>
       <div class="subtitle">按 <strong>CSV 的 (conversation_date, conversation_time)</strong> 排序 · 浏览器双击可看 · 自动从 <code>tracker.csv</code> 生成</div>
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">平均命中率</div><div class="kpi-value">{avg}%</div><div class="kpi-sub">{n} 场加权</div></div>
-        <div class="kpi"><div class="kpi-label">最高分</div>{peak_html}</div>
-        <div class="kpi"><div class="kpi-label">最低分 · 第 1 场</div>{trough_html}</div>
+        <div class="kpi"><div class="kpi-label">平均严格命中率</div><div class="kpi-value">{avg}%</div><div class="kpi-sub">{n} 场加权 · v4.1.0 主</div></div>
+        <div class="kpi"><div class="kpi-label">最高分 (严格)</div>{peak_html}</div>
+        <div class="kpi"><div class="kpi-label">最低分 (严格)</div>{trough_html}</div>
         <div class="kpi"><div class="kpi-label">场数</div><div class="kpi-value">{n}</div><div class="kpi-sub">unique 陪练</div></div>
         <div class="kpi"><div class="kpi-label">生成时间</div><div class="kpi-value" style="font-size:14px;">{today}</div><div class="kpi-sub">自动化</div></div>
       </div>
@@ -329,7 +332,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <div class="card">
       <h2>① 命中率走势</h2>
-      <p class="desc">每场 PCC marker 总命中率 = (✔ + 0.5×△) / 37 · 虚线为均值 · 折线点按 persona 着色</p>
+      <p class="desc">每场 PCC marker 命中率: 蓝实=严格 ✔/37(v4.1.0 主指标)· 蓝虚=复合 (✔+0.5×△)/37(辅)· 灰虚=严格均值 · 折线点按 persona 着色</p>
       <div class="chart-wrap tall"><canvas id="hitRateChart"></canvas></div>
       <div class="legend-row">{persona_legend}</div>
       <div class="callout"><strong>解读:</strong>{narrative}</div>
@@ -353,7 +356,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <p class="desc">{n} 场陪练的判定构成与最终得分</p>
       <table>
         <thead>
-          <tr><th>#</th><th>实际时间</th><th>session_id 日期</th><th>Persona</th><th>难度</th><th>✔</th><th>△</th><th>✘</th><th>必命中✘</th><th>命中率</th></tr>
+          <tr><th>#</th><th>实际时间</th><th>session_id 日期</th><th>Persona</th><th>难度</th><th>✔</th><th>△</th><th>✘</th><th>必命中✘</th><th>严格 (主·v4.1.0)</th><th>复合 (辅)</th></tr>
         </thead>
         <tbody>
 {table_rows}
@@ -378,9 +381,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     const labels = sessions.map(s => s.label_short);
     const hits = sessions.map(s => s.hit);
+    const strictHits = sessions.map(s => s.hit_strict);
     const personaFills = sessions.map(s => personaColors[s.persona]);
 
     const mean = hits.reduce((a, b) => a + b, 0) / hits.length;
+    const strictMean = strictHits.reduce((a, b) => a + b, 0) / strictHits.length;
 
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
     Chart.defaults.color = '#5b6473';
@@ -389,33 +394,52 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       type: 'line',
       data: {{
         labels: labels,
-        datasets: [{{
-          label: '命中率 (%)',
-          data: hits,
-          borderColor: '#2b6cb0',
-          backgroundColor: 'rgba(43, 108, 176, 0.08)',
-          borderWidth: 2.5, tension: 0.25,
-          pointRadius: 7, pointHoverRadius: 9,
-          pointBackgroundColor: personaFills,
-          pointBorderColor: '#fff', pointBorderWidth: 2,
-          fill: true,
-        }}],
+        datasets: [
+          {{
+            label: '严格命中率(主·v4.1.0)',
+            data: strictHits,
+            borderColor: '#2b6cb0',
+            backgroundColor: 'rgba(43, 108, 176, 0.08)',
+            borderWidth: 2.5, tension: 0.25,
+            pointRadius: 7, pointHoverRadius: 9,
+            pointBackgroundColor: personaFills,
+            pointBorderColor: '#fff', pointBorderWidth: 2,
+            fill: true,
+          }},
+          {{
+            label: '复合命中率(辅·历史口径)',
+            data: hits,
+            borderColor: '#2b6cb0',
+            backgroundColor: 'rgba(43, 108, 176, 0.03)',
+            borderWidth: 1.8, tension: 0.25,
+            pointRadius: 4, pointHoverRadius: 6,
+            pointBackgroundColor: '#2b6cb0',
+            pointBorderColor: '#fff', pointBorderWidth: 1.5,
+            fill: false,
+            borderDash: [6, 4],
+          }},
+        ],
       }},
       options: {{
         responsive: true, maintainAspectRatio: false,
         plugins: {{
-          legend: {{ display: false }},
+          legend: {{ display: true, position: 'top', labels: {{ boxWidth: 14, padding: 12, font: {{ size: 12 }} }} }},
           tooltip: {{
             backgroundColor: 'rgba(28, 32, 39, 0.92)', padding: 12,
             callbacks: {{
               label: (ctx) => {{
                 const s = sessions[ctx.dataIndex];
+                const isStrict = ctx.dataset.label.indexOf('严格') !== -1;
+                const tag = isStrict ? '严格' : '复合';
+                const num = (isStrict ? s.hit_strict : s.hit).toFixed(2);
+                const diff = (s.hit - s.hit_strict).toFixed(2);
                 return [
-                  `实际: ${{s.conv_date}} ${{s.conv_time}}`,
-                  `命中率: ${{s.hit.toFixed(2)}}%`,
-                  `✔ ${{s.good}} · △ ${{s.part}} · ✘ ${{s.fail}}`,
-                  `必命中✘: ${{s.mustHit}}`,
-                  s.reeval_of ? `⚠️ reeval of ${{s.reeval_of}}` : ''
+                  '实际: ' + s.conv_date + ' ' + s.conv_time,
+                  tag + ': ' + num + '%',
+                  '复-严差值: ' + diff + 'pp',
+                  '✔ ' + s.good + ' · △ ' + s.part + ' · ✘ ' + s.fail,
+                  '必命中✘: ' + s.mustHit,
+                  s.reeval_of ? '⚠️ reeval of ' + s.reeval_of : ''
                 ].filter(Boolean);
               }},
             }},
@@ -423,13 +447,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           annotation: {{
             annotations: {{
               meanLine: {{
-                type: 'line', yMin: mean, yMax: mean,
-                borderColor: 'rgba(214, 158, 46, 0.6)',
+                type: 'line', yMin: strictMean, yMax: strictMean,
+                borderColor: 'rgba(113, 128, 150, 0.55)',
                 borderWidth: 1.5, borderDash: [6, 4],
                 label: {{
-                  display: true, content: `均值 ${{mean.toFixed(1)}}%`,
+                  display: true, content: `严格均值 ${{strictMean.toFixed(1)}}%`,
                   position: 'end',
-                  backgroundColor: 'rgba(214, 158, 46, 0.95)',
+                  backgroundColor: 'rgba(113, 128, 150, 0.95)',
                   color: '#fff', font: {{ size: 11, weight: '600' }}, padding: 4,
                 }},
               }},
