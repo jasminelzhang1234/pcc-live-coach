@@ -1,0 +1,11 @@
+# .mailmap — 把所有历史 commit 的 author/committer 改写为 noreply 邮箱
+# 格式: Proper Name <proper@email> <commit@email>
+# 触发场景: 2026-09-18 安全审计发现本地 commit author/committer 用过
+#           noreply@invalid.invalid(个人 Gmail)
+# 配合: git filter-repo --mailmap .mailmap 改写历史 author/committer
+
+# 把个人 Gmail 改写为 noreply
+the maintainer <noreply@invalid.invalid> <noreply@invalid.invalid>
+
+# 把"小写 maintainer"形式归一为标准 "the maintainer"
+the maintainer <noreply@invalid.invalid> <maintainer@users.noreply.github.com>
