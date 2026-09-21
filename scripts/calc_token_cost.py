@@ -4,7 +4,7 @@
 
 被两个调用方使用:
   - scripts/hook_token_usage.py (Stop hook 落账)
-  - scripts/report_token_usage.py (汇总报告)
+  - scripts/gen_token_dashboard.py / scripts/gen_spending_report.py (HTML 报告生成)
 
 定价表(USD per million tokens,2026-08-26 收集):
 

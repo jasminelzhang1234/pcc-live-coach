@@ -51,28 +51,44 @@ AGENT_LABEL = {
 
 
 def load_rows() -> list[dict]:
-    """读 token-usage.csv,返回行列表(数字字段已转 int/float)。"""
-    if not CSV.exists():
-        return []
-    rows = []
-    with CSV.open(newline="", encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            try:
-                rows.append({
-                    "timestamp": r["timestamp"],
-                    "session_id": r["session_id"],
-                    "agent": r.get("agent", ""),
-                    "model": r.get("model", ""),
-                    "input_tokens": int(r.get("input_tokens", 0) or 0),
-                    "output_tokens": int(r.get("output_tokens", 0) or 0),
-                    "cache_read_tokens": int(r.get("cache_read_tokens", 0) or 0),
-                    "cache_write_tokens": int(r.get("cache_write_tokens", 0) or 0),
-                    "total_tokens": int(r.get("total_tokens", 0) or 0),
-                    "cost_usd": float(r.get("estimated_cost_usd", 0) or 0),
-                })
-            except (ValueError, KeyError):
-                continue
-    return rows
+    """读 observability/token-usage.csv + progress/token-usage.csv + progress/token-usage-backfilled-*.csv,
+    按 (session_id, model) 去重(backfill 优先,因为它带 persona 元数据;其次 progress/;最后 observability/)。
+
+    返回行列表(数字字段已转 int/float)。
+    """
+    candidates = [
+        ROOT / "observability" / "token-usage.csv",
+        ROOT / "progress" / "token-usage.csv",
+    ]
+    # backfill 文件(glob 最新)
+    backfill_glob = sorted((ROOT / "progress").glob("token-usage-backfilled-*.csv"))
+    candidates.extend(backfill_glob)
+
+    merged: dict[str, dict] = {}
+    for csv_path in candidates:
+        if not csv_path.exists():
+            continue
+        with csv_path.open(newline="", encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                try:
+                    sid = r.get("session_id", "")
+                    model = r.get("model", "")
+                    key = f"{sid}|{model}"
+                    merged[key] = {
+                        "timestamp": r["timestamp"],
+                        "session_id": sid,
+                        "agent": r.get("agent", ""),
+                        "model": model,
+                        "input_tokens": int(r.get("input_tokens", 0) or 0),
+                        "output_tokens": int(r.get("output_tokens", 0) or 0),
+                        "cache_read_tokens": int(r.get("cache_read_tokens", 0) or 0),
+                        "cache_write_tokens": int(r.get("cache_write_tokens", 0) or 0),
+                        "total_tokens": int(r.get("total_tokens", 0) or 0),
+                        "cost_usd": float(r.get("estimated_cost_usd", 0) or 0),
+                    }
+                except (ValueError, KeyError):
+                    continue
+    return list(merged.values())
 
 
 def aggregate(rows: list[dict]) -> dict:
