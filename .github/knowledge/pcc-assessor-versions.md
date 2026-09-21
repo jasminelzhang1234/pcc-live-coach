@@ -1,9 +1,9 @@
 ---
 type: versioning-metadata
 target_agent: pcc-assessor
-current_version: v4.1.1
-published_versions: [v0, v1, v2, v3, v4, v4.0.1, v4.1.0, v4.1.1]
-last_updated: 2026-09-19
+current_version: v4.1.3
+published_versions: [v0, v1, v2, v3, v4, v4.0.1, v4.1.0, v4.1.1, v4.1.2, v4.1.3]
+last_updated: 2026-09-20
 ---
 
 # pcc-assessor 版本元数据(单一真相源)
@@ -14,7 +14,7 @@ last_updated: 2026-09-19
 
 ## 当前默认
 
-**vN 默认 = `v4.1.1`**(2026-09-19)
+**vN 默认 = `v4.1.3`**(2026-09-20)
 
 ## 已发布版本(完整 changelog)
 
@@ -28,6 +28,8 @@ last_updated: 2026-09-19
 | **v4.0.1** | **2026-09-14** | **行为加固(规则不变)** | **caller 错误触发**(vec-02 s01 prompt 显式要 .md + 沿用 v3)| HTML-only 硬规则 + v4 default 硬规则 + caller override 拒绝;KB 判定规则不变 |
 | **v4.1.0** | **2026-09-14** | **行为加固(规则不变)** | **结构不稳定触发**(vec-07 s01 / Angela 2026-09-08 / vec-02 v4 三场章节顺序 + CSS 风格不一致 + "v3 vs v4 对比"过渡残留)| 新建 `knowledge/pcc-assessor-html-template.md` 固化 12 章节顺序 + CSS 按场次类型(AI 蓝 / 真人橙)+ 占位符 + 可选章节显式标注;spec 加"调 template 产报告"硬规则 + 文末骨架精简并指向 template 文件;KB 判定规则完全不变 |
 | **v4.1.1** | **2026-09-19** | **行为加固(可选章节结构固化)** | **vec-02 s04 翻车复盘显式需求**(必命中 ✘ 3,一票否决触发,需要在结构层显式承载"翻车复盘 / 关键转折点"段,而非塞进 § 9 主要优势与失守)| template § 3 新增 [card] ⑫ 翻车复盘 / 关键转折点(可选 IF `N_MUST_FAIL >= 2`);footer 改成 ⑬;章节总数 12 → 13(其中 3 个可选);KB 判定规则完全不变 |
+| **v4.1.2** | **2026-09-19** | **行为加固(修补说明格式固化)** | **vec-02 s02 用户反馈**(⑧ 可打磨 △ 清单的"修补说明"只写补句不写原问全文,模糊指代无锚定)| template 新增 § 7"⑧ 可打磨 △ 清单修补说明格式规范"(7.1 模板 / 7.2 锚定指代清单 / 7.3 反例 / 7.4 触发源);§ 3 章节顺序 ⑧ 描述补 "(修补说明格式见 § 7)";章节总数不变(仍 13,3 个可选),仅细化既有卡片列格式;KB 判定规则完全不变 |
+| **v4.1.3** | **2026-09-20** | **行为加固(章节结构简化)** | **vec-07 s01 用户反馈** + **voc-08 s02 用户反馈**(§ 7 PCC 考官模拟判定 整章内容与 § 2 + § 4 + § 6 完全重复;必命中项表头应写 7 条含 7.2/7.3 替代说明;37 markers 全表缺统一 row-pass/part/fail CSS class;§ 2 元信息表缺 vN 解析依据 metadata)| template § 3 章节总数 13 → 12(2 个可选,跨场趋势 / 翻车复盘),所有章节编号重排;§ 7 PCC 考官模拟判定 整章删除,核心内容(PCC 综合判定 + 通过概率公式推导)分散到 § 2 整体评级 callout;(PCC 实际口径换算 + 一票否决 4 项检查)分散到 § 3 末尾 callout;必命中项表头固定 7 条含 7.2/7.3 替代说明;章节命名固定字面一致;footer 加 template 版本 metadata;v3 vs v4 对比小节从可选章节列表移除(彻底过期);KB 判定规则完全不变 |
 
 ## 变更类型分类(供未来 v5 决策参考)
 
@@ -70,10 +72,10 @@ last_updated: 2026-09-19
 
 | 引用位置 | 当前值 | 来源 |
 |---|---|---|
-| `.claude/agents/pcc-assessor.md` § 版本史 | v4.1.0(本文件后)| spec 副本 |
-| `.claude/agents/pcc-assessor.md` § 输出格式 vN | v4.1.0(本文件后)| spec 副本 |
-| `knowledge/pcc-assessor-html-template.md` | v4.1.0 配套 template | template 文件 |
-| `.claude/agents/pcc-coachee.md` 转交块 | **v3(过期!需修)** | coachee spec |
+| `.claude/agents/pcc-assessor.md` § 版本史 | v4.1.3(本文件后)| spec 副本 |
+| `.claude/agents/pcc-assessor.md` § 输出格式 vN | v4.1.3(本文件后)| spec 副本 |
+| `knowledge/pcc-assessor-html-template.md` | v4.1.3 配套 template | template 文件 |
+| `.claude/agents/pcc-coachee.md` 转交块 | v4.1.3(2026-09-20 同步)| coachee spec |
 | `.claude/agents/pcc-tracker.md` schema eval_version | v2.5(tracker 内部 schema,非 KB 版本)| tracker spec |
 
 ## 加载策略

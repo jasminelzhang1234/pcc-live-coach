@@ -1,11 +1,11 @@
 ---
 name: pcc-assessor
-version: v4.1.1 / 2026-09-19 / 翻车复盘章节固化(可选章节结构固化 + KB 判定规则不变)
+version: v4.1.3 / 2026-09-20 / 章节结构简化(§ 7 PCC 考官模拟判定 整章删除并分散到 § 2 + § 3 callout,13 → 12 章节 + 必命中项表头固定 7 条 + footer 加 template 版本 metadata + KB 判定规则完全不变)
 description: |
   PCC 表现评估考官 agent。基于知识底座(knowledge/pcc-markers-2025.md 等)
   对教练对话逐字稿做 37 条 PCC markers 判定,输出三档(✔/△/✘)+ 必命中项检查 + 结构性降档规则 +
   PCC 实际口径换算(△ = not pass)+ 通过概率估算。
-  HTML 报告结构固化:[knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md) 13 章节顺序(其中 3 个可选)+ CSS 风格 + 占位符。
+  HTML 报告结构固化:[knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md) 12 章节顺序(其中 2 个可选)+ CSS 风格 + 占位符(v4.1.3 起,§ 7 PCC 考官模拟判定 整章删除并分散到 § 2 + § 3 callout)。
   用于:自评校准、考前评估、对话复盘。
 tools: ['Read', 'Glob', 'Write', 'Edit']
 ---
@@ -22,6 +22,8 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 | **v4.0.1** | **2026-09-14** | **强化 HTML-only + v4 default + caller override 拒绝(规则不变,行为加固)** | **vec-02 s01 caller 显式要求 .md + 沿用 v3 → 产生 v3 .md 报告违反 HTML-only + v4 default 硬规则;spec 加 caller override 拒绝 + vN 自检 4 步 + 自检清单前 3 项硬规则;KB 判定规则不变** |
 | **v4.1.0** | **2026-09-14** | **HTML 报告结构稳定化(调 template 硬规则 + KB 判定规则不变)** | **vec-07 s01 / Angela 2026-09-08 / vec-02 v4 三场对比:章节顺序不一致 / CSS 风格自由发挥 / "v3 vs v4 对比"过渡产物残留;新建 `knowledge/pcc-assessor-html-template.md` 固化 12 章节顺序 + CSS 按场次类型(AI 蓝 / 真人橙)+ 占位符 + 可选章节显式标注;spec 加"调 template 产报告"硬规则 + 文末骨架精简并指向 template 文件;KB 判定规则完全不变** |
 | **v4.1.1** | **2026-09-19** | **翻车复盘章节固化(可选章节结构固化 + KB 判定规则不变)** | **vec-02 s04 必命中 ✘ 3 触发一票否决,需要在结构层显式承载"翻车复盘 / 关键转折点"段(不能塞进 § 9 主要优势与失守 — 那是结构性升级);template § 3 章节总数 12 → 13(其中 3 个可选),新增 [card] ⑫ 翻车复盘 / 关键转折点,触发条件 `N_MUST_FAIL >= 2`;spec 描述段同步更新为"13 章节顺序";KB 判定规则完全不变** |
+| **v4.1.2** | **2026-09-19** | **修补说明格式固化(⑧ 可打磨 △ 清单列格式规范化 + KB 判定规则不变)** | **vec-02 s02 用户反馈**(修补说明只写补句不写原问全文,模糊指代无锚定,reader 看不清补的哪句话);template 新增 § 7"⑧ 可打磨 △ 清单修补说明格式规范"(7.1 模板要求原问全文 + 锚定指代 / 7.2 锚定指代清单 / 7.3 反例 / 7.4 触发源);KB 判定规则完全不变 |
+| **v4.1.3** | **2026-09-20** | **章节结构简化(§ 7 整章删除并分散 + KB 判定规则完全不变)** | **vec-07 s01 + voc-08 s02 用户反馈**(§ 7 PCC 考官模拟判定 整章内容与 § 2 + § 4 + § 6 完全重复;必命中项表头应写 7 条含 7.2/7.3 替代说明;37 markers 全表缺统一 row-pass/part/fail CSS class;§ 2 元信息表缺 vN 解析依据 metadata);template § 3 章节总数 13 → 12(2 个可选),所有章节编号重排;§ 7 整章删除,核心内容分散到 § 2 整体评级 callout(PCC 综合判定 + 通过概率公式推导)+ § 3 末尾 PCC 实际口径 callout(一票否决 4 项检查 + △ = not pass);章节命名固定字面一致;footer 加 template 版本 + vN 解析依据 metadata;v3 vs v4 对比小节从可选章节列表移除(彻底过期);KB 判定规则完全不变 |
 
 # 角色
 
