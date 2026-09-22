@@ -7,7 +7,7 @@ description: |
   § 2 整体评级 callout + § 3 末尾 PCC 实际口径 callout。
   v4.1.4 起 `## → Tracker 转交` 机器接口段**不**写入 HTML 报告文件(只走 agent 间通信)。
 type: template
-spec_version: v4.1.5
+spec_version: v4.1.6
 last_updated: 2026-09-22
 ---
 
@@ -47,7 +47,7 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
 [header]                   ① KPI 行(7 个卡片)
 [card] 元信息               ② meta-grid + 整体评级 callout(含 PCC 通过概率 + 一票否决 + 综合判定)
 [card] 必命中项检查         ③ 7 条 must-marker 大表 + 末尾 PCC 实际口径换算 callout(△ = not pass)
-[card] 37 条 markers 全表   ④ 按能力分组(能力 3/4/5/6/7/8),保留 rowspan 分组
+[card] 37 条 markers 全表   ④ 按能力分组(能力 3/4/5/6/7/8),保留 rowspan 分组;第 2 列必含 marker 短描述(v4.1.6 起 — 来自 KB,见 § 5 `{MARKER_TITLE}`)
 [card] 结构性降档规则       ⑤ 5 条 vec-08 三方校准规则表
 [grid-2]                   ⑥ 能力维度分布表 + 雷达图
                             (空右侧)判定构成柱状图
@@ -69,7 +69,7 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
 - 一票否决 4 项检查清单(合约没锁 / 替客户决定 / 替客户总结 / 必命中 7/7)+ 本场触发状态
 
 **章节命名固定**(h2 标题文字必须字面一致):
-- `对话元信息` / `必命中项检查(7 条,任一 ✘ = 一票否决)` / `37 条 Markers 全表`
+- `对话元信息` / `必命中项检查(7 条,任一 ✘ = 一票否决)` / `37 条 Markers 全表` / `Marker / 短描述`(第 2 列格式,th width 220px,v4.1.6 起)
 - `结构性降档规则命中情况` / `能力维度分布`
 - `可打磨 △ 清单` / `主要优势与失守` / `下一步练习建议`
 - `跨场趋势({persona_id} · {start_date} → {end_date})` [可选]
@@ -120,6 +120,7 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
 | `{MUST_FAIL_DETAIL}` | 必命中 ✘ 的 marker ID(如 `3.4 一票否决`) | ✔ |
 | `{PCT_PCC_PASS}` | v4 公式算出的 PCC 通过概率 0-100 整数 | ✔ |
 | `{vN}` | pcc-assessor-versions.md current_version | ✔ |
+| `{MARKER_TITLE}` | `knowledge/pcc-markers-2025.md` 对应 marker 的标题(如 `3.1 确认本次会话想达成什么`/`7.2 探索超越当前认知(关于"人")`);§ 4 第 2 列每行必含,th width 220px | ✔(v4.1.6 起硬规则) |
 | `{JUDGE_MAIN}` | 评估者标识(Claude v{N} / GPT-5.6 / DeepSeek V4 Flash) | ✔ |
 | `{JUDGE_2}` | second judge 或 `-` | ✔ |
 
@@ -209,3 +210,8 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
     - PCC 实际口径换算(△ = not pass)+ 一票否决检查 → § 3 末尾 callout(新增)
   - v3 vs v4 对比小节(过渡期)从可选章节列表移除(2026-09 起彻底过期)
   - 配套 pcc-assessor.md KB 判定规则完全不变,仅结构层简化
+- 2026-09-22: v4.1.6 § 4 marker 短描述必含(vec-02 s01 用户反馈:§ 4 第 2 列只有 marker-id 编号,无 KB 短描述;voc-08 § 4 是"编号 + 短描述"格式)
+  - § 3 章节顺序 § 4 描述补"(第 2 列必含 marker 短描述,见 § 5 `{MARKER_TITLE}`)"
+  - § 5 占位符总表加 `{MARKER_TITLE}` 字段(来自 `knowledge/pcc-markers-2025.md` 对应 marker 标题)
+  - § 7 章节命名固定补"`Marker / 短描述` 第 2 列格式"(th width 220px)
+  - 配套 pcc-assessor.md 升 v4.1.6,KB 判定规则完全不变
