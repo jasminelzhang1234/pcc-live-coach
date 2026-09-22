@@ -5,9 +5,10 @@ description: |
   + 占位符语法 + 可选章节显式标注;让 pcc-assessor agent 每次只填值不动结构。
   v4.1.3 起 § 7 PCC 考官模拟判定 整章删,核心内容(实际口径 / 一票否决 / 通过概率)分散到
   § 2 整体评级 callout + § 3 末尾 PCC 实际口径 callout。
+  v4.1.4 起 `## → Tracker 转交` 机器接口段**不**写入 HTML 报告文件(只走 agent 间通信)。
 type: template
-spec_version: v4.1.3
-last_updated: 2026-09-20
+spec_version: v4.1.4
+last_updated: 2026-09-22
 ---
 
 # pcc-assessor HTML 报告骨架模板
