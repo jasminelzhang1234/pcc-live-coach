@@ -1,8 +1,8 @@
 ---
 type: versioning-metadata
 target_agent: pcc-assessor
-current_version: v4.1.4
-published_versions: [v0, v1, v2, v3, v4, v4.0.1, v4.1.0, v4.1.1, v4.1.2, v4.1.3, v4.1.4]
+current_version: v4.1.5
+published_versions: [v0, v1, v2, v3, v4, v4.0.1, v4.1.0, v4.1.1, v4.1.2, v4.1.3, v4.1.4, v4.1.5]
 last_updated: 2026-09-22
 ---
 
@@ -14,7 +14,7 @@ last_updated: 2026-09-22
 
 ## 当前默认
 
-**vN 默认 = `v4.1.4`**(2026-09-22)
+**vN 默认 = `v4.1.5`**(2026-09-22)
 
 ## 已发布版本(完整 changelog)
 
@@ -31,6 +31,7 @@ last_updated: 2026-09-22
 | **v4.1.2** | **2026-09-19** | **行为加固(修补说明格式固化)** | **vec-02 s02 用户反馈**(⑧ 可打磨 △ 清单的"修补说明"只写补句不写原问全文,模糊指代无锚定)| template 新增 § 7"⑧ 可打磨 △ 清单修补说明格式规范"(7.1 模板 / 7.2 锚定指代清单 / 7.3 反例 / 7.4 触发源);§ 3 章节顺序 ⑧ 描述补 "(修补说明格式见 § 7)";章节总数不变(仍 13,3 个可选),仅细化既有卡片列格式;KB 判定规则完全不变 |
 | **v4.1.3** | **2026-09-20** | **行为加固(章节结构简化)** | **vec-07 s01 用户反馈** + **voc-08 s02 用户反馈**(§ 7 PCC 考官模拟判定 整章内容与 § 2 + § 4 + § 6 完全重复;必命中项表头应写 7 条含 7.2/7.3 替代说明;37 markers 全表缺统一 row-pass/part/fail CSS class;§ 2 元信息表缺 vN 解析依据 metadata)| template § 3 章节总数 13 → 12(2 个可选,跨场趋势 / 翻车复盘),所有章节编号重排;§ 7 PCC 考官模拟判定 整章删除,核心内容(PCC 综合判定 + 通过概率公式推导)分散到 § 2 整体评级 callout;(PCC 实际口径换算 + 一票否决 4 项检查)分散到 § 3 末尾 callout;必命中项表头固定 7 条含 7.2/7.3 替代说明;章节命名固定字面一致;footer 加 template 版本 metadata;v3 vs v4 对比小节从可选章节列表移除(彻底过期);KB 判定规则完全不变 |
 | **v4.1.4** | **2026-09-22** | **行为加固(机器接口从 HTML 挪出)** | **vec-09 s01 用户反馈**(HTML 报告结尾出现 `## → Tracker 转交` 机器接口段,reader 困惑;agent 输出段被误写入 HTML 文件)| spec § "评估后联动 — Tracker 转交" 顶部 intro 加显式约束:`## → Tracker 转交` 段**只**出现在 agent markdown 输出末尾(给主控解析触发 pcc-tracker 派单),**不**写入 HTML 报告文件(reader-facing 报告纯化,机器接口只走 agent 间通信);KB 判定规则完全不变 |
+| **v4.1.5** | **2026-09-22** | **行为加固(跨场趋势必含 + Tracker 转交块加 prior_sessions_count)** | **vec-09 s01 用户反馈**(vec-02 s01 报告漏掉"跨场趋势"章节 — vec-02 跨场 5 场历史满足 ≥ 2 触发条件,但 pcc-assessor agent 没触发;可选章节"自由度"导致 drift)| template § 6 跨场趋势从"可选 IF ≥ 2 场"→"**必含** IF `prior_sessions_count >= 1`"(消除可选章节 drift);pcc-assessor "## → Tracker 转交" 块加 `prior_sessions_count` 字段(pcc-tracker 提供,让 pcc-assessor 无需自 Glob tracker.csv);KB 判定规则完全不变 |
 
 ## 变更类型分类(供未来 v5 决策参考)
 

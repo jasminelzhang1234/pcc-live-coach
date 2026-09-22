@@ -7,7 +7,7 @@ description: |
   § 2 整体评级 callout + § 3 末尾 PCC 实际口径 callout。
   v4.1.4 起 `## → Tracker 转交` 机器接口段**不**写入 HTML 报告文件(只走 agent 间通信)。
 type: template
-spec_version: v4.1.4
+spec_version: v4.1.5
 last_updated: 2026-09-22
 ---
 
@@ -24,7 +24,8 @@ pcc-assessor agent 在生成 HTML 报告时,**必须**按本模板的 12 章节�
 - 重新引入已删除的 § 7 PCC 考官模拟判定 整章(v4.1.3 起删除,内容分散)
 
 允许:
-- 可选章节(§ 10 跨场趋势 / § 11 翻车复盘)按显式条件出现
+- 条件必含章节(§ 10 跨场趋势 IF prior_sessions_count >= 1)按显式条件出现
+- 可选章节(§ 11 翻车复盘 IF N_MUST_FAIL >= 2)按显式条件出现
 - 占位符填值
 - KPI 数值随 transcript 变化
 - 判定文字随 transcript 变化
@@ -53,7 +54,7 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
 [card] 可打磨 △ 清单       ⑦ 8 条 △ 按标点/一句/流程/思维 4 级分类(修补说明格式见 § 7.5)
 [card] 主要优势与失守      ⑧ grid-2 双列 ✓优势 / ✗失守
 [card] 下一步练习建议       ⑨ P0/P1/P2/P3 优先级表
-[card] 跨场趋势           ⑩ 可选 IF persona_id 已存在 ≥ 2 场
+[card] 跨场趋势           ⑩ 必含 IF prior_sessions_count >= 1(v4.1.5 起)
 [card] 翻车复盘 / 关键转折点  ⑪ 可选 IF N_MUST_FAIL >= 2(必命中 ✘ ≥ 2)
 [footer]                   ⑫ 数据来源 + vN + 生成日期
 ```
@@ -122,19 +123,24 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
 | `{JUDGE_MAIN}` | 评估者标识(Claude v{N} / GPT-5.6 / DeepSeek V4 Flash) | ✔ |
 | `{JUDGE_2}` | second judge 或 `-` | ✔ |
 
-## 6. 可选章节标注
+## 6. 可选章节标注(v4.1.5 起跨场趋势从"可选"升级为"必含 IF")
 
-模板里有 2 个章节是可选的,其他必须出现:
+模板里有 1 个章节是可选的,1 个章节是条件必含,其他必须出现:
 
 ```
-<!-- IF persona_id 已存在 ≥ 2 场(查 tracker.csv / tracker-real-sessions.csv) -->
-[card] 跨场趋势
+<!-- IF {prior_sessions_count} >= 1(pcc-tracker 转交块提供,本场之前该 persona 已评估至少 1 场) -->
+[card] 跨场趋势               ← v4.1.5 起必含(消除可选章节 drift,vec-09 s01 漏掉触发)
 <!-- END IF -->
 
 <!-- IF {N_MUST_FAIL} >= 2(必命中 ✘ ≥ 2,触发一票否决临近) -->
-[card] 翻车复盘 / 关键转折点
+[card] 翻车复盘 / 关键转折点   ← 仍可选
 <!-- END IF -->
 ```
+
+**必含触发逻辑**(v4.1.5 起):
+- `prior_sessions_count >= 1`(本场之前该 persona 至少 1 场历史)→ **必含** 跨场趋势章节
+- `prior_sessions_count == 0`(本场是该 persona 首场)→ 跨场趋势章节**省略**(无历史可避免)
+- `N_MUST_FAIL >= 2` → **必含** 翻车复盘章节(原可选规则保留)
 
 **严禁保留**:`v3 vs v4 对比小节` 在 v4.1+ 是过期产物。2026-11 起必须从所有报告移除。
 
