@@ -644,8 +644,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="生成 trending chart HTML")
     parser.add_argument(
         "--kb-version",
-        default="current",
-        help="KB 版本切片:'current'(默认 = v4.1.x)/ 'all' / 精确版本(如 v4.1.6)",
+        default="all",
+        help="KB 版本切片:'all'(默认 = 全量 31 场)/ 'current'(v4.1.x)/ 精确版本(如 v4.1.6)",
     )
     parser.add_argument("--out", type=Path, default=None, help="输出 HTML 路径(默认按 KB 切片自动命名)")
     parser.add_argument("--print-summary", action="store_true", help="打印切片摘要到 stdout")
@@ -668,10 +668,10 @@ def main() -> int:
     today = datetime.now().strftime("%Y-%m-%d")
     if args.out:
         out = args.out
-    elif args.kb_version == "current":
-        out = PROGRESS / "trending-chart.html"
     elif args.kb_version == "all":
-        out = PROGRESS / "trending-chart-all.html"
+        out = PROGRESS / "trending-chart.html"
+    elif args.kb_version == "current":
+        out = PROGRESS / "trending-chart-v4.1.x.html"
     else:
         safe_v = args.kb_version.replace("/", "-").replace(" ", "-")
         out = PROGRESS / f"trending-chart-{safe_v}.html"
@@ -683,9 +683,9 @@ def main() -> int:
     print(f"   场数:{len(sessions)} · 严格平均 {avg:.1f}% · outlier {n_outliers} 场 · KB={args.kb_version} / 全量 {len(sessions_all)} 场")
     print(f"   排序:(conversation_date, conversation_time)")
     print(f"\n  💡 后续维护:")
-    print(f"     python3 scripts/gen_trending_chart.py                       # 默认 v4.1.x 切片")
-    print(f"     python3 scripts/gen_trending_chart.py --kb-version all     # 全量聚合(参考)")
-    print(f"     python3 scripts/gen_trending_chart.py --kb-version v4.1.6  # 精确版本")
+    print(f"     python3 scripts/gen_trending_chart.py                       # 默认全量(31 场)")
+    print(f"     python3 scripts/gen_trending_chart.py --kb-version current # v4.1.x 切片(15 场)")
+    print(f"     python3 scripts/gen_trending_chart.py --kb-version v4.1.6  # 精确版本(3 场)")
     return 0
 
 
