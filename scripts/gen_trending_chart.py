@@ -395,8 +395,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <h1>PCC 陪练趋势 · {n} 场数据</h1>
       <div class="subtitle">按 <strong>CSV 的 (conversation_date, conversation_time)</strong> 排序 · 浏览器双击可看 · 自动从 <code>tracker.csv</code> 生成</div>
       <div class="kpi-row">
-        <div class="kpi"><div class="kpi-label">平均严格命中率</div><div class="kpi-value">{avg}%</div><div class="kpi-sub">{n} 场加权 · v4.1.0 主</div></div>
         <div class="kpi"><div class="kpi-label">PCC 通过场次</div>{pass_html}</div>
+        <div class="kpi"><div class="kpi-label">平均严格命中率</div><div class="kpi-value">{avg}%</div><div class="kpi-sub">{n} 场加权 · v4.1.0 主</div></div>
         <div class="kpi"><div class="kpi-label">最高分 (严格)</div>{peak_html}</div>
         <div class="kpi"><div class="kpi-label">最低分 (严格)</div>{trough_html}</div>
         <div class="kpi"><div class="kpi-label">场数</div><div class="kpi-value">{n}</div><div class="kpi-sub">unique 陪练</div></div>
