@@ -91,6 +91,7 @@ def load_sessions() -> list[dict]:
                 "short_label": f"{persona_short} s{last}",
                 "color": PERSONA_COLORS.get(r["persona"], "#999"),
                 "eval_version": r.get("eval_version", "").strip(),
+                "pcc_pass": int(r["pcc_pass_pct"]) if r.get("pcc_pass_pct", "").strip() else None,
             }
         )
     return sessions
@@ -211,9 +212,25 @@ def build_html(sessions: list[dict], today: str) -> str:
         outlier_flag = "⚠️ " if is_outlier(s) else ""
         eval_v = s.get("eval_version", "")
         eval_v_label = f' <span class="kb-tag">{eval_v}</span>' if eval_v else ""
+        pcc = s.get("pcc_pass")
+        if pcc is None:
+            pcc_cell = '<span class="muted">—</span>'
+            pcc_class = ""
+        elif pcc < 50:
+            pcc_cell = f'<span class="pcc-bad">{pcc}%</span>'
+            pcc_class = "pcc-bad-row"
+        elif pcc < 70:
+            pcc_cell = f'<span class="pcc-warn">{pcc}%</span>'
+            pcc_class = "pcc-warn-row"
+        else:
+            pcc_cell = f'<span class="pcc-good">{pcc}%</span>'
+            pcc_class = ""
+        # 严格高 + PCC 低 = misleading 标记
+        misleading = " ⚠️" if s["hit_strict"] >= 85 and pcc is not None and pcc < 50 else ""
+        pcc_class_full = f'{row_class.strip()} {pcc_class}'.strip()
 
         table_rows.append(
-            f"""          <tr{row_class}{bg}>
+            f"""          <tr class="{pcc_class_full}"{bg}>
             <td>{i}</td>
             <td>{time_str}</td>
             <td>{outlier_flag}{session_id_note}{eval_v_label}</td>
@@ -223,6 +240,7 @@ def build_html(sessions: list[dict], today: str) -> str:
             <td>{s['mustHit']}</td>
             <td>{bar_html}{strong}</td>
             <td>{s['hit']:.2f}%</td>
+            <td>{pcc_cell}{misleading}</td>
           </tr>"""
         )
     table_rows_str = "\n".join(table_rows)
@@ -330,6 +348,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .kb-tag {{ display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-family: ui-monospace, "SF Mono", monospace; background: #e6eef7; color: #2b6cb0; margin-left: 4px; }}
     .outlier-row {{ background: #fff5f5; }}
     .outlier-row:hover {{ background: #ffe8e8 !important; }}
+    .pcc-good {{ color: var(--good); font-weight: 600; }}
+    .pcc-warn {{ color: var(--warn); font-weight: 600; }}
+    .pcc-bad {{ color: var(--bad); font-weight: 600; }}
+    .pcc-bad-row {{ background: #fffafa; }}
+    .pcc-bad-row:hover {{ background: #ffe8e8 !important; }}
+    .pcc-warn-row {{ background: #fffbeb; }}
+    .pcc-warn-row:hover {{ background: #fef3c7 !important; }}
+    .muted {{ color: var(--muted); opacity: 0.6; }}
     .diff-1 {{ color: var(--good); font-weight: 600; }}
     .diff-2 {{ color: var(--warn); font-weight: 600; }}
     .diff-3 {{ color: var(--bad); font-weight: 600; }}
@@ -364,7 +390,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <div class="card">
       <h2>① 命中率走势</h2>
-      <p class="desc">每场 PCC marker 命中率: 蓝实=严格 ✔/37(v4.1.0 主指标)· 蓝虚=复合 (✔+0.5×△)/37(辅)· 灰虚=严格均值 · 折线点按 persona 着色</p>
+      <p class="desc">每场 PCC marker 命中率: 蓝实=严格 ✔/37(v4.1.x 主指标)· 蓝虚=复合 (✔+0.5×△)/37(辅)· 橙点线=PCC 通过概率(pass/fail 判定)· 灰虚=严格均值 · 折线点按 persona 着色 · <strong>严格高 + PCC 低 ⚠️</strong> = 必命中失守触发一票否决</p>
       <div class="chart-wrap tall"><canvas id="hitRateChart"></canvas></div>
       <div class="legend-row">{persona_legend}</div>
       <div class="callout"><strong>解读:</strong>{narrative}</div>
@@ -388,7 +414,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <p class="desc">{n} 场陪练的判定构成与最终得分</p>
       <table>
         <thead>
-          <tr><th>#</th><th>实际时间</th><th>session_id 日期</th><th>Persona</th><th>难度</th><th>✔</th><th>△</th><th>✘</th><th>必命中✘</th><th>严格 (主·v4.1.0)</th><th>复合 (辅)</th></tr>
+          <tr><th>#</th><th>实际时间</th><th>session_id 日期</th><th>Persona</th><th>难度</th><th>✔</th><th>△</th><th>✘</th><th>必命中✘</th><th>严格 (主·v4.1.0)</th><th>复合 (辅)</th><th>PCC 通过概率</th></tr>
         </thead>
         <tbody>
 {table_rows}
@@ -414,6 +440,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const labels = sessions.map(s => s.label_short);
     const hits = sessions.map(s => s.hit);
     const strictHits = sessions.map(s => s.hit_strict);
+    const pccPasses = sessions.map(s => (s.pcc_pass === null || s.pcc_pass === undefined) ? null : s.pcc_pass);
     const personaFills = sessions.map(s => personaColors[s.persona]);
 
     // KB 版本边框色映射(默认按 v4.1.x 蓝,旧版本用暗灰区分;outlier 红色边框)
@@ -464,6 +491,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             fill: false,
             borderDash: [6, 4],
           }},
+          {{
+            label: 'PCC 通过概率(主·pass/fail 判定)',
+            data: pccPasses,
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217, 119, 6, 0.05)',
+            borderWidth: 2.2, tension: 0.25,
+            pointRadius: 6, pointHoverRadius: 8,
+            // 按 pass prob 着色:≥70% 绿,<50% 红,其他 橙
+            pointBackgroundColor: sessions.map(s => {{
+              const p = s.pcc_pass;
+              if (p === null || p === undefined) return '#bbb';
+              if (p >= 70) return '#48bb78';
+              if (p < 50) return '#fc8181';
+              return '#f6ad55';
+            }}),
+            pointBorderColor: sessions.map(s => {{
+              const p = s.pcc_pass;
+              if (p === null || p === undefined) return '#999';
+              if (p >= 70) return '#2f855a';
+              if (p < 50) return '#c53030';
+              return '#d97706';
+            }}),
+            pointBorderWidth: 1.5,
+            fill: false,
+            borderDash: [2, 2],
+            spanGaps: true,
+          }},
         ],
       }},
       options: {{
@@ -475,7 +529,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             callbacks: {{
               label: (ctx) => {{
                 const s = sessions[ctx.dataIndex];
-                const isStrict = ctx.dataset.label.indexOf('严格') !== -1;
+                const lbl = ctx.dataset.label;
+                if (lbl.indexOf('PCC') !== -1) {{
+                  const p = s.pcc_pass;
+                  const pStr = (p === null || p === undefined) ? '—(无 HTML 报告)' : p + '%';
+                  const flag = (s.hit_strict >= 85 && p !== null && p < 50) ? ' ⚠️ 严格高 + PCC 低(misleading)' : '';
+                  return [
+                    'PCC 通过概率: ' + pStr + flag,
+                    '严格命中率: ' + s.hit_strict.toFixed(2) + '%(供对比)',
+                  ];
+                }}
+                const isStrict = lbl.indexOf('严格') !== -1;
                 const tag = isStrict ? '严格' : '复合';
                 const num = (isStrict ? s.hit_strict : s.hit).toFixed(2);
                 const diff = (s.hit - s.hit_strict).toFixed(2);

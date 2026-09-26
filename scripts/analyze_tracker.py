@@ -240,6 +240,39 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
         "",
     ]
 
+    # Misleading 案例:严格率 ≥85% 但 PCC 通过概率 < 50%(必命中失守触发一票否决)
+    misleading_rows = []
+    for r in rows:
+        pcc_raw = r.get("pcc_pass_pct", "").strip()
+        if not pcc_raw:
+            continue
+        try:
+            pcc_val = int(pcc_raw)
+        except ValueError:
+            continue
+        try:
+            yes = int(r.get("claude_total_✔", 0))
+        except ValueError:
+            yes = 0
+        strict_pct = yes / 37 * 100
+        if strict_pct >= 85 and pcc_val < 50:
+            misleading_rows.append((r["session_id"], r.get("eval_version", ""), strict_pct, pcc_val, r.get("must_hit_✘_count", "0")))
+    if misleading_rows:
+        md += [
+            "---",
+            "",
+            "## 🚨 严格高 + PCC 低(misleading 案例)",
+            "",
+            "严格率 ≥85% 但 PCC 通过概率 < 50%(必命中失守触发一票否决)。",
+            "**只看严格率会高估真实表现** — 必命中失守 1 条就让 PCC 通过概率坍塌。",
+            "",
+            "| Session | KB 版本 | 严格率 | PCC 通过 | 必命中 ✘ |",
+            "|---|---|---|---|---|",
+        ]
+        for sid, ev, sp, pp, mh in misleading_rows:
+            md.append(f"| {sid} | {ev} | {sp:.1f}% | **{pp}%** | {mh} |")
+        md += ["", ""]
+
     # Outlier 警告(在头部加,显眼)
     if outliers:
         md += [
@@ -324,8 +357,8 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
         "",
         "## 📋 每场 summary(按 (conversation_date, conversation_time) 升序)",
         "",
-        "| # | session_id | 对话日期时间 | 评估日期 | persona | 难度 | ✔ | △ | ✘ | 必命中 ✘ | 评估者 |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "| # | session_id | 对话日期时间 | 评估日期 | persona | 难度 | ✔ | △ | ✘ | 必命中 ✘ | PCC 通过 | 评估者 |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     outlier_sids = {sid for sid, _, _ in outliers}
     for i, row in enumerate(rows, 1):
@@ -335,12 +368,21 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
         sid_display = row["session_id"]
         if sid_display in outlier_sids:
             sid_display = f"⚠️ {sid_display}"
+        # PCC 通过概率(严格高 + PCC 低 = misleading)
+        pcc_raw = row.get("pcc_pass_pct", "").strip()
+        strict_pct = int(row["claude_total_✔"]) / 37 * 100 if row.get("claude_total_✔") else 0
+        if pcc_raw:
+            pcc_val = int(pcc_raw)
+            misleading = " ⚠️" if strict_pct >= 85 and pcc_val < 50 else ""
+            pcc_cell = f"**{pcc_val}%**{misleading}"
+        else:
+            pcc_cell = "—(无 HTML 报告)"
         md.append(
             f"| {i} | {sid_display} | {dt} | {row['date']} "
             f"| {row['persona']} | {row['difficulty']} "
             f"| {row['claude_total_✔']} | {row['claude_total_△']} "
             f"| {row['claude_total_✘']} | {row['must_hit_✘_count']} "
-            f"| {row['judge_main']} |"
+            f"| {pcc_cell} | {row['judge_main']} |"
         )
 
     # 重评 lineage
