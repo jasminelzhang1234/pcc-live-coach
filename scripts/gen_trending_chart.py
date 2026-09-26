@@ -253,6 +253,20 @@ def build_html(sessions: list[dict], today: str) -> str:
         else ""
     )
 
+    # PCC 通过场次:概率 ≥ 70% 算通过,50-69% 边缘,< 50% 失败
+    pcc_passed = [s for s in sessions if s.get("pcc_pass") is not None and s["pcc_pass"] >= 70]
+    pcc_marginal = [s for s in sessions if s.get("pcc_pass") is not None and 50 <= s["pcc_pass"] < 70]
+    pcc_failed = [s for s in sessions if s.get("pcc_pass") is not None and s["pcc_pass"] < 50]
+    n_pass = len(pcc_passed)
+    n_marg = len(pcc_marginal)
+    n_fail = len(pcc_failed)
+    n_with_pcc = n_pass + n_marg + n_fail
+    pass_pct = (n_pass / n_with_pcc * 100) if n_with_pcc else 0
+    pass_html = (
+        f'<div class="kpi-value">{n_pass}/{n_with_pcc}</div>'
+        f'<div class="kpi-sub">{pass_pct:.0f}% 通过(≥70%) · 边缘 {n_marg} · 失败 {n_fail}</div>'
+    )
+
     # 雷达数据(从最新 tracker-analysis 解析)
     radar = competency_stats(sessions)
     radar_json = json.dumps([{"name": n, "rate": r} for n, r in radar])
@@ -269,6 +283,7 @@ def build_html(sessions: list[dict], today: str) -> str:
         n=n,
         today=today,
         avg=f"{avg:.1f}",
+        pass_html=pass_html,
         peak_html=peak_html,
         trough_html=trough_html,
         persona_legend=persona_legend,
@@ -381,6 +396,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="subtitle">按 <strong>CSV 的 (conversation_date, conversation_time)</strong> 排序 · 浏览器双击可看 · 自动从 <code>tracker.csv</code> 生成</div>
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-label">平均严格命中率</div><div class="kpi-value">{avg}%</div><div class="kpi-sub">{n} 场加权 · v4.1.0 主</div></div>
+        <div class="kpi"><div class="kpi-label">PCC 通过场次</div>{pass_html}</div>
         <div class="kpi"><div class="kpi-label">最高分 (严格)</div>{peak_html}</div>
         <div class="kpi"><div class="kpi-label">最低分 (严格)</div>{trough_html}</div>
         <div class="kpi"><div class="kpi-label">场数</div><div class="kpi-value">{n}</div><div class="kpi-sub">unique 陪练</div></div>
