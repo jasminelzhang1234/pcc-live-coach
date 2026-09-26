@@ -11,7 +11,7 @@
 
 输出 HTML:
   - 自包含,浏览器双击可看(无服务器)
-  - 4 个图表:① 命中率走势 ② ✔/△/✘ 堆叠 ③ 能力雷达 ④ 详情表 ⑤ Phase B 状态
+  - 4 个图表:① 命中率走势 ② ✔/△/✘ 堆叠 ③ 能力雷达 ④ 详情表
   - 数据内嵌在 <script> 块(JSON)
 """
 from __future__ import annotations
@@ -567,17 +567,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                   color: '#fff', font: {{ size: 11, weight: '600' }}, padding: 4,
                 }},
               }},
-              phaseBTarget: {{
-                type: 'line', yMin: 85, yMax: 85,
-                borderColor: 'rgba(47, 133, 90, 0.4)',
-                borderWidth: 1.2, borderDash: [3, 3],
-                label: {{
-                  display: true, content: 'Phase B 目标线 85%',
-                  position: 'start',
-                  backgroundColor: 'rgba(47, 133, 90, 0.9)',
-                  color: '#fff', font: {{ size: 10 }}, padding: 4,
-                }},
-              }},
             }},
           }},
         }},
@@ -627,10 +616,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             fill: true, backgroundColor: 'rgba(43, 108, 176, 0.18)',
             borderColor: '#2b6cb0', borderWidth: 2,
             pointBackgroundColor: '#2b6cb0', pointRadius: 4 }},
-          {{ label: 'Phase B 参考线',
-            data: radarData.map(() => 85),
-            fill: false, borderColor: 'rgba(47, 133, 90, 0.5)',
-            borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0 }},
         ],
       }},
       options: {{
