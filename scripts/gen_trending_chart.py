@@ -161,7 +161,7 @@ def build_html(sessions: list[dict], today: str) -> str:
 
     # KPI 计算
     peak = max(sessions, key=lambda s: s["hit"]) if sessions else None
-    trough = min(sessions, key=lambda s: s["hit"]) if sessions else None
+    trough = min(sessions, key=lambda s: s["hit_strict"]) if sessions else None
 
     # 构造 sessions JSON
     sessions_json = json.dumps(
