@@ -16,6 +16,7 @@
 
 import argparse
 import csv
+import re
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -48,6 +49,59 @@ MARKER_NAMES = {
     "8.5": "设计会后行动", "8.6": "资源/支持/障碍",
     "8.7": "设计问责", "8.8": "设计承诺/庆祝进展", "8.9": "共同决定结束",
 }
+
+
+def current_default_kb_version() -> str:
+    """读 knowledge/pcc-assessor-versions.md,返回 current_version 字段;
+    失败时 fallback 到 v4.1.x(2026-09-22 已发布,已知 latest)。
+    """
+    versions_path = Path(__file__).parent.parent / "knowledge" / "pcc-assessor-versions.md"
+    if versions_path.exists():
+        text = versions_path.read_text(encoding="utf-8")
+        m = re.search(r"current_version:\s*(\S+)", text)
+        if m:
+            return m.group(1)
+    return "v4.1.x"  # fallback to v4.1.x family
+
+
+def is_kb_match(row: dict, kb_version: str) -> bool:
+    """判定 row 是否属于指定 KB 版本切片。
+    - 'current' → 匹配最新 v4.1.x 家族(v4.1.0/v4.1.1/v4.1.2/v4.1.3/v4.1.6 等)
+    - 'all' → 全部
+    - 其它字符串 → 精确匹配(如 'v4.1.6' / 'v3')
+    """
+    ev = row.get("eval_version", "").strip()
+    if kb_version == "all":
+        return True
+    if kb_version == "current":
+        return ev.startswith("v4.1.")
+    return ev == kb_version
+
+
+def filter_by_kb(rows: list[dict], kb_version: str) -> list[dict]:
+    return [r for r in rows if is_kb_match(r, kb_version)]
+
+
+def find_outliers(rows: list[dict], threshold: float = 60.0) -> list[tuple]:
+    """找严格率 < threshold% 的场次。返回 [(session_id, eval_version, strict_pct), ...]"""
+    out = []
+    for r in rows:
+        try:
+            yes = int(r.get("claude_total_✔", 0))
+        except (ValueError, TypeError):
+            continue
+        strict_pct = yes / 37 * 100
+        if strict_pct < threshold:
+            out.append((r["session_id"], r.get("eval_version", ""), strict_pct))
+    return out
+
+
+def persona_session_counts(rows: list[dict]) -> dict[str, int]:
+    """每个 persona 的场次数,用于趋势报告的最小样本提示。"""
+    counts: dict[str, int] = defaultdict(int)
+    for r in rows:
+        counts[r.get("persona", "")] += 1
+    return dict(counts)
 
 
 def load_rows(csv_path: Path) -> list[dict]:
@@ -134,8 +188,14 @@ def must_hit_status(rows: list[dict]) -> dict[str, list[str]]:
     return out
 
 
-def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") -> str:
-    """生成 markdown 报告"""
+def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb_version: str = "all") -> str:
+    """生成 markdown 报告。
+
+    kb_version:
+    - "current" → 最新 v4.1.x 家族(默认,与 trending chart 主指标对齐)
+    - "all" → 全量聚合(参考用,跨 KB 版本,统计意义弱)
+    - 其它(如 "v4.1.6" / "v3")→ 精确匹配单版本
+    """
     n = len(rows)
     judgments = marker_judgments(rows)
     comp_stats = competency_stats(rows)
@@ -143,12 +203,22 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") ->
     partials = repeated_partial(judgments, threshold=max(3, n // 2))
     strengths = strength_zone(judgments)
     must_hit = must_hit_status(rows)
+    outliers = find_outliers(rows, threshold=60.0)
+    persona_counts = persona_session_counts(rows)
+
+    # KB 切片说明
+    if kb_version == "current":
+        slice_label = "v4.1.x(默认切片,与 trending chart 主指标对齐)"
+    elif kb_version == "all":
+        slice_label = "全量聚合(跨 KB 版本,统计意义弱,仅参考)"
+    else:
+        slice_label = f"{kb_version}(精确匹配)"
 
     md = [
-        f"# Tracker 分析报告 — {date}(自动生成,{n} 场)",
+        f"# Tracker 分析报告 — {date}(自动生成,{n} 场 · {slice_label})",
         "",
         f"> 来源:[progress/{csv_name}]({csv_name})",
-        "> 生成器:`scripts/analyze_tracker.py`",
+        f"> KB 切片:`{kb_version}` · 生成器:`scripts/analyze_tracker.py`",
         "",
         "## 📊 能力维度命中率",
         "",
@@ -166,8 +236,27 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") ->
     weighted = total_yes / total_all * 100 if total_all else 0
     md += [
         "",
-        f"**总命中率(严格,只看 ✔):{weighted:.1f}%** — 与 trending chart 主指标(严格 ✔/37)对齐,v4.1.0",
+        f"**总命中率(严格,只看 ✔):{weighted:.1f}%** — 与 trending chart 主指标(严格 ✔/37)对齐",
         "",
+    ]
+
+    # Outlier 警告(在头部加,显眼)
+    if outliers:
+        md += [
+            "---",
+            "",
+            f"## ⚠️ Outlier 场次(严格率 < 60%)",
+            "",
+            f"{len(outliers)} 场低于 60% 严格率,已**排除**对能力维度主指标的污染:</>",
+            "",
+            "| Session | KB 版本 | 严格率 |",
+            "|---|---|---|",
+        ]
+        for sid, ev, pct in outliers:
+            md.append(f"| {sid} | {ev} | **{pct:.1f}%** |")
+        md += ["", ""]
+
+    md += [
         "---",
         "",
         f"## ⚠️ 反复失守 marker(≥ {max(3, n // 2)} 场 ✘)",
@@ -213,17 +302,41 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") ->
         "",
         "---",
         "",
+        f"## 👥 Persona 场次分布(切片内 ≥ 1 场的全部 persona)",
+        "",
+        "| Persona | 场次 | 趋势统计意义 |",
+        "|---|---|---|",
+    ]
+    for p, cnt in sorted(persona_counts.items(), key=lambda x: -x[1]):
+        if cnt >= 3:
+            note = f"✔ 可参考({cnt} 场 ≥ 3 阈值)"
+        elif cnt == 2:
+            note = f"⚠️ 仅单场对照,无趋势(2 场)"
+        else:
+            note = f"⚠️ 单场,无趋势(1 场)"
+        md.append(f"| {p} | {cnt} | {note} |")
+    md += [
+        "",
+        "> **趋势统计阈值 ≥ 3 场**:单 persona 需要至少 3 场才能说趋势,",
+        "> 2 场只能说单场对照,1 场无趋势结论。",
+        "",
+        "---",
+        "",
         "## 📋 每场 summary(按 (conversation_date, conversation_time) 升序)",
         "",
         "| # | session_id | 对话日期时间 | 评估日期 | persona | 难度 | ✔ | △ | ✘ | 必命中 ✘ | 评估者 |",
         "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
+    outlier_sids = {sid for sid, _, _ in outliers}
     for i, row in enumerate(rows, 1):
         cd = row.get("conversation_date", "") or row.get("date", "")
         ct = row.get("conversation_time", "")
         dt = f"{cd} {ct}".strip() if ct else cd
+        sid_display = row["session_id"]
+        if sid_display in outlier_sids:
+            sid_display = f"⚠️ {sid_display}"
         md.append(
-            f"| {i} | {row['session_id']} | {dt} | {row['date']} "
+            f"| {i} | {sid_display} | {dt} | {row['date']} "
             f"| {row['persona']} | {row['difficulty']} "
             f"| {row['claude_total_✔']} | {row['claude_total_△']} "
             f"| {row['claude_total_✘']} | {row['must_hit_✘_count']} "
@@ -266,10 +379,19 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv") ->
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     default_csv = Path(__file__).parent.parent / "progress" / "tracker.csv"
-    default_out = default_csv.parent / f"tracker-analysis-{datetime.now():%Y-%m-%d}.md"
     parser.add_argument("--csv", type=Path, default=default_csv, help="tracker.csv 路径")
-    parser.add_argument("--out", type=Path, default=default_out, help="输出报告路径")
+    parser.add_argument(
+        "--kb-version",
+        default="current",
+        help="KB 版本切片:'current'(默认 = v4.1.x)/ 'all' / 精确版本(如 v4.1.6 / v3)",
+    )
     parser.add_argument("--print", action="store_true", help="同时打印到 stdout")
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="输出报告路径(默认按 KB 切片自动命名)",
+    )
     args = parser.parse_args()
 
     if not args.csv.exists():
@@ -281,13 +403,35 @@ def main() -> int:
         print("ERROR: tracker.csv is empty", file=sys.stderr)
         return 1
 
+    filtered = filter_by_kb(rows, args.kb_version)
+    if not filtered:
+        print(
+            f"ERROR: KB slice '{args.kb_version}' 没有匹配到任何场次,csv 全量 {len(rows)} 场",
+            file=sys.stderr,
+        )
+        return 1
+
     today = datetime.now().strftime("%Y-%m-%d")
     csv_name = args.csv.name
-    report = render_report(rows, today, csv_name=csv_name)
+    report = render_report(filtered, today, csv_name=csv_name, kb_version=args.kb_version)
 
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(report, encoding="utf-8")
-    print(f"✅ 报告已生成:{args.out}({len(rows)} 场)")
+    # 默认输出文件名按 KB 切片命名:
+    #   current → tracker-analysis-{date}.md(默认,覆盖)
+    #   all     → tracker-analysis-all-{date}.md
+    #   精确版   → tracker-analysis-{version}-{date}.md
+    if args.out:
+        out = args.out
+    elif args.kb_version == "current":
+        out = default_csv.parent / f"tracker-analysis-{today}.md"
+    elif args.kb_version == "all":
+        out = default_csv.parent / f"tracker-analysis-all-{today}.md"
+    else:
+        safe_v = args.kb_version.replace("/", "-").replace(" ", "-")
+        out = default_csv.parent / f"tracker-analysis-{safe_v}-{today}.md"
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(report, encoding="utf-8")
+    print(f"✅ 报告已生成:{out}({len(filtered)} 场 / KB={args.kb_version} / 全量 {len(rows)} 场)")
 
     if args.print:
         print("\n" + report)

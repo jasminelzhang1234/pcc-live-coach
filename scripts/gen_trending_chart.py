@@ -90,9 +90,29 @@ def load_sessions() -> list[dict]:
                 "mustHit": int(r["must_hit_✘_count"]),
                 "short_label": f"{persona_short} s{last}",
                 "color": PERSONA_COLORS.get(r["persona"], "#999"),
+                "eval_version": r.get("eval_version", "").strip(),
             }
         )
     return sessions
+
+
+def filter_sessions_by_kb(sessions: list[dict], kb_version: str) -> list[dict]:
+    """按 KB 版本切片过滤。
+
+    - 'current' → 最新 v4.1.x 家族(v4.1.0/1/2/3/6)
+    - 'all' → 全部
+    - 其它字符串 → 精确匹配(如 'v4.1.6' / 'v3')
+    """
+    if kb_version == "all":
+        return sessions
+    if kb_version == "current":
+        return [s for s in sessions if s.get("eval_version", "").startswith("v4.1.")]
+    return [s for s in sessions if s.get("eval_version", "") == kb_version]
+
+
+def is_outlier(session: dict, threshold: float = 60.0) -> bool:
+    """严格率 < threshold% 的场次视为 outlier"""
+    return session.get("hit_strict", 100) < threshold
 
 
 def competency_stats(sessions: list[dict]) -> list[tuple[str, float]]:
@@ -136,6 +156,7 @@ def build_html(sessions: list[dict], today: str) -> str:
     n = len(sessions)
     hits = [s["hit"] for s in sessions]
     avg = sum(s["hit_strict"] for s in sessions) / n if n else 0
+    n_outliers = sum(1 for s in sessions if is_outlier(s))
 
     # KPI 计算
     peak = max(sessions, key=lambda s: s["hit"]) if sessions else None
@@ -164,7 +185,12 @@ def build_html(sessions: list[dict], today: str) -> str:
     table_rows = []
     for i, s in enumerate(sessions, 1):
         is_reeval = bool(s["reeval_of"])
-        bg = ' style="background: #fff8e6;"' if is_reeval else ""
+        is_outl = is_outlier(s)
+        bg_parts = []
+        if is_reeval:
+            bg_parts.append("background: #fff8e6;")
+        row_class = ' class="outlier-row"' if is_outl else ""
+        bg = f' style="{" ".join(bg_parts)}"' if bg_parts else ""
         bar_color = (
             "background: linear-gradient(90deg, #c53030, #f56565);"
             if s["hit_strict"] < 50
@@ -182,12 +208,15 @@ def build_html(sessions: list[dict], today: str) -> str:
         else:
             session_id_note = s["date"]
         time_str = f"{s['conv_date'][-5:]} <strong>{s['conv_time']}</strong>" if s["conv_time"] else s["conv_date"][-5:]
+        outlier_flag = "⚠️ " if is_outlier(s) else ""
+        eval_v = s.get("eval_version", "")
+        eval_v_label = f' <span class="kb-tag">{eval_v}</span>' if eval_v else ""
 
         table_rows.append(
-            f"""          <tr{bg}>
+            f"""          <tr{row_class}{bg}>
             <td>{i}</td>
             <td>{time_str}</td>
-            <td>{session_id_note}</td>
+            <td>{outlier_flag}{session_id_note}{eval_v_label}</td>
             <td><span class="badge {s['persona']}">{s['persona']}</span></td>
             <td><span class="{s['diff_class']}">{s['diff_label']}</span></td>
             <td>{s['good']}</td><td>{s['part']}</td><td>{s['fail']}</td>
@@ -298,6 +327,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .badge.vec-06 {{ background: #fadcdc; color: var(--persona-6); }}
     .badge.vec-07 {{ background: #dff0ed; color: var(--persona-7); }}
     .badge.vec-08 {{ background: #dfecdb; color: var(--persona-8); }}
+    .kb-tag {{ display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-family: ui-monospace, "SF Mono", monospace; background: #e6eef7; color: #2b6cb0; margin-left: 4px; }}
+    .outlier-row {{ background: #fff5f5; }}
+    .outlier-row:hover {{ background: #ffe8e8 !important; }}
     .diff-1 {{ color: var(--good); font-weight: 600; }}
     .diff-2 {{ color: var(--warn); font-weight: 600; }}
     .diff-3 {{ color: var(--bad); font-weight: 600; }}
@@ -384,6 +416,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const strictHits = sessions.map(s => s.hit_strict);
     const personaFills = sessions.map(s => personaColors[s.persona]);
 
+    // KB 版本边框色映射(默认按 v4.1.x 蓝,旧版本用暗灰区分;outlier 红色边框)
+    const KB_BORDER = {{
+      'v4.1.0': '#2b6cb0', 'v4.1.1': '#2b6cb0', 'v4.1.2': '#2b6cb0',
+      'v4.1.3': '#2b6cb0', 'v4.1.6': '#2b6cb0',
+      'v1': '#999', 'v2': '#888', 'v2.5': '#777', 'v3': '#666',
+      'v3 / 2026-08-30': '#555',
+    }};
+    const pointBorders = sessions.map(s => {{
+      if ((s.hit_strict || 0) < 60) return '#e53e3e';  // outlier red
+      return KB_BORDER[s.eval_version] || '#2b6cb0';
+    }});
+    const pointBorderWidths = sessions.map(s => (s.hit_strict || 0) < 60 ? 3.5 : 2);
+
     const mean = hits.reduce((a, b) => a + b, 0) / hits.length;
     const strictMean = strictHits.reduce((a, b) => a + b, 0) / strictHits.length;
 
@@ -396,14 +441,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         labels: labels,
         datasets: [
           {{
-            label: '严格命中率(主·v4.1.0)',
+            label: '严格命中率(主·v4.1.x 默认)',
             data: strictHits,
             borderColor: '#2b6cb0',
             backgroundColor: 'rgba(43, 108, 176, 0.08)',
             borderWidth: 2.5, tension: 0.25,
             pointRadius: 7, pointHoverRadius: 9,
             pointBackgroundColor: personaFills,
-            pointBorderColor: '#fff', pointBorderWidth: 2,
+            pointBorderColor: pointBorders,
+            pointBorderWidth: pointBorderWidths,
             fill: true,
           }},
           {{
@@ -545,24 +591,52 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="生成 trending chart HTML")
+    parser.add_argument(
+        "--kb-version",
+        default="current",
+        help="KB 版本切片:'current'(默认 = v4.1.x)/ 'all' / 精确版本(如 v4.1.6)",
+    )
+    parser.add_argument("--out", type=Path, default=None, help="输出 HTML 路径(默认按 KB 切片自动命名)")
+    parser.add_argument("--print-summary", action="store_true", help="打印切片摘要到 stdout")
+    args = parser.parse_args()
+
     if not CSV.exists():
         print(f"ERROR: tracker.csv 不存在:{CSV}", file=sys.stderr)
         return 1
-    sessions = load_sessions()
-    if not sessions:
+    sessions_all = load_sessions()
+    if not sessions_all:
         print("ERROR: tracker.csv 没有数据行", file=sys.stderr)
         return 1
+    sessions = filter_sessions_by_kb(sessions_all, args.kb_version)
+    if not sessions:
+        print(
+            f"ERROR: KB slice '{args.kb_version}' 没有匹配到任何场次(csv 全量 {len(sessions_all)} 场)",
+            file=sys.stderr,
+        )
+        return 1
     today = datetime.now().strftime("%Y-%m-%d")
-    out = PROGRESS / "trending-chart.html"
+    if args.out:
+        out = args.out
+    elif args.kb_version == "current":
+        out = PROGRESS / "trending-chart.html"
+    elif args.kb_version == "all":
+        out = PROGRESS / "trending-chart-all.html"
+    else:
+        safe_v = args.kb_version.replace("/", "-").replace(" ", "-")
+        out = PROGRESS / f"trending-chart-{safe_v}.html"
     html = build_html(sessions, today)
     out.write_text(html, encoding="utf-8")
-    avg = sum(s["hit"] for s in sessions) / len(sessions)
+    avg = sum(s["hit_strict"] for s in sessions) / len(sessions)
+    n_outliers = sum(1 for s in sessions if is_outlier(s))
     print(f"✅ HTML 已生成:{out}")
-    print(f"   场数:{len(sessions)} · 平均 {avg:.1f}%")
+    print(f"   场数:{len(sessions)} · 严格平均 {avg:.1f}% · outlier {n_outliers} 场 · KB={args.kb_version} / 全量 {len(sessions_all)} 场")
     print(f"   排序:(conversation_date, conversation_time)")
     print(f"\n  💡 后续维护:")
-    print(f"     python3 scripts/gen_trending_chart.py     # 重生成今日版")
-    print(f"     python3 scripts/gen_trending_chart.py --yesterday  # 重生成昨日版")
+    print(f"     python3 scripts/gen_trending_chart.py                       # 默认 v4.1.x 切片")
+    print(f"     python3 scripts/gen_trending_chart.py --kb-version all     # 全量聚合(参考)")
+    print(f"     python3 scripts/gen_trending_chart.py --kb-version v4.1.6  # 精确版本")
     return 0
 
 
