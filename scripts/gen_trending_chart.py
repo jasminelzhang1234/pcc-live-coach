@@ -571,7 +571,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           }},
         }},
         scales: {{
-          y: {{ beginAtZero: false, min: 35, max: 100,
+          y: {{ beginAtZero: true, min: 0, max: 100,
                 ticks: {{ callback: (v) => v + '%' }}, grid: {{ color: '#eef0f4' }} }},
           x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 11 }} }} }},
         }},
