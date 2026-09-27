@@ -93,38 +93,69 @@ python3 scripts/analyze_tracker.py --print
 
 1. **必读**:`pcc-assessor` 输出的 37 markers 判定(✔/△/✘)+ 必命中项 + key_weakness
 2. **可选**:DeepSeek V4 Flash 的 37 markers 判定(如果有 second judge)
-3. **构造 csv 行**(91 列,严格按 schema):
-   - 列 1-4:session_id, date, conversation_date, conversation_time
-   - 列 5:reeval_of(空表示独立场次;重评填原 session_id)
-   - 列 6-9:persona, difficulty, topic, judge_main
-   - 列 10:judge_2
-   - 列 11-47:claude_3.1 ... claude_8.9
-   - 列 48-50:claude_total_✔, claude_total_△, claude_total_✘
-   - 列 51:must_hit_✘_count
-   - 列 52:key_weakness
-   - 列 53-89:deepseek_3.1 ... deepseek_8.9(无则填 `-`)
-   - 列 90:claude_deepseek_agreement(无则填 `N/A`)
-   - 列 91:eval_version
+3. **构造 csv 行**(92 列,严格按 schema — 与实际 `tracker.csv` header 对齐):
+   - 列 [0]-[3]:session_id, date, conversation_date, conversation_time
+   - 列 [4]:reeval_of(空表示独立场次;重评填原 session_id)
+   - 列 [5]-[8]:persona, difficulty, topic, judge_main
+   - 列 [9]:judge_2
+   - 列 [10]-[46]:claude_3.1 ... claude_8.9(37 个 marker)
+   - 列 [47]-[49]:claude_total_✔, claude_total_△, claude_total_✘
+     - **联动一致性硬约束(2026-09-27 加固)**:`[47]/[48]/[49]` 必须是列 `[10]-[46]` 37 marker 字段的 `sum(✔)` / `sum(△)` / `sum(✘)`,**绝不能直接抄报告 KPI 数字**。历史 3 场(vec-02-2026-09-27 / vec-08-2026-08-24 / voc-08-2026-09-04)都因手算 KPI 字段导致内部不一致,详见 memory `tracker-csv-strict-handwritten-bug-2026-09-27`
+   - 列 [50]:must_hit_✘_count
+   - 列 [51]:key_weakness
+   - 列 [52]-[88]:deepseek_3.1 ... deepseek_8.9(37 个 marker,无则填 `-`)
+   - 列 [89]:claude_deepseek_agreement(无则填 `N/A`)
+   - 列 [90]:eval_version(如 `v4.1.6`,与 `knowledge/pcc-assessor-versions.md` current_version 对齐)
+   - 列 [91]:pcc_pass_pct(v4.1+ 通过概率 0-100 整数,空填 `-`)
 
    **conversation_date / conversation_time 来源**:
    - 优先从 `practice-logs/{vec-XX}-{date}-session-NN.md` 的文件 mtime 读(精确到分钟)
    - 如果 transcript 不存在,fallback 用 `date` 字段,time 留空
    - 重评估(同对话用新规则跑):`reeval_of` 填原 session_id,`conversation_date/time` 用**原对话**的时间,不是重评时间
 
-4. **追加**(用 Edit 工具,不用 bash 重定向):
+4. **追加**(必须用 Bash + Python `csv.writer`,**绝不**用 Edit / Write / printf 重定向 — 触发 4 个独立根因):
    a. 先 Read 当前 `progress/tracker.csv` 全文,记录:
      - 总行数(含 header)
-     - **现有换行风格**(实测为 LF,非 CRLF;pcc-tracker prompt 历史说明已过时)
+     - **现有换行风格**(实测为 **CRLF**,非 LF — 2026-09-27 vec-04 修复时验证)
      - 最后一行的内容(确认 schema 完整 + 不是空行)
-   b. 用 Edit 工具在最后一行末尾**追加新行**(Edit 自动处理换行):
-     - 新行内容:**91 列**严格按 schema 构造(见 line 96-105 列定义)
-     - second judge 列(DeepSeek)未启用时填 `-`
-     - agreement 列填 `N/A`
-     - **⚠️ 长 CSV 行(>500 字符):用 Bash + Python csv.writer,不要用 Edit**(Edit 会截断后部列,详见 memory `edit-tool-long-csv-truncation`)
-   c. **追加后必验证**:Read `progress/tracker.csv` 倒数第 1-2 行,确认:
+     - **header 列数**(`len(header)`,必须 = 92)
+   b. **用 Bash 跑 Python `csv.writer` 追加新行**(一次性脚本,原子写入):
+     ```python
+     import csv
+     with open('progress/tracker.csv', 'a', encoding='utf-8', newline='') as f:
+         writer = csv.writer(f)
+         writer.writerow(new_row)  # new_row 必须是 92 列 list
+     ```
+     - **为什么必须 csv.writer**:`csv.writer` 自动给含 `,`/`"`/`\n`/`\r` 的字段加引号包裹,手动 `f.write(','.join(row))` 不会(vec-04-2026-09-19 因 topic "和 CEO 关系紧张,模式都看见了但改不了" 含中文逗号未转义,整行右移 1 列 + 7 行末尾字段错位 — 详见 vec-04 修复记录)
+     - **为什么不用 Edit**:`tracker.csv` 单行 >500 字符,Edit 工具会截断后部列(详见 memory `edit-tool-long-csv-truncation`);Edit 也不处理 CSV 引号转义
+     - **为什么不用 Write 重写整文件**:破坏历史 33+ 行的换行风格一致性 + 引入 race condition 风险
+     - 字段填充规则:second judge 列(DeepSeek)未启用时填 `-`;agreement 列填 `N/A`;eval_version 与 pcc_pass_pct 按真实值或 `-`
+   c. **追加后必验证**(Bash + Python 一气呵成):
+     ```python
+     with open('progress/tracker.csv', encoding='utf-8') as f:
+         rows = list(csv.reader(f))
+     assert len(rows[-1]) == len(rows[0]) == 92, f'字段数错位:header={len(rows[0])}, last_row={len(rows[-1])}'
+     assert rows[-1][0] == new_session_id, 'session_id 不匹配'
+     # 抽查关键字段非空
+     assert rows[-1][47] in ('0',) or rows[-1][47].isdigit(), 'claude_total_✔ 不是数字'
+
+     # 37 marker ↔ KPI 字段联动一致性(2026-09-27 加固,防 strict-handwritten bug)
+     m_vals = rows[-1][10:47]
+     sum_✔ = sum(1 for v in m_vals if v == '✔')
+     sum_△ = sum(1 for v in m_vals if v == '△')
+     sum_✘ = sum(1 for v in m_vals if v == '✘')
+     assert int(rows[-1][47]) == sum_✔, f'strict 字段 {rows[-1][47]} ≠ 37 marker 实算 {sum_✔}'
+     assert int(rows[-1][48]) == sum_△, f'△ 字段 {rows[-1][48]} ≠ 37 marker 实算 {sum_△}'
+     assert int(rows[-1][49]) == sum_✘, f'✘ 字段 {rows[-1][49]} ≠ 37 marker 实算 {sum_✘}'
+     assert sum_✔ + sum_△ + sum_✘ == 37, '37 marker 字段加和 ≠ 37'
+     ```
      - 新行存在(总行数 + 1)
-     - schema 与历史行一致(91 列、列顺序)
-     - 换行风格未变(LF → LF,不是 LF → CRLF)
+     - schema 与历史行一致(**92 列**、列顺序对齐 header)
+     - 换行风格未变(CRLF → CRLF,Python 写入默认走系统 newline)
+   d. **失败处理**:若 `len(rows[-1]) != 92`,立即:
+     - 从 `tracker.csv.bak-{date}` 还原(或从 `tracker.csv.bak-vec04-fix-2026-09-27` 复用最近备份)
+     - 重新构造 new_row,定位含 `,`/`"`/`\n`/`\r` 的字段,显式确认 csv.writer 自动转义后重试
+     - **绝不**手工 `f.write(','.join(row))`
 5. **重分析**:跑 `python3 scripts/analyze_tracker.py`
    - 默认输出 `progress/tracker-analysis-{YYYY-MM-DD}.md`
 6. **生成 trending chart**:跑 `python3 scripts/gen_trending_chart.py`
@@ -208,10 +239,11 @@ python3 scripts/analyze_tracker.py --print
 
 # 注意事项
 
-- **tracker.csv schema 严格固定**(87 列):追加行前**先 Read 一遍**当前 csv,确认列定义未变
+- **tracker.csv schema 严格固定**(AI persona 92 列 / 真人练习 95 列):追加行前**先 Read 一遍**当前 csv,确认列定义未变(2026-09-27 vec-04 修复时实测 = 92 列)
 - **不要修改历史行**:只追加,不改旧数据
 - **真人锚点特殊处理**:judge_main = `真人督导(姓名)`,DeepSeek 列填 `-`,agreement = `N/A`
-- **追加 csv 用 Edit 不用 bash printf**:Edit 是 IDE 感知、可验证、可审计的;bash 重定向在云同步/不同 shell 下行为不一致;实测 tracker.csv 是 LF 换行(2026-08-24 验证),Edit 工具自动跟随现有风格,无需人工干预
+- **追加 csv 必须用 Bash + Python csv.writer**(2026-09-27 强约束):Edit 工具截断长 CSV 行(>500 字符)+ 不会处理 CSV 引号转义;实测 tracker.csv 是 **CRLF 换行**(2026-09-27 验证,历史 spec 写 LF 已过时);csv.writer 自动处理 `,`/`"`/`\n`/`\r` 字段转义,是防 vec-04 topic 错位 bug 复发的唯一可靠路径
+- **KPI 字段 [47]-[49] 联动一致性**(2026-09-27 加固):strict/△/✘ 三列必须从列 [10]-[46] 37 marker 字段 sum 实算,**绝不**直接抄 HTML/MD 报告里的 KPI 数字。历史 3 场 KPI 与 37 marker 字段内部不一致(vec-02-2026-09-27 14 处 marker 错位 + vec-08-2026-08-24 strict 13 vs 实算 12 + voc-08-2026-09-04 strict 26 vs 实算 27),详见 memory `tracker-csv-strict-handwritten-bug-2026-09-27`。修复历史错算行时,以 37 marker 字段为最终真相源,HTML/MD 报告的"统计"行可能本身就有算错(报告原文 ≠ 实算)
 - **不要预测未来场次**:只基于已入库的数据做诊断/派单
 - **不要手动改 csv**:所有追加走 Edit(避免 Excel/VS Code 自动改格式)
 
@@ -224,8 +256,10 @@ python3 scripts/analyze_tracker.py --print
 - [ ] 真人锚点 vs AI 我对比了
 - [ ] 派单建议我引用了 persona 文件的训练重点
 - [ ] 我没有主观派单(都基于数据)
-- [ ] 我用 Edit 追加了 csv 行(没用 bash printf)
-- [ ] 我 Read 了追加后的最后一行,确认 schema 一致 + 换行风格未变
+- [ ] 我用 Bash + Python `csv.writer` 追加了 csv 行(没用 Edit / Write / printf — vec-04 修复后强制)
+- [ ] 我验证了新行字段数 = 92(header 列数),与历史行 schema 一致
+- [ ] 我验证了新行 37 marker 字段 sum(✔)/sum(△)/sum(✘) = 列 [47]/[48]/[49] 三个 KPI 字段(strict-handwritten bug 防御 — 2026-09-27 加固)
+- [ ] 我抽查了关键字段(topic / key_weakness / eval_version / pcc_pass_pct)对齐 HTML 报告
 - [ ] 我 Glob 验证了 tracker-analysis-{date}.md 生成
 
 # 调度核心
