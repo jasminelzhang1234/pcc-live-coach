@@ -197,14 +197,18 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
     - 其它(如 "v4.1.6" / "v3")→ 精确匹配单版本
     """
     n = len(rows)
-    judgments = marker_judgments(rows)
-    comp_stats = competency_stats(rows)
-    fails = repeated_failures(judgments, threshold=max(3, n // 2))
-    partials = repeated_partial(judgments, threshold=max(3, n // 2))
+    # 数据质量:row 23 (vec-04-2026-09-19-session-01) 字段错位(extra topic field → 所有列左移 1)
+    # → claude_total_✔ 读到 '✔' 而非数字 → 排除该行避免污染 marker 聚合
+    valid_rows = [r for r in rows if str(r.get("claude_total_✔", "")).lstrip("-").isdigit()]
+    broken_rows = [r for r in rows if r not in valid_rows]
+    judgments = marker_judgments(valid_rows)
+    comp_stats = competency_stats(valid_rows)
+    fails = repeated_failures(judgments, threshold=max(3, len(valid_rows) // 2))
+    partials = repeated_partial(judgments, threshold=max(3, len(valid_rows) // 2))
     strengths = strength_zone(judgments)
-    must_hit = must_hit_status(rows)
-    outliers = find_outliers(rows, threshold=60.0)
-    persona_counts = persona_session_counts(rows)
+    must_hit = must_hit_status(valid_rows)
+    outliers = find_outliers(valid_rows, threshold=60.0)
+    persona_counts = persona_session_counts(valid_rows)
 
     # KB 切片说明
     if kb_version == "current":
@@ -215,10 +219,21 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
         slice_label = f"{kb_version}(精确匹配)"
 
     md = [
-        f"# Tracker 分析报告 — {date}(自动生成,{n} 场 · {slice_label})",
+        f"# Tracker 分析报告 — {date}(自动生成,{len(valid_rows)} 场 · {slice_label}",
+    ]
+    if broken_rows:
+        md[0] += f",{len(broken_rows)} 字段错位行已排除)"
+        broken_note = ", ".join(r["session_id"] for r in broken_rows)
+    else:
+        md[0] += ")"
+    md += [
         "",
         f"> 来源:[progress/{csv_name}]({csv_name})",
         f"> KB 切片:`{kb_version}` · 生成器:`scripts/analyze_tracker.py`",
+    ]
+    if broken_rows:
+        md += [f"> ⚠️ 字段错位行:{broken_note}(key_weakness 有未引号逗号,导致 totals 左移 1)— 仅展示于每场 summary,不参与 marker 聚合)"]
+    md += [
         "",
         "## 📊 能力维度命中率",
         "",
@@ -242,14 +257,12 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
 
     # Misleading 案例:严格率 ≥85% 但 PCC 通过概率 < 50%(必命中失守触发一票否决)
     misleading_rows = []
-    for r in rows:
+    for r in valid_rows:  # 只用 valid_rows(排除字段错位行)
         pcc_raw = r.get("pcc_pass_pct", "").strip()
-        if not pcc_raw:
+        # 老 v4.1.0/v4.1.2 行 key_weakness 含未引号逗号,字段错位,pcc_pass_pct 读到非数字 → 跳过
+        if not pcc_raw or not pcc_raw.lstrip("-").isdigit():
             continue
-        try:
-            pcc_val = int(pcc_raw)
-        except ValueError:
-            continue
+        pcc_val = int(pcc_raw)
         try:
             yes = int(r.get("claude_total_✔", 0))
         except ValueError:
@@ -368,20 +381,37 @@ def render_report(rows: list[dict], date: str, csv_name: str = "tracker.csv", kb
         sid_display = row["session_id"]
         if sid_display in outlier_sids:
             sid_display = f"⚠️ {sid_display}"
+        # 字段错位行(extra topic 多了 1 列 → 所有列左移 1)— 标 🚧
+        broken_sids = {r["session_id"] for r in broken_rows}
+        if sid_display in broken_sids:
+            sid_display = f"🚧 {sid_display}"
+        # 字段错位行 totals 读到 marker 字符,展示异常
+        ct_raw = row.get("claude_total_✔", "")
+        cdp_raw = row.get("claude_total_△", "")
+        cdx_raw = row.get("claude_total_✘", "")
+        ct_display = ct_raw if ct_raw.lstrip("-").isdigit() else f"🚧{ct_raw}"
+        cdp_display = cdp_raw if cdp_raw.lstrip("-").isdigit() else f"🚧{cdp_raw}"
+        cdx_display = cdx_raw if cdx_raw.lstrip("-").isdigit() else f"🚧{cdx_raw}"
         # PCC 通过概率(严格高 + PCC 低 = misleading)
         pcc_raw = row.get("pcc_pass_pct", "").strip()
-        strict_pct = int(row["claude_total_✔"]) / 37 * 100 if row.get("claude_total_✔") else 0
-        if pcc_raw:
+        if ct_raw.lstrip("-").isdigit():
+            strict_pct = int(ct_raw) / 37 * 100
+        else:
+            strict_pct = 0
+        if pcc_raw and pcc_raw.lstrip("-").isdigit():
             pcc_val = int(pcc_raw)
             misleading = " ⚠️" if strict_pct >= 85 and pcc_val < 50 else ""
             pcc_cell = f"**{pcc_val}%**{misleading}"
+        elif pcc_raw:
+            # 老 v4.1.0/v4.1.2 行字段错位,无法读取 — 用 em-dash 表示
+            pcc_cell = "—(字段错位)"
         else:
             pcc_cell = "—(无 HTML 报告)"
         md.append(
             f"| {i} | {sid_display} | {dt} | {row['date']} "
             f"| {row['persona']} | {row['difficulty']} "
-            f"| {row['claude_total_✔']} | {row['claude_total_△']} "
-            f"| {row['claude_total_✘']} | {row['must_hit_✘_count']} "
+            f"| {ct_display} | {cdp_display} "
+            f"| {cdx_display} | {row['must_hit_✘_count']} "
             f"| {pcc_cell} | {row['judge_main']} |"
         )
 
