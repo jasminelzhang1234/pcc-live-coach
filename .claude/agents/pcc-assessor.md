@@ -40,10 +40,10 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 2. **第一步**:确认输入:
    - 逐字稿路径,按 transcript 所在目录区分(2026-09-13 新增真人练习分支):
      - **AI 陪练场**(默认):`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md` 下最新一份 — 见 [pcc-coachee.md](pcc-coachee.md) § 5.5
-     - **真人练习场**(2026-09-13 新增):`practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md`(the maintainer 确认的标准路径);或 `practice-logs/真人练习/real-*-session-NN-transcript.md`(早期命名)
+     - **真人练习场**(2026-09-13 新增):`practice-logs/sessions/{YYYY-MM-DD}-session-NN/01-*.md`(the maintainer 确认的标准路径);或 `practice-logs/sessions/real-*-session-NN-transcript.md`(早期命名)
    - **transcript 落盘强制检查**(优先级最高):用 Glob 工具验证 transcript 路径**必须存在**:
      - AI 陪练 → `practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md`
-     - 真人练习 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md` 或 `practice-logs/真人练习/real-*-session-NN-transcript.md`
+     - 真人练习 → `practice-logs/sessions/{YYYY-MM-DD}-session-NN/01-*.md` 或 `practice-logs/sessions/real-*-session-NN-transcript.md`
      - 存在 → 进入档位选择
      - 不存在 → **拒绝评估**,向用户提示:`「transcript 未落盘,需先由 pcc-coachee 完成陪练对话(或真人练习 transcript 整理)并写入 {path} 后再启动评估」`,**不许用评估报告"代理"transcript**
    - 档位(单条 marker / 整场 / 全评三档之一)
@@ -364,7 +364,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 1. **路径**(按 transcript 所在目录区分,2026-09-13 新增真人练习分支):
    - **AI 陪练场**:`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
      - 例:`practice-logs/AI陪练/vec-07-2026-09-08-session-01-v3-assessment.html`
-   - **真人练习场**:`practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`(the maintainer 2026-09-13 定,**无** vN 后缀 — 真人场 KB 版本内嵌在 `<!-- kb-version:v4 -->` 注释里)
+   - **真人练习场**:`practice-logs/sessions/{YYYY-MM-DD}-session-NN/02-评估.html`(the maintainer 2026-09-13 定,**无** vN 后缀 — 真人场 KB 版本内嵌在 `<!-- kb-version:v4 -->` 注释里)
 2. **NN** = session 序号(01 起,扫同目录 `{persona}-{date}-session-NN-*` 取最大 + 1)
 3. **vN** = **assessor 评估规则版本号**(只 AI 陪练场需要,真人场固定无后缀)
    - ⚠️ **vN 单一真相源 = [knowledge/pcc-assessor-versions.md](../../knowledge/pcc-assessor-versions.md)**(2026-09-14 加)
@@ -393,14 +393,14 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 5. **HTML 骨架**(见文末 "# HTML 报告骨架模板" section):脱敏通用版,git 仓内独立可读;本地某次评估的真实报告作样例参考(因含客户信息,不入版本控制 — 见 `.gitignore`)。
 6. **写完 → Glob 验证**必须存在:
    - AI 陪练场 → `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
-   - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`
+   - 真人练习场 → `practice-logs/sessions/{YYYY-MM-DD}-session-NN/02-评估.html`
 7. **Glob 验证无匹配 → 视为本次评估失败,不许交付用户**
 
 例外:**用户显式说**「只在聊天给我看」「不落盘」「输出到聊天就行」,才跳过落盘。**任何其他表述(「请直接给出评估结果」「给我看完整评估」)** ≠ 例外触发词 — 默认行为 = 落盘 + 回显。
 
 **Transcript 命名**(2026-09-13 更新):
 - **AI 陪练场**:`practice-logs/AI陪练/{vec-XX|voc-XX|vic-XX}-YYYY-MM-DD-session-NN-transcript.md`(date 在 persona 后 / session 前,`-transcript` 后缀,**无** v 后缀 — v 是 assessor 评估版本号的专属)— 见 [pcc-coachee.md](pcc-coachee.md) § 5.5
-- **真人练习场**:`practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-{topic}-{focus}.md`(the maintainer 2026-09-13 定;早期命名 `real-{date}-session-NN-transcript.md` 也兼容)
+- **真人练习场**:`practice-logs/sessions/{YYYY-MM-DD}-session-NN/01-{topic}-{focus}.md`(the maintainer 2026-09-13 定;早期命名 `real-{date}-session-NN-transcript.md` 也兼容)
 - 转交块 `transcript_path` 引用 transcript,**不**引用 assessment。
 
 ## A. 单条 marker 模式(用户说"看 6.7""评估 8.5")
@@ -474,11 +474,11 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 - [ ] **列出了可打磨 △ 清单**(标点级/一句话级/流程级/思维级)— 2026-09-11 v4 新增
 - [ ] 我把 HTML 报告写到正确路径了:
   - AI 陪练场 → `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
-  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`
+  - 真人练习场 → `practice-logs/sessions/{YYYY-MM-DD}-session-NN/02-评估.html`
   (本场 default = v4,格式参考文末 HTML 骨架模板)
 - [ ] 我用 Glob 验证 transcript 已落盘(按场类型):
   - AI 陪练场 → `practice-logs/AI陪练/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在
-  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md` 存在
+  - 真人练习场 → `practice-logs/sessions/{YYYY-MM-DD}-session-NN/01-*.md` 存在
   (缺失 → 拒绝评估)
 - [ ] 我用 Glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
@@ -547,11 +547,11 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 - [ ] 模糊地带我向下取整了
 - [ ] 我把 HTML 报告写到正确路径了:
   - AI 陪练场 → `practice-logs/AI陪练/vec-XX-{YYYY-MM-DD}-session-NN-v{N}-assessment.html`
-  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/02-评估.html`
+  - 真人练习场 → `practice-logs/sessions/{YYYY-MM-DD}-session-NN/02-评估.html`
   (本场 default = v4,格式参考文末 HTML 骨架模板)
 - [ ] 我用 Glob 验证 transcript 已落盘(按场类型):
   - AI 陪练场 → `practice-logs/AI陪练/vec-XX-YYYY-MM-DD-session-NN-transcript.md` 存在
-  - 真人练习场 → `practice-logs/真人练习/{YYYY-MM-DD}-session-NN/01-*.md` 存在
+  - 真人练习场 → `practice-logs/sessions/{YYYY-MM-DD}-session-NN/01-*.md` 存在
   (缺失 → 拒绝评估)
 - [ ] 我用 glob 验证文件存在了
 - [ ] 验证失败的话我重新写了,而不是交付聊天版
