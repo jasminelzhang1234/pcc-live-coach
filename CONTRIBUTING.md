@@ -22,5 +22,5 @@
 
 ## 数据安全
 
-- 任何真人练习材料(音频/转写/评估)放 `practice-logs/真人练习/<YYYY-MM-DD>-session-NN/`,已 `.gitignore`
+- 任何真人练习材料(音频/转写/评估)放 `practice-logs/sessions/<YYYY-MM-DD>-session-NN/`,已 `.gitignore`
 - 不要 commit 真实姓名 / 公司 / 项目名

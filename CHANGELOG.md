@@ -9,6 +9,7 @@
 
 ## 当前重要事件(临时登记)
 
+- **2026-10-04** — 隐私加固:路径 `practice-logs/真人练习/` 重命名为 `practice-logs/sessions/`,去掉路径名中的"真人"标识(云同步 同步 / 备份脚本 / 错误日志(stack trace)可能泄漏真实练习标识);20 个引用文件 + `progress/tracker-real-sessions.csv` audio_path 列同步更新;历史 CHANGELOG 条目保留原路径以反映当时状态
 - **2026-09-05** — Phase B 新用户体验修复(共 9 处),由 GitHub 视角的 install/boot/walkthrough 触发
   - `start.sh`:启动前 `lsof` 检查端口,被占则打印 PID + 给 `kill` / `PCC_LIVE_PORT=N` 两选一,新用户第一步不再 silent-break
   - `phase_b/coach/orchestrator.py`:`_build_system_prompt` 新增 `user_difficulty` 参数;UI 选的难度真正生效,mismatch 时 prompt 输出 `难度: N (用户选择) / persona 推荐: M`

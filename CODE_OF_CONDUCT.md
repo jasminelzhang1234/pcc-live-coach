@@ -6,7 +6,7 @@
 
 - **尊重**:零容忍人身攻击 / 歧视 / 骚扰
 - **协作**:技术分歧以数据和测试为准,不做情绪化攻击
-- **隐私**:涉及真实客户 / 真人练习数据必须走 `practice-logs/真人练习/`(已 `.gitignore`),参考 [PRIVACY.md](PRIVACY.md)
+- **隐私**:涉及真实客户 / 真人练习数据必须走 `practice-logs/sessions/`(已 `.gitignore`),参考 [PRIVACY.md](PRIVACY.md)
 
 ## Scope
 

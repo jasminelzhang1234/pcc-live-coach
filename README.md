@@ -71,8 +71,8 @@ For **fully offline** operation, choose a local provider (Ollama / LM Studio / v
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │  Persistence (files, no traditional database)              │
-│  ├─ Real practice audio: practice-logs/真人练习/*.mp3     │
-│  ├─ Per-session artifacts: practice-logs/真人练习/<YYYY-MM-DD>-session-NN/ │
+│  ├─ Real practice audio: practice-logs/sessions/*.mp3     │
+│  ├─ Per-session artifacts: practice-logs/sessions/<YYYY-MM-DD>-session-NN/ │
 │  └─ Append to existing progress/tracker-real-sessions.csv │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -81,15 +81,15 @@ For **fully offline** operation, choose a local provider (Ollama / LM Studio / v
 
 ## Status
 
-> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 2311 LoC) and frontend (`phase_b/static/`, 614 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
+> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 3546 LoC) and frontend (`phase_b/static/`, 1039 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
 
 - ✅ Technical spike complete — see [spike report](./plans/phase-b/spike-report-2026-09-01.md)
 - ✅ Environment validated — FunASR 1.4.11 on Python 3.9 + CPU torch, RTF 0.029 on M3 Pro
 - ✅ HTTP API validated — `/v1/audio/transcriptions` returns correct text for real client audio
 - ✅ MCP server validated — funasr_mcp.py imports and exposes `transcribe(audio_path, language="auto")` tool
 - ✅ Wireframe — see [phase-b-wireframe-2026-09-03.html](./plans/phase-b/wireframe-2026-09-03.html) (3 pages, static HTML, no JS)
-- ⚠️ Backend code — `phase_b/` (26 .py files, 2311 LoC) + 9 test files under `tests/phase_b/`. **Shipped, not enabled.**
-- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + styles.css, 614 LoC). **Shipped, not enabled.**
+- ⚠️ Backend code — `phase_b/` (28 .py files, 3546 LoC) + 18 test files under `tests/phase_b/`. **Shipped, not enabled.**
+- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + audio_state.js + styles.css, 1039 LoC). **Shipped, not enabled.**
 
 **Why "shipped but not enabled"?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) defines trigger conditions for activating Phase B:
 
@@ -221,8 +221,8 @@ Third-party attributions:
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │  持久化层 (文件,无传统数据库)                             │
-│  ├─ 真人练习音频: practice-logs/真人练习/*.mp3          │
-│  ├─ 逐场派生产物: practice-logs/真人练习/<YYYY-MM-DD>-session-NN/          │
+│  ├─ 真人练习音频: practice-logs/sessions/*.mp3          │
+│  ├─ 逐场派生产物: practice-logs/sessions/<YYYY-MM-DD>-session-NN/          │
 │  └─ 追加到现有 progress/tracker-real-sessions.csv         │
 └──────────────────────────────────────────────────────────┘
 ```
