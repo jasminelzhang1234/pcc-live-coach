@@ -37,7 +37,7 @@ CSS 调色板按本场类型二选一,**不允许**自由配色:
 | 场次类型 | 主色 | accent | muted | 用途 |
 |----------|------|--------|-------|------|
 | AI persona 模拟场 | `#2b6cb0` 蓝 | `--accent: #2b6cb0` | `#5b6473` | practice-logs/AI陪练/ 下所有报告 |
-| 真人陪练场 | `#d97706` 暖橙 | `--accent: #d97706` | `#78350f` | others-sessions/ 与 practice-logs/真人练习/ |
+| 真人陪练场 | `#d97706` 暖橙 | `--accent: #d97706` | `#78350f` | others-sessions/ 与 practice-logs/sessions/ |
 
 **判断方式**:`persona_id` 存在(`vec-XX` / `voc-XX` / `vic-XX`)= AI 场;`persona_id` 为空或 `real_client_*` = 真人场。
 
