@@ -18,4 +18,16 @@ persona 数据层禁止项: [personas/*-client.md](personas/) `不可越界` 小
 
 - **pcc-coachee**(本项目):扮演客户,**不**做 PCC 评估
 - **pcc-assessor**:对话结束后做 37 markers 评估
-- **pcc-tracker**:评估后做追库(tracker.csv / tracker-real-sessions.csv)
+- **pcc-tracker**:评估后做追库(tracker.csv / tracker-sessions.csv)
+
+## answer-me-with-html skill 使用边界
+
+`answer-me-with-html`(全局 skill)**仅用于本项目的非产物文档**——README / CONTRIBUTING / CHANGELOG、培训材料、架构图、3Blue1Brown 风格讲解视频。
+
+**禁止用于以下 agent 的产物渲染**:
+
+- **pcc-assessor** 的 37-marker 评估报告——HTML 结构由 [knowledge/pcc-assessor-html-template.md](knowledge/pcc-assessor-html-template.md) 固化(12 章节顺序、§ 4 marker 短描述、§ 10 必含条件等),走 answer-me-with-html 会破坏格式契约与审计追溯
+- **pcc-coachee** 的陪练对话——陪练铁律要求"只输出客户嘴里说出来的字面内容",不允许 HTML 渲染层介入
+- **pcc-tracker** 的 CSV/报告——tracker 走 csv.writer 强约束 + 37-marker-sum assert,不引入 HTML 中间层
+
+理由:PCC 评估是面向客户的正式报告,token 经济性不能压过格式契约与审计追溯。**只有文档级场景才用 answer-me-with-html**。

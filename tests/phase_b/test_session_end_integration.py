@@ -82,7 +82,7 @@ def test_end_writes_rhythm_jsonl(tmp_path: Path):
 def test_end_appends_to_existing_csv(tmp_path: Path):
     """When the tracker CSV exists, a row must be appended."""
     # Build a minimal 95-col CSV in tmp.
-    real_csv = PROJECT_ROOT / "progress" / "tracker-real-sessions.csv"
+    real_csv = PROJECT_ROOT / "progress" / "tracker-sessions.csv"
     target_csv = tmp_path / "tracker.csv"
     target_csv.write_bytes(real_csv.read_bytes())  # copy header + any rows
     rows_before = sum(1 for _ in open(target_csv, encoding="utf-8")) - 1  # minus header

@@ -12,7 +12,7 @@
 """CSV append for real-voice sessions.
 
 Reads the existing 95-column header from
-`progress/tracker-real-sessions.csv` and appends one row per session
+`progress/tracker-sessions.csv` and appends one row per session
 with all marker scoring columns empty. Marker scoring is out of scope
 for v1; this module only registers the session so the dashboard can
 find it.
@@ -43,7 +43,7 @@ from phase_b.config import get_settings
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_TRACKER_CSV = "progress/tracker-real-sessions.csv"
+DEFAULT_TRACKER_CSV = "progress/tracker-sessions.csv"
 
 
 def _load_header(csv_path: Path) -> list[str]:

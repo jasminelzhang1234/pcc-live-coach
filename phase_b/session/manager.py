@@ -207,7 +207,7 @@ class SessionManager:
             )
         except Exception:
             logger.exception("rhythm extraction failed for %s", session_id)
-        # Step 9: append a row to progress/tracker-real-sessions.csv so the
+        # Step 9: append a row to progress/tracker-sessions.csv so the
         # dashboard and tracker analysis scripts can find the session.
         # Marker scoring columns stay blank in v1.
         try:

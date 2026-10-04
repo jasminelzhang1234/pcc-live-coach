@@ -9,7 +9,7 @@ Spec: docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md
 Plan: docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md
 
 The endpoint:
-1. Upserts one row into progress/tracker-real-sessions.csv (idempotent)
+1. Upserts one row into progress/tracker-sessions.csv (idempotent)
 2. Runs scripts/gen_trending_chart_real.py to refresh the chart
 
 Tests:
@@ -148,7 +148,7 @@ def test_upsert_returns_no_csv_when_file_missing(tmp_path):
 def track_env(tmp_path, monkeypatch):
     """Spin up the FastAPI app with:
     - a real session that has dialogue JSONL + rhythm JSONL
-    - a tracker CSV (95-col header) under tmp_path/progress/tracker-real-sessions.csv
+    - a tracker CSV (95-col header) under tmp_path/progress/tracker-sessions.csv
     - a stub gen_trending_chart_real.py under tmp_path/scripts/ that just writes an empty html
     - tracker_csv settings pointed at the tmp_path CSV
     """
@@ -194,7 +194,7 @@ def track_env(tmp_path, monkeypatch):
     # Pre-create the 95-col CSV under progress/ so upsert has a header.
     progress_dir = tmp_path / "progress"
     progress_dir.mkdir()
-    csv_path = progress_dir / "tracker-real-sessions.csv"
+    csv_path = progress_dir / "tracker-sessions.csv"
     _write_csv_with_rows(csv_path, [])
 
     # Stub scripts/gen_trending_chart_real.py so the endpoint doesn't run
@@ -218,7 +218,7 @@ def track_env(tmp_path, monkeypatch):
     # Tell the endpoint where the (stub) chart was written.
     monkeypatch.setattr(router_mod, "_chart_output_path", lambda repo_root=None: str(chart_out_path))
 
-    # Redirect config.tracker_csv to tmp_path/progress/tracker-real-sessions.csv
+    # Redirect config.tracker_csv to tmp_path/progress/tracker-sessions.csv
     # by setting env, then re-reading settings (config is frozen dataclass).
     monkeypatch.setenv("TRACKER_CSV", str(csv_path))
     import importlib
@@ -294,7 +294,7 @@ def test_track_endpoint_404_when_no_dialogue(tmp_path, monkeypatch):
     # Provide a tracker CSV so the endpoint doesn't fail for the wrong reason.
     progress_dir = tmp_path / "progress"
     progress_dir.mkdir()
-    csv_path = progress_dir / "tracker-real-sessions.csv"
+    csv_path = progress_dir / "tracker-sessions.csv"
     _write_csv_with_rows(csv_path, [])
 
     monkeypatch.setenv("TRACKER_CSV", str(csv_path))
@@ -342,7 +342,7 @@ def test_track_endpoint_handles_no_csv_file(tmp_path, monkeypatch):
     recorder.close()
 
     # CSV does NOT exist.
-    csv_path = tmp_path / "progress" / "tracker-real-sessions.csv"
+    csv_path = tmp_path / "progress" / "tracker-sessions.csv"
     # We still point config at the missing path.
     monkeypatch.setenv("TRACKER_CSV", str(csv_path))
     import importlib

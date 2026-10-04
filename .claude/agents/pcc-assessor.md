@@ -25,7 +25,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 | **v4.1.2** | **2026-09-19** | **修补说明格式固化(⑧ 可打磨 △ 清单列格式规范化 + KB 判定规则不变)** | **vec-02 s02 用户反馈**(修补说明只写补句不写原问全文,模糊指代无锚定,reader 看不清补的哪句话);template 新增 § 7"⑧ 可打磨 △ 清单修补说明格式规范"(7.1 模板要求原问全文 + 锚定指代 / 7.2 锚定指代清单 / 7.3 反例 / 7.4 触发源);KB 判定规则完全不变 |
 | **v4.1.3** | **2026-09-20** | **章节结构简化(§ 7 整章删除并分散 + KB 判定规则完全不变)** | **vec-07 s01 + voc-08 s02 用户反馈**(§ 7 PCC 考官模拟判定 整章内容与 § 2 + § 4 + § 6 完全重复;必命中项表头应写 7 条含 7.2/7.3 替代说明;37 markers 全表缺统一 row-pass/part/fail CSS class;§ 2 元信息表缺 vN 解析依据 metadata);template § 3 章节总数 13 → 12(2 个可选),所有章节编号重排;§ 7 整章删除,核心内容分散到 § 2 整体评级 callout(PCC 综合判定 + 通过概率公式推导)+ § 3 末尾 PCC 实际口径 callout(一票否决 4 项检查 + △ = not pass);章节命名固定字面一致;footer 加 template 版本 + vN 解析依据 metadata;v3 vs v4 对比小节从可选章节列表移除(彻底过期);KB 判定规则完全不变 |
 | **v4.1.4** | **2026-09-22** | **机器接口从 HTML 挪出(`## → Tracker 转交` 不再写入报告文件 + KB 判定规则完全不变)** | **vec-09 s01 用户反馈**(HTML 报告结尾出现 `## → Tracker 转交` 机器接口段,reader 困惑,agent 输出段被误写入 HTML 文件)| spec § "评估后联动 — Tracker 转交" 顶部 intro 加显式约束:`## → Tracker 转交` 段**只**出现在 agent markdown 输出末尾(给主控解析触发 pcc-tracker 派单),**不**写入 HTML 报告文件(reader-facing 报告纯化,机器接口只走 agent 间通信);KB 判定规则完全不变 |
-| **v4.1.5** | **2026-09-22** | **跨场趋势章节必含 + Tracker 转交块加 prior_sessions_count(KB 判定规则完全不变)** | **vec-09 s01 用户反馈**(vec-02 s01 报告漏掉"跨场趋势"章节 — vec-02 跨场 5 场历史满足 ≥ 2 触发条件,但 pcc-assessor agent 没触发;可选章节"自由度"导致 drift)| template § 6 跨场趋势从"可选 IF ≥ 2 场"→"**必含** IF `prior_sessions_count >= 1`"(消除可选章节 drift);spec § 启动流程 step 3 加 prior_sessions_count 计算步骤(Bash 读 tracker.csv / tracker-real-sessions.csv 计数);pcc-assessor "## → Tracker 转交" 块加 `prior_sessions_count` 字段(同时传给 pcc-tracker 复用);KB 判定规则完全不变 |
+| **v4.1.5** | **2026-09-22** | **跨场趋势章节必含 + Tracker 转交块加 prior_sessions_count(KB 判定规则完全不变)** | **vec-09 s01 用户反馈**(vec-02 s01 报告漏掉"跨场趋势"章节 — vec-02 跨场 5 场历史满足 ≥ 2 触发条件,但 pcc-assessor agent 没触发;可选章节"自由度"导致 drift)| template § 6 跨场趋势从"可选 IF ≥ 2 场"→"**必含** IF `prior_sessions_count >= 1`"(消除可选章节 drift);spec § 启动流程 step 3 加 prior_sessions_count 计算步骤(Bash 读 tracker.csv / tracker-sessions.csv 计数);pcc-assessor "## → Tracker 转交" 块加 `prior_sessions_count` 字段(同时传给 pcc-tracker 复用);KB 判定规则完全不变 |
 | **v4.1.6** | **2026-09-22** | **§ 4 marker 短描述必含(KB 判定规则完全不变)** | **vec-09 s01 用户反馈**(vec-02 s01 报告 § 4 第 2 列只有 marker-id 编号,无 KB 短描述;voc-08 § 4 是"编号 + 短描述"格式 — 系统性 drift)| template § 3 § 4 章节顺序补"第 2 列必含 marker 短描述,见 § 5 `{MARKER_TITLE}`";template § 5 占位符总表加 `{MARKER_TITLE}` 字段(来自 `knowledge/pcc-markers-2025.md` 对应 marker 标题);template § 7 章节命名固定补"`Marker / 短描述` 第 2 列格式"(th width 220px);spec 启动流程 step 3 + 自检清单加"§ 4 第 2 列 marker 短描述必含"硬规则;KB 判定规则完全不变 |
 
 # 角色
@@ -53,7 +53,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
    - [knowledge/failure-patterns.md](../../knowledge/failure-patterns.md) — 本土丢分模式
    - [knowledge/session-arc.md](../../knowledge/session-arc.md) — 45 分钟会话结构
    - [knowledge/pcc-assessor-html-template.md](../../knowledge/pcc-assessor-html-template.md) — **HTML 报告骨架模板(v4.1.0 加,固化 12 章节顺序 + CSS + 占位符)**
-   - **prior_sessions_count 计算(v4.1.5 加 · 跨场趋势章节必含触发依赖)**:用 Bash 跑 `python3 -c "import csv; rows=open('progress/tracker.csv').readlines()[1:]; count=sum(1 for r in rows if r.split(',',1)[0].startswith('{persona_id}-')); print(count)"`(AI 陪练场)或 `progress/tracker-real-sessions.csv`(真人场)→ 取 prior_sessions_count(本场之前该 persona 已评估场次数)
+   - **prior_sessions_count 计算(v4.1.5 加 · 跨场趋势章节必含触发依赖)**:用 Bash 跑 `python3 -c "import csv; rows=open('progress/tracker.csv').readlines()[1:]; count=sum(1 for r in rows if r.split(',',1)[0].startswith('{persona_id}-')); print(count)"`(AI 陪练场)或 `progress/tracker-sessions.csv`(真人场)→ 取 prior_sessions_count(本场之前该 persona 已评估场次数)
      - `prior_sessions_count >= 1` → 跨场趋势章节**必含**(见 template § 6)
      - `prior_sessions_count == 0` → 跨场趋势章节**省略**(本场为首场,无历史可避免)
    - **§ 4 第 2列 marker 短描述必含(v4.1.6 加)**:每条 marker 行第 2 列必含 `{MARKER_TITLE}` 短描述,来自 `knowledge/pcc-markers-2025.md` 对应 marker 标题(如 `3.1 确认本次会话想达成什么` / `7.2 探索超越当前认知(关于"人")`);th width 220px。必命中项用 `marker-id must` class,非必命中项用 `marker-id` class(统一包法,vec-02 s01 类"30 个非必命中用裸 `<td>X.Y</td>`"drift 修复)
@@ -508,7 +508,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 **session_id**:`{session_id}`(例:`voc-08-2026-09-04-session-01`)
 **transcript_path**:`{相对路径}`(例:`practice-logs/AI陪练/voc-08-2026-09-04-session-01-transcript.md`)
 **transcript 已落盘验证**:✔ / ✘
-**prior_sessions_count**:`{N}`(本场之前该 persona 已评估场次数;pcc-assessor 启动时用 Bash 读 tracker.csv / tracker-real-sessions.csv 计算后填入 — 0 = 首场 / ≥1 = 历史有场;同时驱动 template § 10 跨场趋势章节必含判定;pcc-tracker 可复用)
+**prior_sessions_count**:`{N}`(本场之前该 persona 已评估场次数;pcc-assessor 启动时用 Bash 读 tracker.csv / tracker-sessions.csv 计算后填入 — 0 = 首场 / ≥1 = 历史有场;同时驱动 template § 10 跨场趋势章节必含判定;pcc-tracker 可复用)
 **persona**:`{persona ID}`(真人场填 `real_client_<代号>` 自由标识)
 **judge_main**:`Claude v4` / `真人督导(姓名)`(本场主要判定者)
 **judge_2**:`-` / `DeepSeek V4 Flash`(本场 second judge;真人场恒为 `-`)
@@ -533,7 +533,7 @@ tools: ['Read', 'Glob', 'Write', 'Edit']
 
 - 评估完只输出报告 + 落盘,**没追加 tracker 转交块** → 工作流断点,数据漏入库
 - **真人场误推到 `progress/tracker.csv`(冷蓝 AI 管线)** → 数据污染(真人锚点和 AI 模拟混在一起,后续分析失真)
-- **AI 场误推到 `progress/tracker-real-sessions.csv`(暖色真人管线)** → 数据污染
+- **AI 场误推到 `progress/tracker-sessions.csv`(暖色真人管线)** → 数据污染
 - 真人场填了 `judge_2` 真人 second judge → 违反 schema(`judge_2` 真人场恒 `-`)
 
 ## 自检清单(每次输出前)

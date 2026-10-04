@@ -250,7 +250,7 @@ python3 scripts/gen_trending_chart.py
 
 ```bash
 
-# 真人练习追踪 CSV 路径:progress/tracker-real-sessions.csv (95 列)
+# 真人练习追踪 CSV 路径:progress/tracker-sessions.csv (95 列)
 
 #   - 前 91 列同 AI persona schema(DeepSeek 37 列填 `-`)
 
@@ -258,13 +258,13 @@ python3 scripts/gen_trending_chart.py
 
 # 真人练习分析报告(暖色调,analyze_tracker.py 已支持 --csv)
 python3 scripts/analyze_tracker.py \
-  --csv progress/tracker-real-sessions.csv \
+  --csv progress/tracker-sessions.csv \
   --out progress/tracker-analysis-real-{date}.md
 
 # 真人练习 trending chart(暖色调,带 AI persona 平均参考线)
 python3 scripts/gen_trending_chart_real.py
 
-#  → 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均)
+#  → 自动读 tracker-sessions.csv + tracker.csv(AI persona 平均)
 
 #  → 自动从最新 tracker-analysis-real-{date}.md 解析能力维度
 
@@ -304,18 +304,18 @@ python3 scripts/gen_trending_chart_real.py
    - `claude_deepseek_agreement` 填 `N/A`
 
 5. **追加**:**必须**用 bash + Python csv.writer(行 95 列 > 500 字符,edit 会截断,详见 memory `edit-tool-long-csv-truncation`)
-   - 路径:`progress/tracker-real-sessions.csv`
+   - 路径:`progress/tracker-sessions.csv`
    - 验证:read 倒数第 1-2 行,确认 95 列 + 换行 LF
 6. **重分析**(AI persona pipeline 独立):
    ```bash
    python3 scripts/analyze_tracker.py \
-     --csv progress/tracker-real-sessions.csv \
+     --csv progress/tracker-sessions.csv \
      --out progress/tracker-analysis-real-{date}.md
    ```
 7. **生成真人 trending chart**:
    ```bash
    python3 scripts/gen_trending_chart_real.py
-   # 自动读 tracker-real-sessions.csv + tracker.csv(AI persona 平均作参考线)
+   # 自动读 tracker-sessions.csv + tracker.csv(AI persona 平均作参考线)
    # 输出 progress/trending-chart-real-{date}.html
    ```
 8. **主报告归档**(用户自留档,不进 tracker):

@@ -24,7 +24,7 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 
 - 🎙️ **Real-time voice conversation** with AI persona clients (built from your existing persona library)
 - 📊 **Objective rhythm metrics** — silence duration, CPM (characters per minute), barge-in detection, question length, inter-question pause
-- 🔒 **Privacy-first** — FunASR speech recognition runs **locally on your CPU**. Audio never leaves your machine.
+- 🔒 **Privacy by configuration** — STT / LLM / TTS are independently switchable endpoints; self-host any of them to keep data on your machine. Default STT (Aliyun NLS) and LLM/TTS (MiniMax) are cloud-hosted — see [PRIVACY.md](PRIVACY.md).
 - 🧠 **Aligned with existing pcc-assessor** — rhythm features feed back into your existing 37-marker evaluation pipeline
 - 🌐 **Browser-based** — works in Chrome / Safari, no installation beyond Python
 
@@ -61,19 +61,18 @@ For **fully offline** operation, choose a local provider (Ollama / LM Studio / v
                      │ WebSocket (wss://)
 ┌────────────────────▼─────────────────────────────────────┐
 │  FastAPI / WebSocket server (single process, ~600 LoC)    │
-│  ├─ Audio ingest → STT queue                              │
-│  ├─ FunASR iic/SenseVoiceSmall (local, CPU)          │
-│  ├─ STT text → LLM (HTTP streaming)                       │
-│  ├─ LLM stream → TTS (WebSocket streaming)                │
-│  ├─ fsmn-vad barge-in: client speaks → stop TTS + LLM  │
-│  └─ Rhythm feature extraction (silence / CPM / barge-in)   │
+│  ├─ Audio ingest → Aliyun NLS WS (configurable STT)       │
+│  ├─ STT partial → LLM (HTTP streaming, MiniMax M3)        │
+│  ├─ LLM stream → TTS (MiniMax T2A WS, streaming PCM)      │
+│  ├─ Auto-submit on utterance_end + barge-in (cancel turn) │
+│  └─ Rhythm extraction (silence / CPM / barge-in)          │
 └────────────────────┬─────────────────────────────────────┘
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │  Persistence (files, no traditional database)              │
-│  ├─ Real practice audio: practice-logs/sessions/*.mp3     │
+│  ├─ Practice audio: practice-logs/sessions/*.mp3          │
 │  ├─ Per-session artifacts: practice-logs/sessions/<YYYY-MM-DD>-session-NN/ │
-│  └─ Append to existing progress/tracker-real-sessions.csv │
+│  └─ Append to existing progress/tracker-sessions.csv │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -81,15 +80,14 @@ For **fully offline** operation, choose a local provider (Ollama / LM Studio / v
 
 ## Status
 
-> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 3546 LoC) and frontend (`phase_b/static/`, 1039 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
+> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 3546 LoC) and frontend (`phase_b/static/`, 1067 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
 
-- ✅ Technical spike complete — see [spike report](./plans/phase-b/spike-report-2026-09-01.md)
-- ✅ Environment validated — FunASR 1.4.11 on Python 3.9 + CPU torch, RTF 0.029 on M3 Pro
-- ✅ HTTP API validated — `/v1/audio/transcriptions` returns correct text for real client audio
-- ✅ MCP server validated — funasr_mcp.py imports and exposes `transcribe(audio_path, language="auto")` tool
-- ✅ Wireframe — see [phase-b-wireframe-2026-09-03.html](./plans/phase-b/wireframe-2026-09-03.html) (3 pages, static HTML, no JS)
+- ✅ STT swap landed — FunASR → Aliyun NLS streaming WebSocket (2026-09-06). Real-time partial + sentence-end trigger now drives auto-submit. See [data-flow report](./phase_b/_reports/phase-b-data-flow-2026-09-06.md).
+- ✅ End-to-end voice pipeline — first real session `real-2026-09-06-08` produced dialogue JSONL + raw wav + rhythm features (no transcript placeholders).
+- ✅ Dashboard v2 — three pages (entry / session / dashboard) with KPI tiles, inline audio playback, transcript table, trending-chart regen, and PCC 37-marker assessment button (2026-10-04).
+- ✅ XSS hardening — `textContent` replaces `innerHTML` in transcript render (2026-10-04).
 - ⚠️ Backend code — `phase_b/` (28 .py files, 3546 LoC) + 18 test files under `tests/phase_b/`. **Shipped, not enabled.**
-- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + audio_state.js + styles.css, 1039 LoC). **Shipped, not enabled.**
+- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + audio_state.js + styles.css, 1067 LoC). **Shipped, not enabled.**
 
 **Why "shipped but not enabled"?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) defines trigger conditions for activating Phase B:
 
@@ -115,7 +113,7 @@ For full instructions, see [INSTALL.md](INSTALL.md) and [DEPLOY.md](DEPLOY.md).
 
 ## Documentation
 
-- [INSTALL.md](INSTALL.md) — environment setup, venv, FunASR model download
+- [INSTALL.md](INSTALL.md) — environment setup, venv, Aliyun NLS credentials (default STT)
 - [DEPLOY.md](DEPLOY.md) — local deployment, ports, firewall, model cache
 - [PRIVACY.md](PRIVACY.md) — privacy guarantees, configurable LLM endpoint
 - [DISCLAIMER.md](DISCLAIMER.md) — ICF boundary, no warranty, no liability
@@ -133,7 +131,7 @@ Apache License 2.0. See [LICENSE](LICENSE).
 
 Third-party attributions:
 
-- FunASR by Alibaba DAMO Academy — MIT License
+- Aliyun NLS Python SDK (`aliyun-nls`) — Apache-2.0 (default STT endpoint)
 - PyTorch — BSD-3-Clause
 - FastAPI — MIT
 
@@ -174,7 +172,7 @@ Third-party attributions:
 
 - 🎙️ **实时语音对话** —— 与 AI 人格客户对话(基于你现有的人格库)
 - 📊 **客观节奏指标** —— 沉默时长、CPM(每分钟字数)、打断检测、问题长度、问题间隔
-- 🔒 **隐私优先** —— FunASR 语音识别**在你 CPU 上本地执行**,从不离开你的机器
+- 🔒 **按配置保隐私** —— STT / LLM / TTS 端点可独立切换;自托管任一端点即可让数据留在本地。默认 STT(Aliyun NLS)与 LLM/TTS(MiniMax)均为云端 —— 详见 [PRIVACY.md](PRIVACY.md)。
 - 🧠 **与现有 pcc-assessor 对齐** —— 节奏特征反馈到现有的 37 标记评估流水线
 - 🌐 **基于浏览器** —— Chrome / Safari 直接使用,只需装 Python
 
@@ -211,19 +209,18 @@ Third-party attributions:
                      │ WebSocket (wss://)
 ┌────────────────────▼─────────────────────────────────────┐
 │  FastAPI / WebSocket server (单进程,~600 行 Python)       │
-│  ├─ 音频接收 → STT 队列                                  │
-│  ├─ FunASR iic/SenseVoiceSmall (本地, CPU)          │
-│  ├─ STT 文本 → LLM (HTTP 流式)                           │
-│  ├─ LLM 流 → TTS (WebSocket 流式)                        │
-│  ├─ fsmn-vad barge-in: 客户说话 → 停 TTS + 取消 LLM    │
+│  ├─ 音频接收 → Aliyun NLS WS (可配置 STT)                │
+│  ├─ STT partial → LLM (HTTP 流式,MiniMax M3)            │
+│  ├─ LLM 流 → TTS (MiniMax T2A WS,流式 PCM)              │
+│  ├─ utterance_end 自动提交 + barge-in(取消当前轮次)      │
 │  └─ 节奏特征提取 (沉默 / CPM / 打断)                     │
 └────────────────────┬─────────────────────────────────────┘
                      │
 ┌────────────────────▼─────────────────────────────────────┐
 │  持久化层 (文件,无传统数据库)                             │
-│  ├─ 真人练习音频: practice-logs/sessions/*.mp3          │
+│  ├─ 练习音频: practice-logs/sessions/*.mp3                │
 │  ├─ 逐场派生产物: practice-logs/sessions/<YYYY-MM-DD>-session-NN/          │
-│  └─ 追加到现有 progress/tracker-real-sessions.csv         │
+│  └─ 追加到现有 progress/tracker-sessions.csv         │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -231,15 +228,14 @@ Third-party attributions:
 
 ## 当前状态
 
-> ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,2311 行)+ 前端(`phase_b/static/`,614 行)已提交且可通过 `./start.sh` 启动,但产品稳定性未根据母项目触发条件(见下)验证。如果你现在试用,预计会遇到边缘情况。
+> ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,3546 行)+ 前端(`phase_b/static/`,1067 行)已提交且可通过 `./start.sh` 启动,但产品稳定性未根据母项目触发条件(见下)验证。如果你现在试用,预计会遇到边缘情况。
 
-- ✅ 技术 spike 完成 — 详见 [spike 报告](./plans/phase-b/spike-report-2026-09-01.md)
-- ✅ 环境已验证 — FunASR 1.4.11 + Python 3.9 + CPU torch,M3 Pro 上 RTF 0.029
-- ✅ HTTP API 已验证 — `/v1/audio/transcriptions` 对真实客户音频返回正确文本
-- ✅ MCP server 已验证 — funasr_mcp.py import OK,暴露 `transcribe(audio_path, language="auto")` 工具
-- ✅ Wireframe — 详见 [phase-b-wireframe-2026-09-03.html](./plans/phase-b/wireframe-2026-09-03.html)(3 页静态 HTML)
-- ⚠️ 后端代码 — `phase_b/`(26 个 .py 文件,2311 行)+ `tests/phase_b/` 下 9 个测试文件。**已写、未启用。**
-- ⚠️ 前端代码 — `phase_b/static/`(index.html + app.js + styles.css,614 行)。**已写、未启用。**
+- ✅ STT 切换落地 —— FunASR → Aliyun NLS 流式 WebSocket(2026-09-06)。实时 partial + 句尾触发自动提交。详见 [data-flow 报告](./phase_b/_reports/phase-b-data-flow-2026-09-06.md)。
+- ✅ 端到端语音管线 —— 首场真人对话 `real-2026-09-06-08` 完整产出 dialogue JSONL + raw wav + rhythm 特征(非占位 transcript)。
+- ✅ Dashboard v2 —— 三页面(entry / session / dashboard),含 KPI 卡、内嵌音频播放、transcript 表、trending chart 重生成、PCC 37-marker 评估按钮(2026-10-04)。
+- ✅ XSS 加固 —— transcript 渲染 `innerHTML` 换 `textContent`(2026-10-04)。
+- ⚠️ 后端代码 —— `phase_b/`(28 个 .py 文件,3546 行)+ `tests/phase_b/` 下 18 个测试文件。**已写、未启用。**
+- ⚠️ 前端代码 —— `phase_b/static/`(index.html + app.js + audio_state.js + styles.css,1067 行)。**已写、未启用。**
 
 **为什么"已写但未启用"?** 母项目 spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) 定义了 Phase B 启动的触发条件:
 
@@ -271,7 +267,7 @@ pip install -e .
 
 ## 文档
 
-- [INSTALL.md](INSTALL.md) —— 环境设置、venv、FunASR 模型下载
+- [INSTALL.md](INSTALL.md) —— 环境设置、venv、Aliyun NLS 凭证(默认 STT)
 - [DEPLOY.md](DEPLOY.md) —— 本地部署、端口、防火墙、模型缓存
 - [PRIVACY.md](PRIVACY.md) —— 隐私保证、可配置的 LLM 端点
 - [DISCLAIMER.md](DISCLAIMER.md) —— ICF 边界、不作担保、责任限制
@@ -289,7 +285,7 @@ Apache License 2.0。详见 [LICENSE](LICENSE)。
 
 第三方致谢:
 
-- FunASR by Alibaba DAMO Academy —— MIT 许可
+- Aliyun NLS Python SDK(`aliyun-nls`)—— Apache-2.0(默认 STT 端点)
 - PyTorch —— BSD-3-Clause
 - FastAPI —— MIT
 

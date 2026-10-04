@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TRACKER_REL = "progress/tracker.csv"
-REAL_CSV_REL = "progress/tracker-real-sessions.csv"
+REAL_CSV_REL = "progress/tracker-sessions.csv"
 ANALYZE_SCRIPT = ROOT / "scripts" / "analyze_tracker.py"
 GEN_SCRIPT = ROOT / "scripts" / "gen_trending_chart.py"
 GEN_REAL_SCRIPT = ROOT / "scripts" / "gen_trending_chart_real.py"
@@ -67,7 +67,7 @@ def main() -> int:
     file_path_raw = data.get("tool_input", {}).get("file_path", "")
     file_path = normalize_path(file_path_raw)
 
-    # 分支:tracker.csv(AI)→ 跑 AI 版;tracker-real-sessions.csv(真人)→ 跑真人版
+    # 分支:tracker.csv(AI)→ 跑 AI 版;tracker-sessions.csv(真人)→ 跑真人版
     if file_path == TRACKER_REL:
         # AI:analyze_tracker.py(默认 tracker.csv)+ gen_trending_chart.py
         plan = [

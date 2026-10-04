@@ -11,7 +11,7 @@
 # limitations under the License.
 """PCC tracker CSV append.
 
-Step 9 — writes a new row to `progress/tracker-real-sessions.csv` for
+Step 9 — writes a new row to `progress/tracker-sessions.csv` for
 each completed real-voice session. The 95-column header is read at
 runtime from the existing CSV (so future column additions don't require
 code changes). Marker scoring columns stay empty in v1; v2 will fill

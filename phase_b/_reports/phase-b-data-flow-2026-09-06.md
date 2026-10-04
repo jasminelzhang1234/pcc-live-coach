@@ -12,7 +12,7 @@
 | 完整对话 transcript | `practice-logs/sessions/dialogues/real-2026-09-06-08.jsonl` | 每个 turn 实时 append |
 | 整场录音(用户全程 PCM) | `practice-logs/sessions/raw/real-2026-09-06-08.wav` | 每个 binary frame 实时 append |
 | 每句节奏特征(CPM/沉默/打断) | `practice-logs/sessions/rhythm/real-2026-09-06-08.jsonl` | session.end() 时一次性提取 |
-| 训练追踪 +1 行 | `progress/tracker-real-sessions.csv` | session.end() 时 append(已存在则覆盖) |
+| 训练追踪 +1 行 | `progress/tracker-sessions.csv` | session.end() 时 append(已存在则覆盖) |
 | 成长曲线 html | `progress/trending-chart-real-2026-09-*.html` | tracker 追加后**手动重跑**(v2 改成按钮触发) |
 
 ## Phase B 服务端架构
@@ -59,7 +59,7 @@
 | TTS 客户端 | `phase_b/tts/minimax_tts.py` | MiniMax T2A v2 WS 流式 PCM |
 | 节奏特征 | `phase_b/rhythm/turn_features.py` | CPM / 5.5 沉默 / 6.6 打断 / barge-in |
 | 配置 | `phase_b/config.py` | dataclass Settings + _load_dotenv |
-| 训练追踪 | `phase_b/tracker/csv_append.py` | 追加到 tracker-real-sessions.csv |
+| 训练追踪 | `phase_b/tracker/csv_append.py` | 追加到 tracker-sessions.csv |
 
 ### 前端代码
 
@@ -76,7 +76,7 @@
 | AI persona 模拟对话 | `practice-logs/AI 练习/{dialogues,raw,rhythm}/` |
 | 真人练习对话 | `practice-logs/sessions/{dialogues,raw,rhythm}/` |
 | AI 训练追踪 | `progress/tracker.csv` |
-| 真人追踪 | `progress/tracker-real-sessions.csv`(暖色 trending chart) |
+| 真人追踪 | `progress/tracker-sessions.csv`(暖色 trending chart) |
 | 真人成长曲线 | `progress/trending-chart-real-2026-09-*.html` |
 | PCC 评估结果 | `assessments/<session_id>.json`(待 v2 实现) |
 
@@ -184,7 +184,7 @@ if key and key not in os.environ:    # ❌ shell 有就跳过
 - [ ] 真人对话后,`practice-logs/sessions/dialogues/` 有新 jsonl
 - [ ] 真人对话后,`practice-logs/sessions/raw/` 有新 wav
 - [ ] 真人对话后,`practice-logs/sessions/rhythm/` 有新 jsonl(非空)
-- [ ] 真人对话后,`progress/tracker-real-sessions.csv` 行数 +1
+- [ ] 真人对话后,`progress/tracker-sessions.csv` 行数 +1
 - [ ] `progress/trending-chart-real-*.html` 在 24h 内有更新(自动生成)
 - [ ] `progress/trending-chart-*.html`(AI 暖色)和 `progress/trending-chart-real-*.html`(真人暖色)**互不混合**
-- [ ] AI persona 模拟对话不会写入 `真人练习/` 或 `tracker-real-sessions.csv`
+- [ ] AI persona 模拟对话不会写入 `真人练习/` 或 `tracker-sessions.csv`

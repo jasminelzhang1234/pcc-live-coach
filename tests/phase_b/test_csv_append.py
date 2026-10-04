@@ -55,7 +55,7 @@ HEADER_95 = [
 
 
 def _write_header(tmp_path: Path) -> Path:
-    p = tmp_path / "tracker-real-sessions.csv"
+    p = tmp_path / "tracker-sessions.csv"
     with open(p, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(HEADER_95)

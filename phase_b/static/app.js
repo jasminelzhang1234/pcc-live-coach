@@ -720,7 +720,7 @@
       const csvStatus = data.csv_status || "?";
       const chart = data.chart_path || "(未生成)";
       if (status) status.textContent =
-        `已 ${csvStatus} → tracker-real-sessions.csv · chart:${chart}` +
+        `已 ${csvStatus} → tracker-sessions.csv · chart:${chart}` +
         (data.chart_error ? ` · chart 错误:${data.chart_error}` : "");
     } catch (e) {
       console.error("runTrack failed", e);

@@ -36,7 +36,7 @@ practice-logs/
 
 # ===== 训练记录 + 校准工作文档(内部沉淀,真人姓名/路径全在这里) =====
 # 整个 progress/ 屏蔽:含 tracker.csv(AI 模拟 + 真人 session)、
-# 校准三方对照(真人督导师真名)、tracker-real-sessions.csv(真人场数据)、
+# 校准三方对照(真人督导师真名)、tracker-sessions.csv(真人场数据)、
 # trending-chart.html、prompts/、v3-KB-candidates/、snapshots/、claude-judgment-*.json
 progress/
 

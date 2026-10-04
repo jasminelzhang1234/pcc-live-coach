@@ -9,6 +9,7 @@
 
 ## 当前重要事件(临时登记)
 
+- **2026-10-05** — 隐私加固:tracker 文件名 `progress/tracker-real-sessions.csv` 重命名为 `progress/tracker-sessions.csv`,去掉文件名中的"real-"标识(与 2026-10-04 路径改名保持一致);24 个引用文件 + `.env` `TRACKER_CSV` 配置同步更新;CSV 数据保留(原 4 行音频路径已自动同步到新路径);`PRIVACY.md` 加显眼"路径与文件名命名缘由"说明,`Last updated` 同步到 2026-10-05
 - **2026-10-04** — 隐私加固:路径 `practice-logs/真人练习/` 重命名为 `practice-logs/sessions/`,去掉路径名中的"真人"标识(云同步 同步 / 备份脚本 / 错误日志(stack trace)可能泄漏真实练习标识);20 个引用文件 + `progress/tracker-real-sessions.csv` audio_path 列同步更新;历史 CHANGELOG 条目保留原路径以反映当时状态
 - **2026-09-05** — Phase B 新用户体验修复(共 9 处),由 GitHub 视角的 install/boot/walkthrough 触发
   - `start.sh`:启动前 `lsof` 检查端口,被占则打印 PID + 给 `kill` / `PCC_LIVE_PORT=N` 两选一,新用户第一步不再 silent-break

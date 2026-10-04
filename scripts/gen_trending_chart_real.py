@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""gen_trending_chart_real.py — 从 tracker-real-sessions.csv 生成 trending chart HTML。
+"""gen_trending_chart_real.py — 从 tracker-sessions.csv 生成 trending chart HTML。
 
 真人练习专属 trending,跟 AI persona 完全隔离:
-  - 读 progress/tracker-real-sessions.csv (95 列,含 source_type/audio_path/transcript_path/audio_quality_notes)
+  - 读 progress/tracker-sessions.csv (95 列,含 source_type/audio_path/transcript_path/audio_quality_notes)
   - 同时读 progress/tracker.csv 计算 AI persona 平均命中率,作为参考线
   - 暖色调(amber/orange),视觉一眼区别 AI persona 的冷蓝
   - 输出 progress/trending-chart-real-{date}.html
@@ -28,7 +28,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROGRESS = ROOT / "progress"
-REAL_CSV = PROGRESS / "tracker-real-sessions.csv"
+REAL_CSV = PROGRESS / "tracker-sessions.csv"
 AI_CSV = PROGRESS / "tracker.csv"
 
 
@@ -62,7 +62,7 @@ def _safe_int(row: dict, key: str, default: int = 0) -> int:
 
 
 def load_real_sessions(csv_path: Path) -> list[dict]:
-    """读 tracker-real-sessions.csv,排序,返回 sessions dict 列表。
+    """读 tracker-sessions.csv,排序,返回 sessions dict 列表。
 
     防御性过滤(2026-09-11 加):排除
     - pytest 临时目录音频(/private/var/... 或路径含 pytest)
@@ -396,7 +396,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="container">
     <header>
       <h1>🤝 真人练习 PCC 趋势 · {n} 场数据{n_trend_note}</h1>
-      <div class="subtitle">独立于 AI persona · 按 (conversation_date, conversation_time) 排序 · 双击可看 · 从 <code>tracker-real-sessions.csv</code> 生成</div>
+      <div class="subtitle">独立于 AI persona · 按 (conversation_date, conversation_time) 排序 · 双击可看 · 从 <code>tracker-sessions.csv</code> 生成</div>
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-label">平均严格命中率 (主·v4.1.0)</div><div class="kpi-value">{real_avg}%</div><div class="kpi-sub">{n} 场真人 ✔/37</div></div>
         <div class="kpi"><div class="kpi-label">最高分 (严格)</div>{peak_html}</div>
@@ -445,7 +445,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <footer>
-      数据来源: <code>progress/tracker-real-sessions.csv</code> ({n} 行, 95 列) ·
+      数据来源: <code>progress/tracker-sessions.csv</code> ({n} 行, 95 列) ·
       参考线来源: <code>progress/tracker.csv</code> (AI persona) ·
       生成器: <code>scripts/gen_trending_chart_real.py</code> · 生成于 {today}
     </footer>

@@ -28,7 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PROGRESS = ROOT / "progress"
 TRACKER_CSV = PROGRESS / "tracker.csv"
-REAL_CSV = PROGRESS / "tracker-real-sessions.csv"
+REAL_CSV = PROGRESS / "tracker-sessions.csv"
 TOKEN_CSV = PROGRESS / "token-usage.csv"
 BACKFILL_CSV = next(PROGRESS.glob("token-usage-backfilled-*.csv"), None)
 

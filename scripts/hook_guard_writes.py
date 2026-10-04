@@ -9,7 +9,7 @@ PreToolUse hook: 防止 PCC 三 agent 越权写到其他 agent 的领域。
 - pcc-assessor → practice-logs/{date}-vec-XX-session-NN-*.md
                  + progress/real-sessions/<date>-session-XX/02-评估.md
 - pcc-tracker  → progress/tracker.csv + progress/tracker-analysis-{date}.md
-                 + progress/tracker-real-sessions.csv + progress/tracker-analysis-real-{date}.md
+                 + progress/tracker-sessions.csv + progress/tracker-analysis-real-{date}.md
 
 其他 agent(非 PCC 三件套)或未识别 agent:不做限制,放行。
 
@@ -70,7 +70,7 @@ AGENT_ALLOWED_PATTERNS: dict[str, list[str]] = {
     "pcc-tracker": [
         r"^progress/tracker\.csv$",
         r"^progress/tracker-analysis-\d{4}-\d{2}-\d{2}\.md$",
-        r"^progress/tracker-real-sessions\.csv$",
+        r"^progress/tracker-sessions\.csv$",
         r"^progress/tracker-analysis-real-\d{4}-\d{2}-\d{2}\.md$",
     ],
 }

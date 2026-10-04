@@ -164,7 +164,7 @@ persona 文件的"情绪触发点"里会指定:
 ```
 
 转交后,**主控看到 pcc-assessor 输出末尾的 `## → Tracker 转交` 块,应自动调用 pcc-tracker**:
-- 真人场 → 操作类型 **D(真人练习追库,95 列,tracker-real-sessions.csv 暖色管线)**
+- 真人场 → 操作类型 **D(真人练习追库,95 列,tracker-sessions.csv 暖色管线)**
 - AI 场 → 操作类型 **C(追加场次,91 列,tracker.csv 冷蓝管线)**
 
 主控在 pcc-tracker 完成后,再向用户回报"评估 + 追库"两件结果。**不允许只评估不追库**——这是 2026-09-04 用户反馈的工作流断点。

@@ -311,7 +311,7 @@ def session_track(session_id: str) -> dict:
     """Push the session to tracker CSV + regenerate the trending chart.
 
     Spec (Task 4, dashboard v2):
-    1. Upsert one row into `progress/tracker-real-sessions.csv` (idempotent:
+    1. Upsert one row into `progress/tracker-sessions.csv` (idempotent:
        existing session_id → drop old row, insert new).
     2. Re-run `scripts/gen_trending_chart_real.py` so the dashboard's
        "成长曲线" link reflects the latest tracker state.

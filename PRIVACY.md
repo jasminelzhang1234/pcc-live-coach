@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: 2026-09-03
+Last updated: 2026-10-05
 
 ## Summary
 
@@ -73,13 +73,13 @@ Real (non-persona) practice sessions produce these local files:
 - `practice-logs/sessions/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` — original audio (never uploaded)
 - `practice-logs/sessions/<YYYY-MM-DD>-session-NN/01-<topic>.md` — cleaned transcript (coach-authored)
 - `practice-logs/sessions/<YYYY-MM-DD>-session-NN/02-评估.md` — PCC 37-marker assessment
-- `progress/tracker-real-sessions.csv` — single-row-per-session summary for trending analysis
+- `progress/tracker-sessions.csv` — single-row-per-session summary for trending analysis
 
 All files are stored on your local disk and are **not** uploaded anywhere by the tool.
 
 ### 7. Append to tracker CSV
 
-Rhythm features are appended to `progress/tracker-real-sessions.csv` for the existing analysis pipeline. This file stays local.
+Rhythm features are appended to `progress/tracker-sessions.csv` for the existing analysis pipeline. This file stays local.
 
 ### 8. No telemetry
 
@@ -90,6 +90,8 @@ This tool does **not** include telemetry, analytics, crash reporting, or any oth
 The tool runs on `127.0.0.1` only (no public exposure by default). There is no user authentication, no cookies, no sessions to manage.
 
 ---
+
+> **Note on path and file naming (2026-10-05)**: The directory `practice-logs/sessions/` and the tracker file `progress/tracker-sessions.csv` (formerly `practice-logs/真人练习/` and `progress/tracker-real-sessions.csv`; see [CHANGELOG.md](CHANGELOG.md)) intentionally use neutral, generic names. This avoids leaking "real practice" semantics in cloud-sync paths, backup filenames, error stack traces, and path-aware log aggregation. **The contents are still personal data** — the rename only obscures the path/filename, not the data. All backup-disable / encryption / retention recommendations below still apply.
 
 ## What we recommend
 
@@ -113,7 +115,7 @@ If the tool's privacy posture changes (e.g., optional cloud feature added), this
 
 # 隐私策略
 
-最后更新:2026-09-03
+最后更新:2026-10-05
 
 ## 概要
 
@@ -186,13 +188,13 @@ LLM 端点**完全可配置**,通过三个环境变量(`LLM_BASE_URL`、`LLM_API
 - `practice-logs/sessions/<YYYY-MM-DD>-session-NN/audio/<session>.mp3` —— 原始音频(绝不外传)
 - `practice-logs/sessions/<YYYY-MM-DD>-session-NN/01-<议题>.md` —— 整理后逐字稿(本人撰写)
 - `practice-logs/sessions/<YYYY-MM-DD>-session-NN/02-评估.md` —— PCC 37-marker 评估报告
-- `progress/tracker-real-sessions.csv` —— 逐场摘要,供 trending 分析使用
+- `progress/tracker-sessions.csv` —— 逐场摘要,供 trending 分析使用
 
 所有文件存储在你的本地磁盘上。本工具**不会**将它们上传到任何地方。
 
 ### 7. 追加到 tracker CSV
 
-节奏特征被追加到 `progress/tracker-real-sessions.csv` 以供现有分析流水线使用。此文件保留在本地。
+节奏特征被追加到 `progress/tracker-sessions.csv` 以供现有分析流水线使用。此文件保留在本地。
 
 ### 8. 无遥测
 
@@ -203,6 +205,8 @@ LLM 端点**完全可配置**,通过三个环境变量(`LLM_BASE_URL`、`LLM_API
 工具仅在 `127.0.0.1` 运行(默认不对外暴露)。没有用户认证、cookie 或会话管理。
 
 ---
+
+> **关于路径与文件名命名(2026-10-05)**:目录 `practice-logs/sessions/` 与 tracker 文件 `progress/tracker-sessions.csv`(原 `practice-logs/真人练习/` 与 `progress/tracker-real-sessions.csv`;见 [CHANGELOG.md](CHANGELOG.md))有意使用中性通用命名。这避免在云同步路径、备份文件名、错误堆栈、路径感知日志聚合中泄漏"真实练习"语义。**文件内容仍然是个人数据** —— 重命名只模糊了路径/文件名,不模糊数据本身。下方的禁用云备份 / 加密 / 保留期建议仍然适用。
 
 ## 我们建议
 
