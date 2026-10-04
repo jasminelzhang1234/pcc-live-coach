@@ -557,13 +557,19 @@
         tbody.innerHTML = "";
         for (const t of data.turns || []) {
           const tr = document.createElement("tr");
-          tr.innerHTML =
-            `<td>${t.turn}</td>` +
-            `<td>${t.speaker_role || ""}</td>` +
-            `<td>${t.cpm != null ? t.cpm : ""}</td>` +
-            `<td>${t.pre_silence_ms != null ? t.pre_silence_ms : ""}</td>` +
-            `<td>${t.silence_5_5 ? "✔" : "·"}</td>` +
-            `<td>${t.barge_in_count || 0}</td>`;
+          const cells = [
+            t.turn,
+            t.speaker_role || "",
+            t.cpm != null ? t.cpm : "",
+            t.pre_silence_ms != null ? t.pre_silence_ms : "",
+            t.silence_5_5 ? "✔" : "·",
+            t.barge_in_count || 0,
+          ];
+          for (const value of cells) {
+            const td = document.createElement("td");
+            td.textContent = value;  // textContent auto-escapes — no XSS surface
+            tr.append(td);
+          }
           tbody.appendChild(tr);
         }
       }
@@ -598,10 +604,16 @@
         const role = t.role === "coach" ? "教练" : "客户";
         const row = document.createElement("div");
         row.className = `turn ${t.role}`;
-        row.innerHTML =
-          `<span class="who">${role}</span>` +
-          `<div class="msg">${escapeHtml(t.text || "")}</div>` +
-          `<div class="ts">${formatTs(t.ms)}</div>`;
+        const who = document.createElement("span");
+        who.className = "who";
+        who.textContent = role;
+        const msg = document.createElement("div");
+        msg.className = "msg";
+        msg.textContent = t.text || "";  // textContent auto-escapes — no XSS surface
+        const ts = document.createElement("div");
+        ts.className = "ts";
+        ts.textContent = formatTs(t.ms);
+        row.append(who, msg, ts);
         list.appendChild(row);
       }
     } catch (e) {
@@ -649,13 +661,36 @@
         (summary.required_missed ? ` · 必命中 ✘ ${summary.required_missed}` : "");
       if (result) {
         result.className = "assess-result";
-        result.innerHTML =
-          `<h3>PCC 评估结果 · ${summary.verdict || "?"}</h3>` +
-          (summary.key_weakness
-            ? `<p style='color: var(--text-soft); font-size: 12px; margin-bottom: 10px;'>短板:${escapeHtml(summary.key_weakness)}</p>`
-            : "") +
-          `<p style='color: var(--text-soft); font-size: 12px;'>完整 37 marker 详情见 <code>assessments/${sessionId}.json</code></p>` +
-          `<p style='color: var(--text-soft); font-size: 11px; margin-top: 8px;'>v verdict:${summary.verdict || "?"} <span class="v ${verdictClass}">${summary.verdict || "?"}</span></p>`;
+        result.replaceChildren();  // clear previous result
+        const h3 = document.createElement("h3");
+        h3.textContent = `PCC 评估结果 · ${summary.verdict || "?"}`;
+        result.append(h3);
+        if (summary.key_weakness) {
+          const p = document.createElement("p");
+          p.style.color = "var(--text-soft)";
+          p.style.fontSize = "12px";
+          p.style.marginBottom = "10px";
+          p.textContent = `短板:${summary.key_weakness}`;
+          result.append(p);
+        }
+        const detail = document.createElement("p");
+        detail.style.color = "var(--text-soft)";
+        detail.style.fontSize = "12px";
+        detail.append("完整 37 marker 详情见 ");
+        const code = document.createElement("code");
+        code.textContent = `assessments/${sessionId}.json`;
+        detail.append(code);
+        result.append(detail);
+        const verdictP = document.createElement("p");
+        verdictP.style.color = "var(--text-soft)";
+        verdictP.style.fontSize = "11px";
+        verdictP.style.marginTop = "8px";
+        verdictP.append("v verdict:", summary.verdict || "?");
+        const verdictSpan = document.createElement("span");
+        verdictSpan.className = `v ${verdictClass}`;
+        verdictSpan.textContent = summary.verdict || "?";
+        verdictP.append(" ", verdictSpan);
+        result.append(verdictP);
       }
     } catch (e) {
       console.error("runAssess failed", e);
@@ -696,13 +731,6 @@
   }
 
   // ---- Helpers ------------------------------------------------------------
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
   function formatTs(ms) {
     if (ms == null) return "";
     const d = new Date(ms);
