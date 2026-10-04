@@ -19,7 +19,7 @@ Each session has:
 - rhythm jsonl writer (sessions/rhythm/<id>.jsonl) — created in Step 8
 - start_ms / end_ms timestamps
 
-Sessions are stored under practice-logs/真人练习/ (gitignored). After session.end(), the
+Sessions are stored under practice-logs/sessions/ (gitignored). After session.end(), the
 manager keeps the record until process exit; /api/session/{id} can still
 return metadata for dashboard rendering.
 """
@@ -98,7 +98,7 @@ def _today_seq(existing: List[str]) -> int:
 
 
 class SessionManager:
-    def __init__(self, sessions_dir: str = "practice-logs/真人练习") -> None:
+    def __init__(self, sessions_dir: str = "practice-logs/sessions") -> None:
         self._sessions_dir = Path(sessions_dir).resolve()
         self._sessions: Dict[str, SessionState] = {}
         self._lock = threading.Lock()

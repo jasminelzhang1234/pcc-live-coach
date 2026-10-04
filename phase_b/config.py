@@ -136,7 +136,7 @@ class Settings:
 
     # Paths
     personas_dir: str = "personas"
-    sessions_dir: str = "practice-logs/真人练习"
+    sessions_dir: str = "practice-logs/sessions"
     tracker_csv: str = "progress/tracker-real-sessions.csv"
 
 
@@ -174,7 +174,7 @@ def get_settings() -> Settings:
         cpm_fast=_env_int("CPM_FAST", 280),
         barge_in_debounce_ms=_env_int("BARGE_IN_DEBOUNCE_MS", 500),
         personas_dir=_env("PERSONAS_DIR", "personas"),
-        sessions_dir=_env("SESSIONS_DIR", "practice-logs/真人练习"),
+        sessions_dir=_env("SESSIONS_DIR", "practice-logs/sessions"),
         tracker_csv=_env("TRACKER_CSV", "progress/tracker-real-sessions.csv"),
     )
     # Safety: refuse 0.0.0.0 unless allow_lan
