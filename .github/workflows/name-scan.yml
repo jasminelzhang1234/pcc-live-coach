@@ -1,0 +1,90 @@
+name: name-scan
+
+# Online backstop for the local pre-commit / commit-msg hooks. Runs on
+# every push and PR to main so a leak cannot reach origin/main unnoticed,
+# even if the author skipped --no-verify or the local hook was disabled.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  name-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify wordlist exists
+        id: check
+        run: |
+          if [ ! -f scripts/hooks/words.txt ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Scan tracked files for banned words
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -e
+          FAIL=0
+          # Excludes match the local hook so we don't false-positive on
+          # ignored / cache / session directories.
+          while IFS= read -r word; do
+            case "$word" in "" | "#"*) continue ;; esac
+            # git grep -I ignores binary; -F is fixed-string.
+            # pathspec exclusions mirror the local hook's case statement.
+            if git grep -qIF -- "$word" -- \
+                ':!scripts/hooks/words.txt' \
+                ':!scripts/hooks/pre-commit' \
+                ':!scripts/hooks/commit-msg' \
+                ':!.venv' ':!.venv-1' \
+                ':!node_modules' ':!__pycache__' \
+                ':!sessions' ':!others-sessions' \
+                ':!calibration-reports' ':!Reference' \
+                ':!progress' ':!plans' ':!notes' \
+                2>/dev/null; then
+              echo "::error file=*::Banned word '$word' found in tracked files"
+              git grep -nIF -- "$word" -- \
+                ':!scripts/hooks/words.txt' \
+                ':!scripts/hooks/pre-commit' \
+                ':!scripts/hooks/commit-msg' \
+                ':!.venv' ':!.venv-1' \
+                ':!node_modules' ':!__pycache__' \
+                ':!sessions' ':!others-sessions' \
+                ':!calibration-reports' ':!Reference' \
+                ':!progress' ':!plans' ':!notes' \
+                | head -10
+              FAIL=1
+            fi
+          done < scripts/hooks/words.txt
+          exit $FAIL
+
+      - name: Scan commit messages on this push
+        if: steps.check.outputs.skip != 'true' && github.event_name == 'push'
+        run: |
+          set -e
+          FAIL=0
+          # Compare against the parent ref to get only the commits pushed now.
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          # If 'before' is all zeros (first push), scan just the new root.
+          if [ "${BEFORE}" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="$AFTER"
+          else
+            RANGE="${BEFORE}..${AFTER}"
+          fi
+          while IFS= read -r word; do
+            case "$word" in "" | "#"*) continue ;; esac
+            if git log --pretty=format:'%H %s' "$RANGE" | grep -qF -- "$word"; then
+              echo "::error::Banned word '$word' found in commit messages of $RANGE"
+              git log --pretty=format:'%H %s' "$RANGE" | grep -nF -- "$word" | head -5
+              FAIL=1
+            fi
+          done < scripts/hooks/words.txt
+          exit $FAIL
