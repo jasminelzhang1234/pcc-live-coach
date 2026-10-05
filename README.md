@@ -30,6 +30,31 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 
 ---
 
+## 5 分钟入门路径(小白先看)
+
+> 如果你不确定从哪儿开始,按你的画像走下面 4 条路径之一:
+
+| 你是谁 | 先看 | 然后 |
+|---|---|---|
+| **PCC 备考教练(领域熟、技术小白)** | [FAQ.md § PCC 概念速通](FAQ.md#pcc-概念速通领域小白) — 5 分钟搞懂 37 markers / 5.5-6.6-7.6 是什么 | [INSTALL.md § 1-7](INSTALL.md) 装环境 → [Quick start](#quick-start) |
+| **开发者(技术熟、领域小白)** | [FAQ.md § PCC 概念速通](FAQ.md#pcc-概念速通领域小白) — 看 ICF PCC 评估口径 | [INSTALL.md](INSTALL.md) 装环境 → [LLM provider flexibility](#llm-provider-flexibility) 换端点 |
+| **完全小白(技术 + 领域都不熟)** | [FAQ.md](FAQ.md) 通读一遍(~10 分钟) | [INSTALL.md](INSTALL.md) 逐步跟 → 跑通一场 session → 唤起 `pcc-assessor` agent 看评估 |
+| **只想看现状 / 不准备上手** | [Status § Phase B shipped but not enabled](#status) — 理解为什么代码在但产品未启用 | 等 [README.md:94-98](#status) 的 3 个 trigger condition 达成 |
+
+### 真实使用流程(端到端 5 步)
+
+```
+① 装环境 (INSTALL § 1-4)        ~10 分钟
+② 拿 Aliyun NLS 三件套          ~15 分钟 (要去阿里云控制台开项目 + 子账号)
+③ 填 .env 跑 ./start.sh          ~1 分钟
+④ 浏览器选 persona 开练          45 分钟一场
+⑤ 收场后唤 pcc-assessor 评估     ~5 分钟 (出 HTML 报告 + tracker CSV 追加)
+```
+
+> ⚠️ **Pre-alpha 提醒**:项目自我定位未公开发布(见 [Status](#status)),Phase B 代码已提交但默认未启用 —— 你跑得通,但别当生产工具用。
+
+---
+
 ## LLM provider flexibility
 
 The default LLM endpoint (`https://api.minimaxi.com/v1`, model `MiniMax-M3`) is a **placeholder** — the code uses the standard OpenAI Chat Completions API, so any OpenAI-compatible endpoint works. Switch by editing `.env`:
