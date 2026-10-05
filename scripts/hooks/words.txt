@@ -1,0 +1,12 @@
+# Sensitive-word block-list
+# Shared by: scripts/hooks/pre-commit, scripts/hooks/commit-msg,
+#            .github/workflows/name-scan.yml
+#
+# Format: one entry per line. `#` starts a comment. Blank lines ignored.
+# Match is plain substring (grep -F), case-sensitive — no regex surprises
+# with CJK characters.
+#
+# Add real names / personal mentions / project codenames here.
+# To make the change effective locally: ./scripts/install-hooks.sh
+
+REDACTED

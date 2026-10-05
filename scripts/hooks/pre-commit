@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# pre-commit hook: block commits that introduce sensitive words into
+# tracked / untracked files. Word list lives in scripts/hooks/words.txt
+# (relative to repo root) so it is shared with commit-msg + GH Actions.
+#
+# Scope: tracked files where working tree != HEAD (staged + unstaged)
+#      + untracked, non-ignored files (would land in next `git add`).
+# Skip : .venv*, node_modules, __pycache__, sessions/, others-sessions/
+#
+# Bypass for one-off:   git commit --no-verify
+# Extend block-list:    edit scripts/hooks/words.txt, then re-run
+#                       ./scripts/install-hooks.sh
+
+set -euo pipefail
+
+# Locate repo root + word list. Works whether this script runs from
+# .git/hooks/ (installed) or scripts/hooks/ (raw checkout).
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+WORDLIST="$REPO_ROOT/scripts/hooks/words.txt"
+
+if [ ! -f "$WORDLIST" ]; then
+    echo "⚠️  No wordlist at $WORDLIST — pre-commit check skipped."
+    exit 0
+fi
+
+# Ensure the wordlist ends with a newline so `while read` does not drop the
+# last entry (POSIX read returns 1 on EOF without trailing \n). One-time
+# rewrite of the file in place; safe to re-run.
+last_byte=$(tail -c 1 "$WORDLIST" | od -An -tx1 | tr -d ' ')
+if [ "$last_byte" != "0a" ]; then
+    printf '\n' >> "$WORDLIST"
+fi
+
+# Candidate files: tracked diff + untracked (excluding .gitignore'd).
+TRACKED_DIFF=$(git diff --name-only --diff-filter=AM HEAD 2>/dev/null || true)
+UNTRACKED=$(git ls-files --others --exclude-standard 2>/dev/null || true)
+FILES_TMP=$(printf "%s\n%s\n" "$TRACKED_DIFF" "$UNTRACKED" | grep -v '^$' || true)
+
+if [ -z "$FILES_TMP" ]; then
+    exit 0
+fi
+
+FAIL=0
+
+while IFS= read -r word; do
+    case "$word" in
+        ""|"#"*) continue ;;
+    esac
+
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        [ -f "$file" ] || continue
+        case "$file" in
+            .venv/*|.venv-1/*|node_modules/*|__pycache__/*|sessions/*|others-sessions/*) continue ;;
+            # The word list contains the banned words by design.
+            scripts/hooks/words.txt) continue ;;
+        esac
+
+        if hits=$(grep -nF --color=never -- "$word" "$file" 2>/dev/null); then
+            echo "❌ Sensitive word detected: '$word'"
+            echo "   in $file"
+            echo "$hits" | head -3 | sed 's/^/   /'
+            echo
+            FAIL=1
+        fi
+    done <<< "$FILES_TMP"
+done < "$WORDLIST"
+
+if [ "$FAIL" -eq 1 ]; then
+    cat <<'TIP'
+
+To bypass for a legitimate use case:
+    git commit --no-verify
+
+To extend the block-list:
+    edit scripts/hooks/words.txt, then: ./scripts/install-hooks.sh
+
+TIP
+    exit 1
+fi
+
+exit 0

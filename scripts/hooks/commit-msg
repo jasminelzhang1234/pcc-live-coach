@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# commit-msg hook: block commits whose message contains sensitive words.
+# Catches the case where the real name leaks into a commit message instead
+# of a file — this is the leakiest case because `git log` and `git blame`
+# surface it everywhere, and even git-filter-repo only rewrites what's
+# already pushed.
+#
+# Word list: scripts/hooks/words.txt (shared with pre-commit + GH Actions).
+# Bypass for one-off:    git commit --no-verify
+# Extend block-list:     edit scripts/hooks/words.txt, then
+#                        ./scripts/install-hooks.sh
+
+set -euo pipefail
+
+MSG_FILE="$1"
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+WORDLIST="$REPO_ROOT/scripts/hooks/words.txt"
+
+if [ ! -f "$WORDLIST" ]; then
+    echo "⚠️  No wordlist at $WORDLIST — commit-msg check skipped."
+    exit 0
+fi
+
+# Ensure the wordlist ends with a newline so `while read` does not drop the
+# last entry (POSIX read returns 1 on EOF without trailing \n).
+last_byte=$(tail -c 1 "$WORDLIST" | od -An -tx1 | tr -d ' ')
+if [ "$last_byte" != "0a" ]; then
+    printf '\n' >> "$WORDLIST"
+fi
+
+FAIL=0
+
+while IFS= read -r word; do
+    case "$word" in
+        ""|"#"*) continue ;;
+    esac
+
+    if grep -qF --color=never -- "$word" "$MSG_FILE" 2>/dev/null; then
+        echo "❌ Sensitive word '$word' found in commit message:"
+        grep -nF --color=never -- "$word" "$MSG_FILE" | head -3 | sed 's/^/   /'
+        echo
+        FAIL=1
+    fi
+done < "$WORDLIST"
+
+if [ "$FAIL" -eq 1 ]; then
+    cat <<'TIP'
+
+To bypass for a legitimate use case:
+    git commit --no-verify
+
+TIP
+    exit 1
+fi
+
+exit 0
