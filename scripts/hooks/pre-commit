@@ -1,34 +1,54 @@
 #!/usr/bin/env bash
 # pre-commit hook: block commits that introduce sensitive words into
-# tracked / untracked files. Word list lives in scripts/hooks/words.txt
-# (relative to repo root) so it is shared with commit-msg + GH Actions.
+# tracked / untracked files. Word lists live in:
+#   - scripts/hooks/words.txt          (repo-shared, also scanned by CI)
+#   - ~/.gitignore_local_words         (this machine only)
+# Hooks read both files and concatenate at runtime.
 #
 # Scope: tracked files where working tree != HEAD (staged + unstaged)
 #      + untracked, non-ignored files (would land in next `git add`).
 # Skip : .venv*, node_modules, __pycache__, sessions/, others-sessions/
 #
 # Bypass for one-off:   git commit --no-verify
-# Extend block-list:    edit scripts/hooks/words.txt, then re-run
-#                       ./scripts/install-hooks.sh
+# Extend block-list:    edit scripts/hooks/words.txt (shared) and/or
+#                       ~/.gitignore_local_words (local-only). Hooks are
+#                       symlinked, so script edits take effect on next
+#                       commit — no reinstall needed.
 
 set -euo pipefail
 
-# Locate repo root + word list. Works whether this script runs from
+# Locate repo root + word lists. Works whether this script runs from
 # .git/hooks/ (installed) or scripts/hooks/ (raw checkout).
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 WORDLIST="$REPO_ROOT/scripts/hooks/words.txt"
+LOCAL_WORDLIST="$HOME/.gitignore_local_words"
 
 if [ ! -f "$WORDLIST" ]; then
     echo "⚠️  No wordlist at $WORDLIST — pre-commit check skipped."
     exit 0
 fi
 
-# Ensure the wordlist ends with a newline so `while read` does not drop the
-# last entry (POSIX read returns 1 on EOF without trailing \n). One-time
-# rewrite of the file in place; safe to re-run.
-last_byte=$(tail -c 1 "$WORDLIST" | od -An -tx1 | tr -d ' ')
-if [ "$last_byte" != "0a" ]; then
-    printf '\n' >> "$WORDLIST"
+# Make sure both wordlists end with a newline so `while read` doesn't drop
+# the last entry (POSIX read returns 1 on EOF without trailing \n).
+ensure_trailing_newline() {
+    local f="$1"
+    [ -f "$f" ] || return 0
+    local last_byte
+    last_byte=$(tail -c 1 "$f" | od -An -tx1 | tr -d ' ')
+    if [ "$last_byte" != "0a" ]; then
+        printf '\n' >> "$f"
+    fi
+}
+ensure_trailing_newline "$WORDLIST"
+ensure_trailing_newline "$LOCAL_WORDLIST"
+
+# Combine repo wordlist with optional local-only wordlist.
+# Local file is opt-in: missing file = no extra entries, no error.
+COMBINED_WORDLIST=$(mktemp)
+trap 'rm -f "$COMBINED_WORDLIST"' EXIT
+cat "$WORDLIST" > "$COMBINED_WORDLIST"
+if [ -f "$LOCAL_WORDLIST" ]; then
+    cat "$LOCAL_WORDLIST" >> "$COMBINED_WORDLIST"
 fi
 
 # Candidate files: tracked diff + untracked (excluding .gitignore'd).
@@ -52,8 +72,9 @@ while IFS= read -r word; do
         [ -f "$file" ] || continue
         case "$file" in
             .venv/*|.venv-1/*|node_modules/*|__pycache__/*|sessions/*|others-sessions/*) continue ;;
-            # The word list contains the banned words by design.
+            # The word lists contain the banned words by design.
             scripts/hooks/words.txt) continue ;;
+            "$HOME/.gitignore_local_words") continue ;;
         esac
 
         if hits=$(grep -nF --color=never -- "$word" "$file" 2>/dev/null); then
@@ -64,7 +85,7 @@ while IFS= read -r word; do
             FAIL=1
         fi
     done <<< "$FILES_TMP"
-done < "$WORDLIST"
+done < "$COMBINED_WORDLIST"
 
 if [ "$FAIL" -eq 1 ]; then
     cat <<'TIP'
@@ -73,7 +94,9 @@ To bypass for a legitimate use case:
     git commit --no-verify
 
 To extend the block-list:
-    edit scripts/hooks/words.txt, then: ./scripts/install-hooks.sh
+    - everyone + CI:   edit scripts/hooks/words.txt
+    - this machine:    edit ~/.gitignore_local_words
+    Hooks are symlinked, so script edits take effect on next commit.
 
 TIP
     exit 1

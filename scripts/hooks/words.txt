@@ -6,7 +6,13 @@
 # Match is plain substring (grep -F), case-sensitive — no regex surprises
 # with CJK characters.
 #
-# Add real names / personal mentions / project codenames here.
+# Add names / personal mentions / project codenames you want EVERY
+# contributor (and CI) to block here.
+#
+# For names you want blocked ONLY on your own machine (not visible in
+# this public repo), add them to ~/.gitignore_local_words instead —
+# pre-commit / commit-msg hooks also read that file at runtime.
+#
 # To make the change effective locally: ./scripts/install-hooks.sh
-
-REDACTED
+# (re-run only required if hooks are not yet symlinked; once installed,
+#  edits to this file or scripts/hooks/*.sh take effect on next commit).

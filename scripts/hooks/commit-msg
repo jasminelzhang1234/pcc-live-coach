@@ -5,10 +5,13 @@
 # surface it everywhere, and even git-filter-repo only rewrites what's
 # already pushed.
 #
-# Word list: scripts/hooks/words.txt (shared with pre-commit + GH Actions).
+# Word lists: scripts/hooks/words.txt (repo-shared + CI)
+#           + ~/.gitignore_local_words (this machine only)
 # Bypass for one-off:    git commit --no-verify
-# Extend block-list:     edit scripts/hooks/words.txt, then
-#                        ./scripts/install-hooks.sh
+# Extend block-list:     edit scripts/hooks/words.txt (shared) and/or
+#                        ~/.gitignore_local_words (local). Hooks are
+#                        symlinked, so script edits take effect on next
+#                        commit — no reinstall needed.
 
 set -euo pipefail
 
@@ -16,17 +19,33 @@ MSG_FILE="$1"
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 WORDLIST="$REPO_ROOT/scripts/hooks/words.txt"
+LOCAL_WORDLIST="$HOME/.gitignore_local_words"
 
 if [ ! -f "$WORDLIST" ]; then
     echo "⚠️  No wordlist at $WORDLIST — commit-msg check skipped."
     exit 0
 fi
 
-# Ensure the wordlist ends with a newline so `while read` does not drop the
-# last entry (POSIX read returns 1 on EOF without trailing \n).
-last_byte=$(tail -c 1 "$WORDLIST" | od -An -tx1 | tr -d ' ')
-if [ "$last_byte" != "0a" ]; then
-    printf '\n' >> "$WORDLIST"
+# Make sure both wordlists end with a newline so `while read` doesn't drop
+# the last entry (POSIX read returns 1 on EOF without trailing \n).
+ensure_trailing_newline() {
+    local f="$1"
+    [ -f "$f" ] || return 0
+    local last_byte
+    last_byte=$(tail -c 1 "$f" | od -An -tx1 | tr -d ' ')
+    if [ "$last_byte" != "0a" ]; then
+        printf '\n' >> "$f"
+    fi
+}
+ensure_trailing_newline "$WORDLIST"
+ensure_trailing_newline "$LOCAL_WORDLIST"
+
+# Combine repo + local wordlists. Local file is opt-in: missing = no extra.
+COMBINED_WORDLIST=$(mktemp)
+trap 'rm -f "$COMBINED_WORDLIST"' EXIT
+cat "$WORDLIST" > "$COMBINED_WORDLIST"
+if [ -f "$LOCAL_WORDLIST" ]; then
+    cat "$LOCAL_WORDLIST" >> "$COMBINED_WORDLIST"
 fi
 
 FAIL=0
@@ -42,13 +61,18 @@ while IFS= read -r word; do
         echo
         FAIL=1
     fi
-done < "$WORDLIST"
+done < "$COMBINED_WORDLIST"
 
 if [ "$FAIL" -eq 1 ]; then
     cat <<'TIP'
 
 To bypass for a legitimate use case:
     git commit --no-verify
+
+To extend the block-list:
+    - everyone + CI:   edit scripts/hooks/words.txt
+    - this machine:    edit ~/.gitignore_local_words
+    Hooks are symlinked, so script edits take effect on next commit.
 
 TIP
     exit 1
