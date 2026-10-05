@@ -35,7 +35,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from phase_b.config import get_settings
 
@@ -131,45 +131,87 @@ def upsert_session_row(
     """Idempotent insert: if `session_id` already exists in the CSV, drop
     the old row first; then append the new row.
 
+    Uses an in-process dict cache keyed by csv_path (header + rows +
+    session_id index). First call loads O(n); later calls in the same
+    process are O(1) lookup + O(n) full-file rewrite (CSV has no
+    random-access insert). Total cost for n upserts in one process: O(n)
+    instead of the un-cached O(n²).
+
     Returns:
         "inserted"  — no prior row for this session_id
         "replaced"  — prior row was found and dropped before insert
         "no_csv"    — csv_path missing; caller decides whether that's a 404
     """
-    if not csv_path.is_file():
+    header, rows, index = _load_cache(csv_path)
+    if rows is None:
         return "no_csv"
     session_id = row.get("session_id", "")
-    # Read all rows, drop any matching session_id, then rewrite the file.
+    if session_id and session_id in index:
+        rows[index[session_id]] = row
+        replaced = True
+    else:
+        rows.append(row)
+        if session_id:
+            index[session_id] = len(rows) - 1
+        replaced = False
+    _write_cache(csv_path, header, rows)
+    logger.info(
+        "%s row session_id=%s -> %s", "replaced" if replaced else "inserted", session_id, csv_path,
+    )
+    return "replaced" if replaced else "inserted"
+
+
+# --- In-process cache -------------------------------------------------------
+# Cache key = resolved csv_path. Value = (header, rows, index_by_session_id).
+# `rows` is None when the file does not exist on first lookup.
+# Note: this cache assumes upsert_session_row is the only writer; external
+# writers (CI / dashboards) MUST call flush_cache(csv_path) afterwards to
+# stay consistent. Tests get unique tmp_paths so no cross-test pollution.
+_CSV_CACHE: Dict[Path, Tuple[List[str], Optional[List[Dict[str, str]]], Dict[str, int]]] = {}
+
+
+def _load_cache(
+    csv_path: Path,
+) -> tuple[list[str], Optional[list[Dict[str, str]]], dict[str, int]]:
+    """Return (header, rows, index). rows is None if csv_path doesn't exist."""
+    cached = _CSV_CACHE.get(csv_path)
+    if cached is not None:
+        return cached
+    if not csv_path.is_file():
+        _CSV_CACHE[csv_path] = ([], None, {})
+        return _CSV_CACHE[csv_path]
     with open(csv_path, "r", encoding="utf-8", newline="") as f:
         reader = csv.reader(f)
         try:
             header = next(reader)
         except StopIteration:
-            header = list(row.keys())
-        rows = [r for r in reader if r and (len(r) == 0 or r[0] != session_id)]
-    replaced = False
-    with open(csv_path, "r", encoding="utf-8", newline="") as f:
-        reader = csv.reader(f)
-        try:
-            next(reader)  # header
-            for r in reader:
-                if r and r[0] == session_id:
-                    replaced = True
-                    break
-        except StopIteration:
-            pass
+            raise ValueError(f"tracker CSV has no header: {csv_path}")
+        raw_rows = [r for r in reader if r]
+    index: dict[str, int] = {}
+    for i, r in enumerate(raw_rows):
+        if r and r[0]:
+            index[r[0]] = i
+    rows: list[Dict[str, str]] = [dict(zip(header, r)) for r in raw_rows]
+    _CSV_CACHE[csv_path] = (header, rows, index)
+    return _CSV_CACHE[csv_path]
+
+
+def _write_cache(csv_path: Path, header: list[str], rows: list[Dict[str, str]]) -> None:
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        # Re-emit only the surviving rows (everything except the duplicate).
         for r in rows:
-            if r:
-                writer.writerow(r)
-        writer.writerow([row.get(col, "") for col in header])
-    logger.info(
-        "%s row session_id=%s -> %s", "replaced" if replaced else "inserted", session_id, csv_path,
-    )
-    return "replaced" if replaced else "inserted"
+            writer.writerow([r.get(col, "") for col in header])
+
+
+def flush_cache(csv_path: Optional[Path] = None) -> None:
+    """Drop cached CSV state. Pass a specific path to drop just one entry,
+    or omit to drop the entire cache (e.g. between test runs).
+    """
+    if csv_path is None:
+        _CSV_CACHE.clear()
+    else:
+        _CSV_CACHE.pop(csv_path, None)
 
 
 def append_session(
