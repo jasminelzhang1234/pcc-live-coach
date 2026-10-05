@@ -138,6 +138,10 @@ class Settings:
     personas_dir: str = "personas"
     sessions_dir: str = "practice-logs/sessions"
     tracker_csv: str = "progress/tracker-sessions.csv"
+    # Trending chart output. Empty = default per-day file under progress/.
+    # If set, may be an absolute path or relative to repo root; "{date}" is
+    # substituted with YYYY-MM-DD if present.
+    trending_chart_path: str = ""
 
 
 def get_settings() -> Settings:
@@ -176,6 +180,7 @@ def get_settings() -> Settings:
         personas_dir=_env("PERSONAS_DIR", "personas"),
         sessions_dir=_env("SESSIONS_DIR", "practice-logs/sessions"),
         tracker_csv=_env("TRACKER_CSV", "progress/tracker-sessions.csv"),
+        trending_chart_path=_env("TRENDING_CHART_PATH", ""),
     )
     # Safety: refuse 0.0.0.0 unless allow_lan
     if not s.allow_lan and s.host in ("0.0.0.0", ""):

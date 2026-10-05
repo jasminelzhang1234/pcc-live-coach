@@ -284,6 +284,10 @@ def _compute_kpis(turns: List[dict]) -> dict:
     coach_turns = [t for t in turns if t.get("speaker_role") == "coach"]
     if not coach_turns:
         return {"mean_cpm": 0, "silence_5_5_count": 0, "barge_in_count": 0, "turn_count": len(turns)}
+    # NOTE: mean_cpm is a v1 proxy that includes LLM think-time — see
+    # phase_b/rhythm/cpm.py docstring ("This is a v1 proxy: it conflates
+    # the LLM think-time with the coach's spoken rate"). Frontend label
+    # surfaces this caveat; do not present mean_cpm as pure spoken rate.
     mean_cpm = sum(t.get("cpm", 0) for t in coach_turns) / len(coach_turns)
     silence_5_5_count = sum(1 for t in coach_turns if t.get("silence_5_5"))
     barge_in_count = sum(int(t.get("barge_in_count", 0)) for t in coach_turns)
@@ -296,14 +300,31 @@ def _compute_kpis(turns: List[dict]) -> dict:
 
 
 def _chart_output_path(repo_root: Path) -> str:
-    """Default trending-chart output path: progress/trending-chart-real-YYYY-MM-DD.html.
+    """Trending-chart output path.
 
-    Overridable via monkeypatch in tests to point at a tmp_path chart
-    when the real script isn't being exercised.
+    Default: `progress/trending-chart-real-YYYY-MM-DD.html` under repo_root.
+
+    Overridable via:
+      1. monkeypatch in tests (used to point at a tmp_path chart).
+      2. `TRENDING_CHART_PATH` env var (see `phase_b.config.Settings.trending_chart_path`).
+         Absolute paths are used as-is; relative paths resolve against
+         repo_root. A literal `{date}` token is substituted with today's
+         YYYY-MM-DD so per-day rollovers still work outside the default layout.
     """
-    return str(
-        repo_root / "progress" / f"trending-chart-real-{datetime.now().strftime('%Y-%m-%d')}.html"
-    )
+    raw = ""
+    try:
+        from phase_b.config import get_settings
+        raw = get_settings().trending_chart_path or ""
+    except Exception:
+        raw = ""
+    today = datetime.now().strftime("%Y-%m-%d")
+    if raw:
+        resolved = raw.replace("{date}", today)
+        path = Path(resolved)
+        if not path.is_absolute():
+            path = repo_root / path
+        return str(path)
+    return str(repo_root / "progress" / f"trending-chart-real-{today}.html")
 
 
 @api_router.post("/session/{session_id}/track")

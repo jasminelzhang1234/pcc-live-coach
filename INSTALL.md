@@ -1,14 +1,12 @@
 # Installation Guide
 
-Last updated: 2026-09-06
+Last updated: 2026-10-05
 
-> ✅ **Phase B is enabled as of 2026-09-06.** Backend (`phase_b/`) and frontend (`phase_b/static/`) are committed and end-to-end working (browser → Aliyun ASR → MiniMax LLM → MiniMax TTS → browser). 
+> ✅ **Phase B end-to-end works as of 2026-09-06** (browser → Aliyun NLS ASR → MiniMax LLM → MiniMax TTS → browser). Code is shipped but **not enabled** by default — see [README § Status](./README.md#status) for the activation trigger conditions.
 >
-> 🆕 **ASR switched from FunASR to Aliyun NLS on 2026-09-06.** The FunASR sections below are historical (kept for reference). For the current ASR setup, see [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md).
+> 🆕 **ASR is Aliyun NLS** (Alibaba Cloud 智能语音交互, project type **实时语音识别**). Before installing, register an Aliyun account, create a NLS project, and obtain AppKey + AccessKey ID/Secret. Full guide: [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md).
 >
-> 🆕 **Dashboard v2 landed on 2026-09-06.** 4 new endpoints (`/transcript` `/audio` `/assess` `/track`) + `phase_b/assess.py` (LLM-driven PCC 37-marker assessment) + idempotent `upsert_session_row()` + frontend transcript / audio / 下一步 button area. See [`docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md`](./docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md) and the implementation plan [`docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md`](./docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md).
->
-> 📂 **Where files live after a session runs:** see [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md) (transcripts / audio / rhythm / tracker files).
+> 📂 **Where session artifacts land:** see [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md) (transcripts / audio / rhythm / tracker files).
 
 ---
 
@@ -16,9 +14,9 @@ Last updated: 2026-09-06
 
 ### Hardware
 
-- **CPU**: Apple Silicon (M1 / M2 / M3 / M4) recommended. Intel macOS works but is ~3× slower for FunASR.
-- **RAM**: 8 GB minimum, 16 GB recommended (FunASR model loaded into memory).
-- **Disk**: ~3 GB free (Python venv + FunASR model cache).
+- **CPU**: Any modern x86_64 or Apple Silicon. STT runs in the cloud (Aliyun NLS); no local inference is performed, so RAM/CPU requirements are modest.
+- **RAM**: 4 GB minimum, 8 GB recommended.
+- **Disk**: ~500 MB free (Python venv + audio cache).
 - **Microphone**: Any built-in or USB mic. Headset recommended to avoid echo with TTS playback.
 
 ### Software
@@ -29,14 +27,13 @@ Last updated: 2026-09-06
 - **ffmpeg**: required by librosa for audio I/O. Install with `brew install ffmpeg`.
 - **Chrome or Safari**: for the browser frontend.
 
-### Network (first run only)
+### Network
 
-- ~220 MB download from ModelScope hub for the FunASR `iic/SenseVoiceSmall` model.
-- HuggingFace Hub access if you switch to a non-ModelScope model.
-- Outbound HTTPS to your LLM endpoint (default: MiniMax API).
-- Outbound HTTPS to your TTS endpoint (default: MiniMax T2A).
+- Outbound **WSS** to your **STT endpoint** (default: `wss://nls-gateway.cn-shanghai.aliyuncs.com/ws/v1` — Aliyun NLS streaming).
+- Outbound HTTPS to your **LLM endpoint** (default: MiniMax API).
+- Outbound **WSS** to your **TTS endpoint** (default: MiniMax T2A WebSocket).
 
-After the first run, STT works offline. LLM / TTS still require network unless self-hosted.
+If you self-host LLM/TTS/STT, only `127.0.0.1` traffic is required and no data leaves your machine. See [PRIVACY.md](./PRIVACY.md).
 
 ---
 
@@ -62,94 +59,122 @@ python -m pip install --upgrade pip setuptools wheel
 
 ### Why a venv?
 
-- FunASR pulls in ~25 transitive dependencies (torch, transformers, librosa, etc.). A venv keeps them isolated from your system Python.
-- The venv is gitignored — no risk of accidentally committing torch (≈ 800 MB).
+- Keeps FastAPI / uvicorn / aliyun-nls isolated from system Python.
+- The venv is gitignored — no risk of committing the SDK cache.
 
 ---
 
 ## 4. Install Python dependencies
 
-When code is released, the project will ship a `pyproject.toml` (or `requirements.txt`):
+Install runtime deps from `requirements.txt`:
 
 ```bash
-pip install -e .
+pip install -r requirements.txt
 ```
 
-Until then, the spike validation used the following minimal dependency set (tested end-to-end on Python 3.9 + Apple Silicon):
+The full set (kept lean after the 2026-09-06 FunASR → Aliyun swap):
 
 ```
-funasr==1.4.11
-torch==2.8.0
-modelscope
-huggingface_hub
-librosa
-soundfile
-safetensors
-sentencepiece
-tensorboardx
-tiktoken
-transformers
-umap-learn
-websockets
-jaconv
-jamo
-jieba
-kaldiio
-omegaconf
-oss2
-rapidfuzz
-hydra-core
+fastapi==0.128.8
+uvicorn==0.39.0
+websockets==15.0.1
+httpx==0.28.1
+python-multipart==0.0.20
+aliyun-nls==0.0.1
+alibabacloud-nls-cloud-meta20190228==1.0.0
 ```
 
-If `pip install funasr` fails in your environment, use `pip install --no-deps funasr` and install the rest manually.
+> ⚠️ `aliyun-nls==0.0.1` transitively pulls matplotlib / pillow / fonttools / pycryptodome (~54 MB) that this project does not actually use. The project only `import`s `nls` / `alibabacloud_nls_cloud_meta20190228.client` / `alibabacloud_tea_openapi.models` — none of those need the heavy four. To skip them at install time, run a two-step install instead of plain `pip install -r requirements.txt`:
+>
+> ```bash
+> pip install -r requirements.txt
+> pip install --no-deps --force-reinstall aliyun-nls==0.0.1
+> ```
+>
+> Then verify with a one-liner (must print `OK`):
+>
+> ```bash
+> python -c "import nls; from alibabacloud_nls_cloud_meta20190228.client import Client; from alibabacloud_tea_openapi import models; print('OK')"
+> ```
+>
+> If the smoke test fails, fall back to the default install + `pip uninstall matplotlib pillow fonttools pycryptodome` to reclaim disk.
 
 ---
 
-## 5. Download the FunASR model (first run only)
+## 5. Configure Aliyun NLS credentials (default STT)
 
-The default ASR model is `iic/SenseVoiceSmall` from ModelScope. It is downloaded automatically the first time you run the server. To pre-download:
+STT is **Aliyun NLS** (project type **实时语音识别**, not "一句话识别"). Before `.env` will work, register and obtain three credentials. Full walkthrough: [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md).
 
-```bash
-python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
-```
+In short:
 
-The model is cached in `~/.cache/modelscope/` (~220 MB). Subsequent runs use the cache and require no network.
+1. Sign up at [aliyun.com](https://www.aliyun.com) and complete real-name verification.
+2. Activate **智能语音交互** at [nls-portal.console.aliyun.com](https://nls-portal.console.aliyun.com/) (pay-as-you-go billing).
+3. Create a project with **项目类型 = 实时语音识别** and copy the **AppKey**.
+4. In [RAM 控制台](https://ram.console.aliyun.com/), create a sub-user with OpenAPI access; grant `AliyunNLSFullAccess`. Copy **AccessKey ID** + **AccessKey Secret** (shown once).
+5. Put the three values into `.env` (see next section).
 
-### Alternative models
-
-If you want a different ASR model (e.g., for Cantonese, English, or code-switching), edit `config/asr.yaml` (planned):
-
-```yaml
-asr:
-  model: "iic/SenseVoiceSmall"   # default
-  # model: "paraformer-en-streaming" # English
-  # model: "SenseVoiceSmall"         # multilingual, larger
-```
-
-Each model has its own download size and license terms. See the [FunASR model zoo](https://www.modelscope.cn/models?page=1&tasks=auto-speech-recognition).
+Pricing (2026-09 reference): 0.0008 元/秒 ≈ 2.88 元/小时, with a monthly free tier (~20 000 calls — verify on aliyun.com for current terms).
 
 ---
 
 ## 6. Configure environment variables
 
-Create a `.env` file in the project root (gitignored):
+Copy `.env.example` to `.env` and fill in your keys (`.env` is gitignored):
 
 ```bash
-# LLM endpoint (default: MiniMax)
-LLM_BASE_URL=https://api.minimaxi.com/v1
-LLM_API_KEY=<your-key-here>
-LLM_MODEL=MiniMax-M3
+cp .env.example .env
+$EDITOR .env
+```
 
-# TTS endpoint (default: MiniMax T2A)
-TTS_BASE_URL=wss://api.minimaxi.com/ws/v1/t2a_v2
-TTS_API_KEY=<your-key-here>
-TTS_MODEL=speech-2.6-hd
-TTS_VOICE=male-qn-jingying
+Full template (matches [`./.env.example`](./.env.example)):
 
-# Server
+```bash
+# --- Server ---
 PCC_LIVE_HOST=127.0.0.1
 PCC_LIVE_PORT=8765
 PCC_LIVE_LOG_LEVEL=info
+# Set to 1 to allow binding 0.0.0.0 (LAN exposure). Default 0 = refuse.
+PCC_LIVE_ALLOW_LAN=0
+
+# --- LLM (MiniMax or any OpenAI-compatible endpoint) ---
+LLM_BASE_URL=https://api.minimaxi.com/v1
+LLM_API_KEY=
+LLM_MODEL=MiniMax-M3
+LLM_TIMEOUT_S=30
+LLM_MAX_TOKENS=1000
+LLM_TEMPERATURE=0.6
+
+# --- TTS (MiniMax T2A WebSocket) ---
+TTS_WS_URL=wss://api.minimaxi.com/ws/v1/t2a_v2
+TTS_API_KEY=
+TTS_MODEL=speech-2.6-hd
+TTS_VOICE=male-qn-jingying
+TTS_SAMPLE_RATE=16000
+TTS_TIMEOUT_S=30
+
+# --- ASR (阿里云实时语音识别 — see §5) ---
+ALIYUN_ASR_APPKEY=
+ALIYUN_ACCESS_KEY_ID=
+ALIYUN_ACCESS_KEY_SECRET=
+
+# --- Audio / Rhythm / Paths ---
+AUDIO_SAMPLE_RATE=16000
+AUDIO_FRAME_MS=30
+AUDIO_CHANNELS=1
+SILENCE_THRESHOLD_MS=2000
+CPM_SLOW=120
+CPM_IDEAL_LOW=150
+CPM_IDEAL_HIGH=200
+CPM_FAST=280
+BARGE_IN_DEBOUNCE_MS=500
+PERSONAS_DIR=personas
+SESSIONS_DIR=practice-logs/sessions
+TRACKER_CSV=progress/tracker-sessions.csv
+# Trending chart output. Empty = default per-day file under progress/.
+# Absolute path = used as-is. Relative = resolved against repo root.
+# Literal "{date}" is substituted with today's YYYY-MM-DD.
+# Example: reports/trending-{date}.html
+# TRENDING_CHART_PATH=
 ```
 
 > ⚠️ **Never commit `.env` to git.** It contains your API keys. The repo's `.gitignore` excludes it by default.
@@ -187,14 +212,9 @@ In self-hosted mode, no conversation text leaves your machine. See [PRIVACY.md](
 
 ## 7. Verify installation
 
-Once the code ships:
-
 ```bash
 # Check Python deps
-python -c "import funasr, torch, fastapi, websockets; print('OK')"
-
-# Check FunASR model is downloaded
-ls ~/.cache/modelscope/hub/  # should contain iic/SenseVoiceSmall
+python -c "import fastapi, uvicorn, aliyun_nls; print('OK')"
 
 # Start the server
 ./start.sh                       # 推荐 — 自动检查端口/venv/.env
@@ -203,13 +223,14 @@ ls ~/.cache/modelscope/hub/  # should contain iic/SenseVoiceSmall
 # Open browser to http://127.0.0.1:8765
 ```
 
-Expected log output:
+Expected log output (first session only — Aliyun NLS model loads lazily on first WS connect):
 
 ```
-[INFO] FunASR model loaded: iic/SenseVoiceSmall
-[INFO] LLM endpoint: https://api.minimaxi.com/v1 (model=MiniMax-M3)
-[INFO] TTS endpoint: wss://api.minimaxi.com/ws/v1/t2a_v2 (model=speech-2.6-hd)
-[INFO] Server listening on http://127.0.0.1:8765
+[INFO] phase_b: server listening on http://127.0.0.1:8765
+[INFO] phase_b.config: STT=aliyun-nls  LLM=https://api.minimaxi.com/v1 (MiniMax-M3)  TTS=wss://api.minimaxi.com/ws/v1/t2a_v2 (speech-2.6-hd)
+[INFO] ws <session-id> connecting
+[INFO] ws <session-id> accepted
+[INFO] ws <session-id> sent ready
 ```
 
 ---
@@ -230,20 +251,21 @@ Expected log output:
    PCC_LIVE_PORT=8766 ./start.sh
    ```
 
-### `pip install funasr` fails or hangs
+### `pip install aliyun-nls` fails or hangs
 
-This was the main obstacle during the spike. Workarounds:
+The Aliyun SDK has only been validated on Python 3.9+. Workarounds:
 
-1. Use `--no-deps` and install dependencies manually (see Section 4).
+1. Use `--no-deps` and install dependencies manually.
 2. Use a fresh venv — system Python may have conflicting packages.
 3. If you're on Apple Silicon, ensure you're using a native arm64 Python (not Rosetta). Run `python -c "import platform; print(platform.machine())"` and confirm it prints `arm64`.
 
-### FunASR model download is slow or fails
+### Aliyun NLS connection fails (`InvalidToken` / 4xx)
 
-ModelScope's main endpoint is in China. If you're outside China and the download is slow:
+The three `.env` credentials must all be set; missing or mistyped values produce auth errors. See [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md) for the full registration checklist. Common mistakes:
 
-1. Set `MODELSCOPE_ENDPOINT=https://www.modelscope.cn` (default).
-2. If still slow, manually download from [modelscope.cn](https://www.modelscope.cn/) and place in `~/.cache/modelscope/hub/`.
+- Project type is "**一句话识别**" instead of "**实时语音识别**" → STT session never opens.
+- Sub-account lacks `AliyunNLSFullAccess` → 403 Forbidden.
+- `.env` `LLM_*` keys accidentally placed in `ALIYUN_*` slots (or vice versa) → start.sh boots but the server reports config-parse errors at first STT request.
 
 ### Microphone not detected in browser
 
@@ -292,15 +314,10 @@ instead of editing the CSV by hand. See memory `edit-tool-long-csv-truncation`.
 ```bash
 git pull
 source .venv/bin/activate
-pip install -e . --upgrade
+pip install -r requirements.txt --upgrade
 ```
 
-FunASR models do not auto-update. To upgrade the ASR model:
-
-```bash
-rm -rf ~/.cache/modelscope/hub/iic/SenseVoiceSmall
-python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
-```
+Aliyun NLS is a managed cloud endpoint — no local model to upgrade. To roll credentials, edit `.env` and restart with `./start.sh`.
 
 ---
 
@@ -309,17 +326,13 @@ python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmal
 
 # 安装指南
 
-最后更新:2026-09-06
+最后更新:2026-10-05
 
-> ✅ **Phase B 已于 2026-09-06 启用。** 后端(`phase_b/`)和前端(`phase_b/static/`)已提交,端到端跑通(浏览器 → 阿里云 ASR → MiniMax LLM → MiniMax TTS → 浏览器)。
+> ✅ **Phase B 端到端已可用(2026-09-06 起)**(浏览器 → Aliyun NLS ASR → MiniMax LLM → MiniMax TTS → 浏览器)。代码已提交但**默认未启用** —— 激活触发条件见 [README § Status](./README.md#status)。
 >
-> 🆕 **ASR 已于 2026-09-06 从 FunASR 切换到阿里云 NLS。** 下方的 FunASR 章节保留作历史参考。当前 ASR 注册见 [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md)。
+> 🆕 **ASR 是 Aliyun NLS**(阿里云智能语音交互,项目类型**实时语音识别**)。安装前请先注册阿里云账号、建 NLS 项目、拿到 AppKey + AccessKey ID/Secret。完整指南:[`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md)。
 >
-> 🆕 **Dashboard v2 已于 2026-09-06 落地。** 4 个新 endpoint(`/transcript` `/audio` `/assess` `/track`)+ `phase_b/assess.py`(调 LLM 跑 PCC 37 marker 全评估)+ 幂等去重 `upsert_session_row()` + 前端 transcript / audio / 下一步按钮区。详见 [`docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md`](./docs/superpowers/specs/2026-09-06-phase-b-dashboard-v2-design.md) 和实施计划 [`docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md`](./docs/superpowers/plans/2026-09-06-phase-b-dashboard-v2.md)。
->
-> 📂 **对话结束后文件落在哪:** 见 [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md)(transcript / 录音 / rhythm / tracker 文件位置)。
->
-> 以下说明基于 spike 期间的环境验证(详见 [spike 报告](./plans/phase-b/spike-report-2026-09-01.md)),该报告证明该技术栈在 macOS M 系列 + Python 3.9 上端到端可用。
+> 📂 **会话产物落点:** 见 [`phase_b/_reports/phase-b-data-flow-2026-09-06.md`](./phase_b/_reports/phase-b-data-flow-2026-09-06.md)(transcript / 录音 / rhythm / tracker 文件位置)。
 
 ---
 
@@ -327,9 +340,9 @@ python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmal
 
 ### 硬件
 
-- **CPU**: 推荐 Apple Silicon (M1 / M2 / M3 / M4)。Intel macOS 可用,但 FunASR 慢约 3 倍。
-- **内存**: 最低 8 GB,推荐 16 GB(FunASR 模型加载到内存)。
-- **磁盘**: ~3 GB 可用空间(Python venv + FunASR 模型缓存)。
+- **CPU**: 现代 x86_64 或 Apple Silicon 均可。STT 运行在云端(Aliyun NLS),不做本地推理,所以 RAM/CPU 要求不高。
+- **内存**: 最低 4 GB,推荐 8 GB。
+- **磁盘**: ~500 MB 可用空间(Python venv + 音频缓存)。
 - **麦克风**: 任何内置或 USB 麦克风。推荐使用耳机以避免与 TTS 播放产生回声。
 
 ### 软件
@@ -340,14 +353,13 @@ python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmal
 - **ffmpeg**: librosa 处理音频 I/O 需要。通过 `brew install ffmpeg` 安装
 - **Chrome 或 Safari**: 浏览器前端
 
-### 网络(仅首次运行)
+### 网络
 
-- 从 ModelScope hub 下载 ~220 MB 的 FunASR `iic/SenseVoiceSmall` 模型
-- 如果切换到非 ModelScope 模型,需要 HuggingFace Hub 访问
-- 你的 LLM 端点的出站 HTTPS(默认:MiniMax API)
-- 你的 TTS 端点的出站 HTTPS(默认:MiniMax T2A)
+- 出站 **WSS** 到你的 **STT 端点**(默认:`wss://nls-gateway.cn-shanghai.aliyuncs.com/ws/v1` —— Aliyun NLS 流式)
+- 出站 HTTPS 到你的 **LLM 端点**(默认:MiniMax API)
+- 出站 **WSS** 到你的 **TTS 端点**(默认:MiniMax T2A WebSocket)
 
-首次运行后,STT 可离线工作。LLM / TTS 仍需要网络,除非自托管。
+如果你自托管 LLM/TTS/STT,只需要 `127.0.0.1` 流量,数据不离开你的机器。详见 [PRIVACY.md](./PRIVACY.md)。
 
 ---
 
@@ -373,94 +385,122 @@ python -m pip install --upgrade pip setuptools wheel
 
 ### 为什么用 venv?
 
-- FunASR 拉入约 25 个传递依赖(torch、transformers、librosa 等)。venv 保持它们与系统 Python 隔离
-- venv 被 gitignore —— 避免意外提交 torch(约 800 MB)
+- 隔离 FastAPI / uvicorn / aliyun-nls 与系统 Python
+- venv 被 gitignore —— 避免意外提交 SDK 缓存
 
 ---
 
 ## 4. 安装 Python 依赖
 
-代码发布后,项目将附带 `pyproject.toml`(或 `requirements.txt`):
+从 `requirements.txt` 装运行时依赖:
 
 ```bash
-pip install -e .
+pip install -r requirements.txt
 ```
 
-在那之前,spike 验证使用了以下最小依赖集(在 Python 3.9 + Apple Silicon 上端到端测试):
+完整依赖清单(2026-09-06 FunASR → Aliyun 换栈后已精简):
 
 ```
-funasr==1.4.11
-torch==2.8.0
-modelscope
-huggingface_hub
-librosa
-soundfile
-safetensors
-sentencepiece
-tensorboardx
-tiktoken
-transformers
-umap-learn
-websockets
-jaconv
-jamo
-jieba
-kaldiio
-omegaconf
-oss2
-rapidfuzz
-hydra-core
+fastapi==0.128.8
+uvicorn==0.39.0
+websockets==15.0.1
+httpx==0.28.1
+python-multipart==0.0.20
+aliyun-nls==0.0.1
+alibabacloud-nls-cloud-meta20190228==1.0.0
 ```
 
-如果 `pip install funasr` 在你的环境中失败,使用 `pip install --no-deps funasr` 并手动安装其余依赖。
+> ⚠️ `aliyun-nls==0.0.1` 会顺带拉入 matplotlib / pillow / fonttools / pycryptodome(~54 MB),本项目不实际用到。代码里只 `import nls` / `from alibabacloud_nls_cloud_meta20190228.client import Client` / `from alibabacloud_tea_openapi import models`,都不依赖那四个包。跳过它们的安装方式(两步法):
+>
+> ```bash
+> pip install -r requirements.txt
+> pip install --no-deps --force-reinstall aliyun-nls==0.0.1
+> ```
+>
+> 装完用一行 smoke test 验证(必须输出 `OK`):
+>
+> ```bash
+> python -c "import nls; from alibabacloud_nls_cloud_meta20190228.client import Client; from alibabacloud_tea_openapi import models; print('OK')"
+> ```
+>
+> smoke test 失败的话,退回默认安装 + `pip uninstall matplotlib pillow fonttools pycryptodome` 回收空间。
 
 ---
 
-## 5. 下载 FunASR 模型(仅首次运行)
+## 5. 配置阿里云 NLS 凭证(默认 STT)
 
-默认 ASR 模型是 ModelScope 的 `iic/SenseVoiceSmall`。它在你第一次运行服务器时自动下载。要预下载:
+STT 是 **Aliyun NLS**(项目类型**实时语音识别**,不要选"一句话识别")。`.env` 跑通前,需先注册并拿到三个凭证。完整 walkthrough:[`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md)。
 
-```bash
-python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
-```
+简述:
 
-模型缓存在 `~/.cache/modelscope/`(~220 MB)。后续运行使用缓存,不需要网络。
+1. 在 [aliyun.com](https://www.aliyun.com) 注册并完成实名认证。
+2. 在 [nls-portal.console.aliyun.com](https://nls-portal.console.aliyun.com/) 开通**智能语音交互**(按量付费)。
+3. 创建项目,**项目类型 = 实时语音识别**,复制 **AppKey**。
+4. 在 [RAM 控制台](https://ram.console.aliyun.com/) 创建子账号(OpenAPI 访问),授予 `AliyunNLSFullAccess`。复制 **AccessKey ID** + **AccessKey Secret**(只显示一次)。
+5. 三个值填入 `.env`(见下节)。
 
-### 替代模型
-
-如果你想要不同的 ASR 模型(例如粤语、英语、中英混合),编辑 `config/asr.yaml`(计划中):
-
-```yaml
-asr:
-  model: "iic/SenseVoiceSmall"   # 默认
-  # model: "paraformer-en-streaming" # 英语
-  # model: "SenseVoiceSmall"         # 多语言,更大
-```
-
-每个模型都有自己的下载大小和许可条款。详见 [FunASR 模型库](https://www.modelscope.cn/models?page=1&tasks=auto-speech-recognition)。
+价格参考(2026-09 时点):0.0008 元/秒 ≈ 2.88 元/小时,每月免费额度约 2 万次调用(以 aliyun.com 官网为准)。
 
 ---
 
 ## 6. 配置环境变量
 
-在项目根目录创建 `.env` 文件(被 gitignore):
+复制 `.env.example` 到 `.env` 并填入你的 key(`.env` 被 gitignore):
 
 ```bash
-# LLM 端点(默认:MiniMax)
-LLM_BASE_URL=https://api.minimaxi.com/v1
-LLM_API_KEY=<your-key-here>
-LLM_MODEL=MiniMax-M3
+cp .env.example .env
+$EDITOR .env
+```
 
-# TTS 端点(默认:MiniMax T2A)
-TTS_BASE_URL=wss://api.minimaxi.com/ws/v1/t2a_v2
-TTS_API_KEY=<your-key-here>
-TTS_MODEL=speech-2.6-hd
-TTS_VOICE=male-qn-jingying
+完整模板(对应 [`./.env.example`](./.env.example)):
 
-# 服务器
+```bash
+# --- Server ---
 PCC_LIVE_HOST=127.0.0.1
 PCC_LIVE_PORT=8765
 PCC_LIVE_LOG_LEVEL=info
+# Set to 1 to allow binding 0.0.0.0 (LAN exposure). Default 0 = refuse.
+PCC_LIVE_ALLOW_LAN=0
+
+# --- LLM (MiniMax or any OpenAI-compatible endpoint) ---
+LLM_BASE_URL=https://api.minimaxi.com/v1
+LLM_API_KEY=
+LLM_MODEL=MiniMax-M3
+LLM_TIMEOUT_S=30
+LLM_MAX_TOKENS=1000
+LLM_TEMPERATURE=0.6
+
+# --- TTS (MiniMax T2A WebSocket) ---
+TTS_WS_URL=wss://api.minimaxi.com/ws/v1/t2a_v2
+TTS_API_KEY=
+TTS_MODEL=speech-2.6-hd
+TTS_VOICE=male-qn-jingying
+TTS_SAMPLE_RATE=16000
+TTS_TIMEOUT_S=30
+
+# --- ASR (阿里云实时语音识别 — 见 §5) ---
+ALIYUN_ASR_APPKEY=
+ALIYUN_ACCESS_KEY_ID=
+ALIYUN_ACCESS_KEY_SECRET=
+
+# --- Audio / Rhythm / Paths ---
+AUDIO_SAMPLE_RATE=16000
+AUDIO_FRAME_MS=30
+AUDIO_CHANNELS=1
+SILENCE_THRESHOLD_MS=2000
+CPM_SLOW=120
+CPM_IDEAL_LOW=150
+CPM_IDEAL_HIGH=200
+CPM_FAST=280
+BARGE_IN_DEBOUNCE_MS=500
+PERSONAS_DIR=personas
+SESSIONS_DIR=practice-logs/sessions
+TRACKER_CSV=progress/tracker-sessions.csv
+# 趋势图输出位置。空 = progress/ 下每天一个新文件。
+# 绝对路径 = 直接使用。相对路径 = 相对于仓库根目录。
+# 字面量 "{date}" 会被替换成今天的 YYYY-MM-DD。
+# 例:reports/trending-{date}.html
+# TRENDING_CHART_PATH=
 ```
 
 > ⚠️ **永远不要将 `.env` 提交到 git。** 它包含你的 API 密钥。仓库的 `.gitignore` 默认排除它。
@@ -498,14 +538,9 @@ LLM_API_KEY=not-used                      # 任意非空字符串
 
 ## 7. 验证安装
 
-代码发布后:
-
 ```bash
 # 检查 Python 依赖
-python -c "import funasr, torch, fastapi, websockets; print('OK')"
-
-# 检查 FunASR 模型已下载
-ls ~/.cache/modelscope/hub/  # 应包含 iic/SenseVoiceSmall
+python -c "import fastapi, uvicorn, aliyun_nls; print('OK')"
 
 # 启动服务器
 ./start.sh                       # 推荐 — 自动检查端口/venv/.env
@@ -514,13 +549,14 @@ ls ~/.cache/modelscope/hub/  # 应包含 iic/SenseVoiceSmall
 # 浏览器打开 http://127.0.0.1:8765
 ```
 
-预期日志输出:
+预期日志输出(Aliyun NLS 模型在首个 WS 连接时按需加载):
 
 ```
-[INFO] FunASR model loaded: iic/SenseVoiceSmall
-[INFO] LLM endpoint: https://api.minimaxi.com/v1 (model=MiniMax-M3)
-[INFO] TTS endpoint: wss://api.minimaxi.com/ws/v1/t2a_v2 (model=speech-2.6-hd)
-[INFO] Server listening on http://127.0.0.1:8765
+[INFO] phase_b: server listening on http://127.0.0.1:8765
+[INFO] phase_b.config: STT=aliyun-nls  LLM=https://api.minimaxi.com/v1 (MiniMax-M3)  TTS=wss://api.minimaxi.com/ws/v1/t2a_v2 (speech-2.6-hd)
+[INFO] ws <session-id> connecting
+[INFO] ws <session-id> accepted
+[INFO] ws <session-id> sent ready
 ```
 
 ---
@@ -541,20 +577,21 @@ ls ~/.cache/modelscope/hub/  # 应包含 iic/SenseVoiceSmall
    PCC_LIVE_PORT=8766 ./start.sh
    ```
 
-### `pip install funasr` 失败或挂起
+### `pip install aliyun-nls` 失败或挂起
 
-这是 spike 期间遇到的主要障碍。解决方案:
+Aliyun SDK 仅在 Python 3.9+ 上验证过。解决方案:
 
-1. 使用 `--no-deps` 并手动安装依赖(见第 4 节)
+1. 使用 `--no-deps` 并手动安装依赖
 2. 使用全新 venv —— 系统 Python 可能有冲突包
 3. 如果你在 Apple Silicon 上,确保使用原生 arm64 Python(不是 Rosetta)。运行 `python -c "import platform; print(platform.machine())"` 确认输出 `arm64`
 
-### FunASR 模型下载慢或失败
+### Aliyun NLS 连接失败(`InvalidToken` / 4xx)
 
-ModelScope 的主要端点在中国。如果你在国外且下载慢:
+三个 `.env` 凭证必须都填;缺值或拼错都会报鉴权错。完整注册清单见 [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md)。常见错误:
 
-1. 设置 `MODELSCOPE_ENDPOINT=https://www.modelscope.cn`(默认)
-2. 如果仍然慢,手动从 [modelscope.cn](https://www.modelscope.cn/) 下载并放到 `~/.cache/modelscope/hub/`
+- 项目类型选了"**一句话识别**"而不是"**实时语音识别**" → STT session 起不来
+- 子账号没授予 `AliyunNLSFullAccess` → 403 Forbidden
+- `.env` 中 `LLM_*` 与 `ALIYUN_*` 串槽 → start.sh 启动 OK,但首次 STT 请求时报 config-parse 错
 
 ### 浏览器未检测到麦克风
 
@@ -603,12 +640,7 @@ python -m phase_b.tracker.csv_append ...
 ```bash
 git pull
 source .venv/bin/activate
-pip install -e . --upgrade
+pip install -r requirements.txt --upgrade
 ```
 
-FunASR 模型不会自动更新。要升级 ASR 模型:
-
-```bash
-rm -rf ~/.cache/modelscope/hub/iic/SenseVoiceSmall
-python -c "from funasr import AutoModel; m = AutoModel(model='iic/SenseVoiceSmall')"
-```
+Aliyun NLS 是托管云端点 —— 本地没有模型要升。轮换凭证时改 `.env` 然后 `./start.sh` 重启即可。

@@ -9,6 +9,7 @@
 
 ## 当前重要事件(临时登记)
 
+- **2026-10-05** — install + config + UI 收尾:`requirements.txt` + `INSTALL.md` § 4 改为两步安装(`pip install -r requirements.txt` + `pip install --no-deps --force-reinstall aliyun-nls==0.0.1`),跳过 aliyun-nls 0.0.1 列出的 matplotlib / pillow / fonttools / pycryptodome(~54MB)未使用 transitive deps,附 smoke test 命令验证;`_chart_output_path` 新增 `TRENDING_CHART_PATH` env var 支持(空 = 现有默认,绝对路径直接使用,相对路径相对仓库根,字面量 `{date}` 替换为当天日期);`.env.example` + `INSTALL.md` § 6 同步;`phase_b/config.py` Settings 新增 `trending_chart_path` 字段;`phase_b/wire/router.py` 加一行注释指向 `phase_b/rhythm/cpm.py` docstring 的 LLM think-time caveat;`phase_b/static/index.html` 标签 "平均 CPM" → "平均 CPM(含 LLM)",kpi 容器加 `title` 提示完整口径;`tests/phase_b/test_track_endpoint.py` 仍以 `monkeypatch` 覆盖,无破坏
 - **2026-10-05** — 隐私加固:tracker 文件名 `progress/tracker-real-sessions.csv` 重命名为 `progress/tracker-sessions.csv`,去掉文件名中的"real-"标识(与 2026-10-04 路径改名保持一致);24 个引用文件 + `.env` `TRACKER_CSV` 配置同步更新;CSV 数据保留(原 4 行音频路径已自动同步到新路径);`PRIVACY.md` 加显眼"路径与文件名命名缘由"说明,`Last updated` 同步到 2026-10-05
 - **2026-10-04** — 隐私加固:路径 `practice-logs/真人练习/` 重命名为 `practice-logs/sessions/`,去掉路径名中的"真人"标识(云同步 同步 / 备份脚本 / 错误日志(stack trace)可能泄漏真实练习标识);20 个引用文件 + `progress/tracker-real-sessions.csv` audio_path 列同步更新;历史 CHANGELOG 条目保留原路径以反映当时状态
 - **2026-09-05** — Phase B 新用户体验修复(共 9 处),由 GitHub 视角的 install/boot/walkthrough 触发

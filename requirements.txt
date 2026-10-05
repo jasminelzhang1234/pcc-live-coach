@@ -5,7 +5,9 @@ httpx==0.28.1
 python-multipart==0.0.20
 
 # --- Aliyun ASR/TTS (替代 FunASR,2026-09-06 起) ---
+# aliyun-nls 0.0.1 列了一大堆 install_requires(matplotlib / pillow / fonttools /
+# pycryptodome, ~54MB),本项目实际只 import nls / alibabacloud_nls_cloud_meta20190228
+# / alibabacloud_tea_openapi,不需要它们。
+# 安装时加 --no-deps 跳过这些 transitive deps,见 INSTALL.md § 4 的 smoke test。
 aliyun-nls==0.0.1
 alibabacloud-nls-cloud-meta20190228==1.0.0
-# 注:aliyun-nls 0.0.1 会顺带拉 matplotlib / pillow / fonttools / pycryptodome(~54MB),
-# 本项目不实际用到。装完后可 pip uninstall 掉省盘。
