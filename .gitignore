@@ -46,8 +46,6 @@ notes/
 
 # 设计 spec / dashboard mockup / 历史 commit 痕迹(开发轨迹文档,入版本控制意义不大)
 docs/
-# 例外:roadmap.md 是永久决策归档,需入版本控制
-!docs/roadmap.md
 
 # 真人案例评估报告(对应 knowledge/校准案例/ 已屏蔽,但产物散落)
 calibration-reports/
