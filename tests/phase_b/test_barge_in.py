@@ -184,7 +184,7 @@ async def main() -> None:
             print(f"[server] {line.decode('utf-8', errors='replace').rstrip()}", flush=True)
     tee_task = asyncio.create_task(_tee())
 
-    # Wait for boot (up to 30s; first funasr import on cold start is slow)
+    # Wait for boot (up to 30s; first Aliyun NLS WS handshake on cold start can be slow)
     import httpx as _httpx
     last_err = None
     booted = False
@@ -216,8 +216,8 @@ async def main() -> None:
         raise RuntimeError(f"server didn't start in 30s (returncode={proc.returncode}, last_err={last_err})")
 
     # Pre-warm the ASR model by opening and closing a WS session. This forces
-    # the slow funasr/torch import (~10s on first run) to happen NOW instead
-    # of during the barge-in timing window.
+    # the slow Aliyun NLS WS handshake (~10s on first run) to happen NOW
+    # instead of during the barge-in timing window.
     print("[smoke] pre-warming ASR model (may take ~10s)…")
     async with _httpx.AsyncClient() as h:
         r = await h.post(f"http://127.0.0.1:{server_port}/api/session/start", json={"persona_id": "vec-01"})

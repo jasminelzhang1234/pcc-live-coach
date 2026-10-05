@@ -23,7 +23,7 @@ from phase_b.asr import asr_worker as aw  # noqa: E402
 
 
 class _FakeModel:
-    """Stub FunASR AutoModel. Records every call and returns scripted results."""
+    """Stub ASR worker model. Records every call and returns scripted results."""
 
     def __init__(self, script: List[List[dict]]):
         # script[i] = sentence_info list to return on the i-th generate() call.
@@ -296,8 +296,8 @@ def test_clear_buffer_drops_buffered_audio_and_dedupe_cursor():
 
 
 def test_overlapping_segments_keep_only_longest(fast_trigger):
-    """FunASR sometimes returns multiple hypotheses for the same audio span
-    (different start/end, different text but all claiming the same speech).
+    """The VAD re-decode path can produce overlapping segments for the same audio
+    span (different start/end, different text but all claiming the same speech).
     The naive join produces repetition like '达到一个什么成果你想拿到你想拿到'.
     The overlap dedupe must keep only the longest text per cluster."""
     fake = _FakeModel([[
