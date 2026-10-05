@@ -52,6 +52,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 import subprocess
 import sys as _sys
@@ -69,6 +70,7 @@ from phase_b.asr.asr_worker import ASRWorker
 from phase_b.coach.orchestrator import run_turn
 from phase_b.personas.loader import list_ids, load as load_persona
 from phase_b.session.manager import get_manager
+from phase_b.session.retention import sweep_expired_audio
 
 
 logger = logging.getLogger(__name__)
@@ -168,6 +170,93 @@ def session_end(session_id: str) -> dict:
     if state is None:
         raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
     return state.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Gap 2: right-to-delete, session list, retention sweep
+# ---------------------------------------------------------------------------
+
+
+@api_router.delete("/session/{session_id}/audio", status_code=204)
+def session_delete_audio(session_id: str):
+    """Delete raw audio for a session (PIPL/GDPR right-to-delete).
+
+    Idempotent: 404 if session unknown, 204 if deleted or didn't exist.
+    Dialogue / rhythm JSONL rows remain (text-derived metrics, not raw voice).
+    """
+    state = get_manager().get(session_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"session not found: {session_id}")
+    audio_p = Path(state.recorder.audio_path)
+    try:
+        if audio_p.is_file():
+            audio_p.unlink()
+            logger.info("audio deleted for %s", session_id)
+    except Exception as e:
+        logger.exception("audio delete failed for %s", session_id)
+        raise HTTPException(status_code=500, detail=f"delete failed: {e}") from e
+    return None
+
+
+@api_router.get("/sessions")
+def list_sessions(with_audio: bool = False) -> dict:
+    """List sessions (in-memory + on-disk raw/*.wav).
+
+    with_audio=true merges both in-memory states and on-disk audio files so
+    the dashboard can show the full set even after a server restart.
+    """
+    mgr = get_manager()
+    items: list[dict] = []
+    seen: set[str] = set()
+    for s in mgr.all():
+        items.append({
+            "id": s.id,
+            "persona_id": s.persona_id,
+            "started_ms": s.started_ms,
+            "ended_ms": s.ended_ms,
+            "audio_bytes": s.recorder.audio_bytes(),
+        })
+        seen.add(s.id)
+    if with_audio:
+        sessions_dir = Path(mgr._sessions_dir)  # noqa: SLF001 (manager-internal path)
+        raw = sessions_dir / "raw"
+        if raw.is_dir():
+            for wav in raw.glob("real-*.wav"):
+                sid = wav.stem
+                if sid in seen:
+                    continue
+                try:
+                    mtime_ms = int(wav.stat().st_mtime * 1000)
+                    items.append({
+                        "id": sid,
+                        "on_disk_only": True,
+                        "audio_bytes": wav.stat().st_size,
+                        "started_ms": mtime_ms,
+                    })
+                except Exception:
+                    logger.exception("list_sessions scan failed for %s", wav)
+    return {"sessions": items}
+
+
+class RetentionBody(BaseModel):
+    days: int = 30
+
+
+@api_router.post("/retention/set")
+def set_retention(body: RetentionBody) -> dict:
+    """Update AUDIO_RETENTION_DAYS and trigger an immediate sweep.
+
+    The new value takes effect for subsequent process restarts; the sweep
+    runs once with the new value before this returns.
+    """
+    if body.days < 0:
+        raise HTTPException(status_code=400, detail="days must be >= 0")
+    os.environ["AUDIO_RETENTION_DAYS"] = str(body.days)
+    from phase_b.config import get_settings
+    settings = get_settings()
+    sessions_dir = Path(settings.sessions_dir).resolve()
+    deleted = sweep_expired_audio(sessions_dir, body.days)
+    return {"days": body.days, "deleted_now": deleted}
 
 
 @api_router.get("/session/{session_id}/transcript")
@@ -537,17 +626,51 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
         return
     logger.info("[ws %s] state ok, persona=%s", session_id, state.persona_id)
 
-    # Per-connection ASR worker (one buffer = one user).
+    # Gap 2: consent gate. Don't send "ready" until the browser has
+    # explicitly sent {"cmd":"consent","agree":true}. Until then, all
+    # incoming binary frames are discarded (recorder.write_audio is a
+    # no-op because recorder._consent_granted is False). The browser is
+    # expected to show the consent modal immediately on receiving
+    # "await_consent".
     from phase_b.config import get_settings
-
     s = get_settings()
+    try:
+        await websocket.send_json({
+            "event": "await_consent",
+            "session_id": session_id,
+            "retention_days": s.audio_retention_days,
+        })
+        consent_granted = await _wait_for_consent(websocket)
+    except Exception as e:
+        logger.warning("[ws %s] consent handshake failed: %s", session_id, e)
+        consent_granted = False
+    if not consent_granted:
+        try:
+            await websocket.close(code=1008, reason="consent not granted")
+        except Exception:
+            pass
+        logger.info("[ws %s] closed: consent not granted", session_id)
+        return
+    # Persist consent: open recorder files + write session_start marker.
+    mgr.mark_consented(session_id)
+    try:
+        await websocket.send_json({
+            "event": "consent_granted",
+            "session_id": session_id,
+            "retention_days": s.audio_retention_days,
+        })
+    except Exception:
+        pass
+
+    # Per-connection ASR worker (one buffer = one user). Created AFTER
+    # consent — never load ASR for a session whose audio we won't keep.
     worker = ASRWorker(sample_rate=16000)
     # Send "ready" FIRST, before any background tasks. There's a known
     # Starlette quirk where websocket.send_json blocks until outstanding
     # tasks on the same WS finish a handshake; spawning tasks before
     # the first send can stall the first message for tens of seconds.
     await websocket.send_json({"event": "ready", "session_id": session_id, "persona_id": state.persona_id})
-    logger.info("[ws %s] sent ready", session_id)
+    logger.info("[ws %s] sent ready (post-consent)", session_id)
 
     # Now kick off model load in the background. feed() no-ops until model
     # is ready, so the first ~3s of audio (cold start) is silently dropped —
@@ -603,8 +726,14 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
             await websocket.send_json({"event": "warn", "msg": "empty transcript; nothing to commit"})
             return False
         if active_turn_task is not None and not active_turn_task.done():
-            await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
-            return False
+            # Gap 1: in degraded (text-only) mode the coach may need to force a
+            # new turn even though the LLM is hung. Allow it through silently;
+            # the LLM retry / fallback will pick it up.
+            if state.asr_degraded:
+                await cancel_active_turn()
+            else:
+                await websocket.send_json({"event": "warn", "msg": "turn already in progress"})
+                return False
         auto_event_key = None
         if auto_event is not None:
             auto_event_key = utterance_identity(auto_event)
@@ -668,8 +797,18 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                 raise
             except Exception as e:
                 logger.exception("run_turn failed")
+                # Gap 1: classify transient errors so the frontend can decide
+                # whether to offer a retry. ReadTimeout / ConnectError /
+                # RemoteProtocolError are recoverable; others are not.
+                err_type = type(e).__name__
+                recoverable = err_type in ("ReadTimeout", "ConnectError", "RemoteProtocolError", "TimeoutException")
                 try:
-                    await websocket.send_json({"event": "error", "stage": "turn", "error": str(e)})
+                    await websocket.send_json({
+                        "event": "error",
+                        "stage": "turn",
+                        "error": str(e) or err_type,
+                        "recoverable": recoverable,
+                    })
                 except Exception:
                     pass
             finally:
@@ -705,9 +844,17 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
     async def pump_asr() -> None:
         """Forward ASRWorker events to the browser as JSON, and mirror the
         latest partial text into ``last_text_holder`` so the speak handler can
-        read it without racing the partial pump."""
+        read it without racing the partial pump.
+
+        Gap 1: on pump death, restart the underlying worker once and re-enter
+        the loop. After one restart, any further failure puts the session
+        into asr_degraded mode (text-only escape via force_turn / retry_turn).
+        """
         nonlocal pending_auto_task
-        try:
+        # Local alias so the inner restart path can re-enter this loop.
+        restart_used_local = [False]
+
+        async def _forward_loop() -> None:
             async for ev in worker.events():
                 if closing:
                     return
@@ -732,10 +879,40 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         pending_auto_task = asyncio.create_task(
                             submit_stable_auto(ev), name=f"auto-submit-{session_id}"
                         )
+
+        try:
+            await _forward_loop()
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("pump_asr failed")
+            logger.exception("pump_asr forward loop crashed")
+        # Outer exception path: try one restart, then give up.
+        if closing:
+            return
+        if not restart_used_local[0]:
+            restart_used_local[0] = True
+            logger.warning("[%s] attempting one ASR restart", session_id)
+            try:
+                await worker.restart()
+                try:
+                    await websocket.send_json({"event": "asr_restarted", "attempt": 1})
+                except Exception:
+                    return
+                await _forward_loop()
+                return
+            except Exception:
+                logger.exception("ASR restart failed; degrading to text mode")
+        # Final degraded path — mark and notify.
+        state.asr_degraded = True
+        try:
+            await websocket.send_json({
+                "event": "asr_degraded",
+                "fallback": "text",
+                "reason": "pump_dead_after_restart",
+            })
+        except Exception:
+            pass
+        logger.warning("[%s] ASR degraded; session continues in text-only mode", session_id)
 
     pump_task = asyncio.create_task(pump_asr(), name=f"asr-pump-{session_id}")
     # Notify browser once the ASR model is loaded (first "partial" implicitly
@@ -748,8 +925,16 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
             await websocket.send_json({"event": "asr_ready"})
         except Exception as e:
             logger.warning("asr load failed in background: %s", e)
+            # Gap 1: ASR load failure → switch to text-only degraded mode.
+            # Don't kill the session; the coach can still drive via speak
+            # with explicit text or via force_turn / retry_turn.
+            state.asr_degraded = True
             try:
-                await websocket.send_json({"event": "error", "stage": "asr_load", "error": str(e)})
+                await websocket.send_json({
+                    "event": "asr_degraded",
+                    "fallback": "text",
+                    "reason": f"load_failed: {e}",
+                })
             except Exception:
                 pass
 
@@ -847,6 +1032,45 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         break
                     elif cmd == "reset_text":
                         last_text_holder[0] = ""
+                    elif cmd == "force_turn":
+                        # Gap 1 escape hatch: abandon any in-flight turn
+                        # (e.g. LLM hung) so a new speak can proceed.
+                        was_active = await cancel_active_turn()
+                        last_text_holder[0] = ""
+                        try:
+                            await websocket.send_json({
+                                "event": "force_turn_acknowledged",
+                                "was_active": was_active,
+                            })
+                        except Exception:
+                            pass
+                    elif cmd == "retry_turn":
+                        # Gap 1 escape hatch: re-submit the most recent coach
+                        # line from the dialogue JSONL after an LLM failure.
+                        was_active = await cancel_active_turn()
+                        last_text_holder[0] = ""
+                        last_coach = ""
+                        try:
+                            dlg_path = Path(state.recorder.dialogue_path)
+                            if dlg_path.is_file():
+                                with dlg_path.open("r", encoding="utf-8") as f:
+                                    for line in f:
+                                        obj = json.loads(line) if line.strip() else None
+                                        if obj and obj.get("role") == "coach":
+                                            last_coach = obj.get("text", "")
+                        except Exception:
+                            logger.exception("retry_turn read failed")
+                        if last_coach:
+                            await submit_turn(last_coach)
+                            try:
+                                await websocket.send_json({"event": "retry_turn_acknowledged"})
+                            except Exception:
+                                pass
+                        else:
+                            try:
+                                await websocket.send_json({"event": "warn", "msg": "retry_turn: no prior coach turn"})
+                            except Exception:
+                                pass
                     else:
                         await websocket.send_json({"event": "warn", "msg": f"unknown cmd: {cmd}"})
     except WebSocketDisconnect:
@@ -876,3 +1100,41 @@ def mount_websocket(app: FastAPI) -> None:
     @app.websocket("/ws/session/{session_id}")
     async def ws_session(websocket: WebSocket, session_id: str) -> None:
         await _ws_session_impl(websocket, session_id)
+
+
+async def _wait_for_consent(websocket: WebSocket, timeout_s: float = 30.0) -> bool:
+    """Block until the browser sends {"cmd":"consent","agree":true}, or
+    return False on timeout / disagree / disconnect.
+
+    Gap 2: gate prevents any audio from being written to disk before
+    explicit user consent (PIPL/GDPR).
+    """
+    try:
+        async def _recv_once() -> Optional[bool]:
+            msg = await websocket.receive()
+            if msg.get("type") == "websocket.disconnect":
+                return None
+            if msg.get("type") != "websocket.receive":
+                return False
+            if "text" not in msg or msg["text"] is None:
+                return False
+            try:
+                obj = json.loads(msg["text"])
+            except json.JSONDecodeError:
+                return False
+            if obj.get("cmd") != "consent":
+                return False
+            return bool(obj.get("agree"))
+
+        result = await asyncio.wait_for(_recv_once(), timeout=timeout_s)
+        if result is None:
+            return False
+        return result
+    except asyncio.TimeoutError:
+        logger.warning("consent handshake timed out after %.1fs", timeout_s)
+        return False
+    except WebSocketDisconnect:
+        return False
+    except Exception:
+        logger.exception("consent handshake error")
+        return False

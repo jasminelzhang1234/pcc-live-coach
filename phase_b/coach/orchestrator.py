@@ -26,6 +26,7 @@ Yield protocol: each item is one of:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import AsyncIterator, Dict, List, Optional, Union
 
@@ -88,16 +89,43 @@ async def run_turn(
     messages: List[Dict[str, str]] = list(history) + [{"role": "user", "content": client_text}]
 
     logger.info("[%s] LLM call (persona=%s, text=%r)", session_id, persona_id, client_text[:40])
-    try:
-        reply = await chat(messages=messages, system=system)
-    except Exception as e:
-        logger.exception("[%s] LLM failed", session_id)
-        print(f"[orch] LLM FAILED ({type(e).__name__}): {e}", flush=True)
-        # httpx.ReadTimeout / ConnectError / etc. often have empty str(e),
-        # which used to surface as "错误(llm):" with no info. Fall back to
-        # type name so the UI at least shows "错误(llm):ReadTimeout".
-        err_msg = str(e) or type(e).__name__
-        yield {"kind": "error", "stage": "llm", "error": err_msg}
+
+    # Gap 1: retry primary → fallback model on transient failure.
+    # Reads llm_model / llm_fallback_model / llm_retry_max from settings.
+    # max_attempts caps total calls across both models (e.g. 2 = 1 primary
+    # + 1 fallback). Exponential backoff between attempts.
+    from phase_b.config import get_settings
+    _s = get_settings()
+    _candidates: List[str] = []
+    if _s.llm_model:
+        _candidates.append(_s.llm_model)
+    if _s.llm_fallback_model and _s.llm_fallback_model != _s.llm_model:
+        _candidates.append(_s.llm_fallback_model)
+    _max_attempts = max(1, min(_s.llm_retry_max, len(_candidates) or 1))
+
+    reply: Optional[str] = None
+    last_err: Optional[BaseException] = None
+    for attempt, model in enumerate(_candidates[:_max_attempts]):
+        try:
+            reply = await chat(messages=messages, system=system, model=model)
+            if attempt > 0:
+                logger.info("[%s] LLM recovered via fallback model=%s", session_id, model)
+            break
+        except Exception as e:
+            last_err = e
+            err_type = type(e).__name__
+            logger.warning(
+                "[%s] LLM attempt %d (%s) failed: %s",
+                session_id, attempt + 1, model, e,
+            )
+            if attempt + 1 < _max_attempts:
+                # Brief backoff before the next attempt.
+                await asyncio.sleep(0.5 * (2 ** attempt))
+    if reply is None:
+        logger.exception("[%s] LLM failed after %d attempt(s)", session_id, _max_attempts)
+        print(f"[orch] LLM FAILED ({type(last_err).__name__}): {last_err}", flush=True)
+        err_msg = str(last_err) if last_err else "unknown"
+        yield {"kind": "error", "stage": "llm", "error": err_msg or (type(last_err).__name__ if last_err else "unknown")}
         return
 
     logger.info("[%s] LLM reply (%d chars): %r", session_id, len(reply), reply[:80])

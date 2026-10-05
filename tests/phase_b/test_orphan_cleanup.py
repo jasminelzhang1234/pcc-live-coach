@@ -62,6 +62,8 @@ def test_probe_session_unlinks_artifacts_and_skips_csv(mgr: SessionManager):
 def test_real_session_keeps_artifacts_and_appends_csv(mgr: SessionManager):
     before = _csv_lines(mgr)
     state = mgr.start("vec-01", topic="real", difficulty=2)
+    # Gap 2: grant_consent opens the recorder (test bypasses WS handshake).
+    state.recorder.grant_consent()
     # Synthesize a tiny utterance — even without audio bytes, the dialogue
     # line is enough to mark this as a real session.
     state.recorder.write_dialogue({
@@ -86,6 +88,8 @@ def test_real_session_keeps_artifacts_and_appends_csv(mgr: SessionManager):
 def test_audio_only_session_kept(mgr: SessionManager):
     before = _csv_lines(mgr)
     state = mgr.start("vec-01", topic="audio-only", difficulty=2)
+    # Gap 2: grant_consent opens the recorder (test bypasses WS handshake).
+    state.recorder.grant_consent()
     state.recorder.write_audio(b"\x00\x00" * 800)  # 50ms of silence
     mgr.end(state.id)
     assert _existing(state) == {"wav": True, "dlg": True, "rhythm": True}

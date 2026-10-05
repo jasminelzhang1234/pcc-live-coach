@@ -60,6 +60,10 @@ class SessionState:
         self.ended_ms: Optional[int] = None
         # Latency telemetry (filled by Step 6+ pipeline).
         self.last_latency_ms: Optional[int] = None
+        # Gap 1: ASR health flag. True after a transient ASR failure that
+        # couldn't be recovered — the coach can keep talking via the
+        # force_turn / retry_turn escape hatches even without partials.
+        self.asr_degraded: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -118,7 +122,10 @@ class SessionManager:
     ) -> SessionState:
         sid = self._new_id()
         recorder = SessionRecorder(self._sessions_dir, sid)
-        recorder.open()
+        # Gap 2: do NOT open the recorder here. The browser must send
+        # {"cmd":"consent","agree":true} first; the router calls
+        # recorder.grant_consent() and writes the session_start marker
+        # retroactively. This satisfies PIPL/GDPR explicit-consent.
         state = SessionState(
             session_id=sid,
             persona_id=persona_id,
@@ -129,21 +136,33 @@ class SessionManager:
         )
         with self._lock:
             self._sessions[sid] = state
-        # Write a session-start marker to dialogue file.
-        recorder.write_dialogue(
-            {
-                "role": "_meta",
-                "event": "session_start",
-                "session_id": sid,
-                "persona_id": persona_id,
-                "topic": topic,
-                "difficulty": difficulty,
-                "started_ms": state.started_ms,
-                "started_iso": datetime.now().isoformat(timespec="seconds"),
-            }
-        )
-        logger.info("session started: %s persona=%s", sid, persona_id)
+        logger.info("session created (pre-consent): %s persona=%s", sid, persona_id)
         return state
+
+    def mark_consented(self, session_id: str) -> bool:
+        """Called by router after browser consent. Opens recorder files and
+        writes the session_start marker. Returns True if successful."""
+        with self._lock:
+            state = self._sessions.get(session_id)
+        if state is None:
+            return False
+        state.recorder.grant_consent()
+        try:
+            state.recorder.write_dialogue(
+                {
+                    "role": "_meta",
+                    "event": "session_start",
+                    "session_id": session_id,
+                    "persona_id": state.persona_id,
+                    "topic": state.topic,
+                    "difficulty": state.difficulty,
+                    "started_ms": state.started_ms,
+                    "started_iso": datetime.now().isoformat(timespec="seconds"),
+                }
+            )
+        except Exception:
+            logger.exception("failed to write session_start marker for %s", session_id)
+        return True
 
     def get(self, session_id: str) -> Optional[SessionState]:
         return self._sessions.get(session_id)
@@ -249,6 +268,16 @@ def get_manager() -> SessionManager:
     global _manager
     if _manager is None:
         from phase_b.config import get_settings
+        from phase_b.session.retention import sweep_expired_audio
 
-        _manager = SessionManager(sessions_dir=get_settings().sessions_dir)
+        settings = get_settings()
+        _manager = SessionManager(sessions_dir=settings.sessions_dir)
+        # Gap 2: sweep expired audio on process start (once per process).
+        try:
+            sweep_expired_audio(
+                Path(settings.sessions_dir).resolve(),
+                settings.audio_retention_days,
+            )
+        except Exception:
+            logger.exception("retention sweep failed during manager init")
     return _manager

@@ -114,6 +114,21 @@ class ASRWorker:
                     pass
                 self._pump_task = None
 
+    async def restart(self) -> None:
+        """Stop and re-start in place, with a fresh events queue.
+
+        Reused by router.py when _pump_loop dies unexpectedly (e.g. Aliyun WS
+        drops mid-session). Caller MUST not call feed() between stop() and
+        the new start() finishing — feed() is silently dropped while not
+        _running.
+
+        Exponential backoff is the caller's responsibility (router owns the
+        outer retry budget — see pump_asr in router.py).
+        """
+        await self.stop()
+        self._events = asyncio.Queue()
+        await self.start()
+
     def feed(self, pcm_bytes: bytes) -> None:
         """Push PCM to the underlying client. Non-blocking.
 

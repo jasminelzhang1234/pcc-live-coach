@@ -56,6 +56,8 @@ def test_end_writes_rhythm_jsonl(tmp_path: Path):
     try:
         mgr = mgr_mod.SessionManager(sessions_dir=str(sessions_dir))
         state = mgr.start(persona_id="vec-01", topic="t", difficulty=0)
+        # Gap 2: grant_consent opens the recorder (test bypasses WS handshake).
+        state.recorder.grant_consent()
         state.recorder.write_dialogue({"role": "coach", "event": "utterance", "turn": 1, "text": "hi", "ms": 1000})
         state.recorder.write_dialogue({"role": "client", "event": "utterance", "turn": 1, "text": "hello", "ms": 3000})
         # Capture log warnings to assert the warning is emitted.
@@ -100,6 +102,8 @@ def test_end_appends_to_existing_csv(tmp_path: Path):
     try:
         mgr = mgr_mod.SessionManager(sessions_dir=str(sessions_dir))
         state = mgr.start(persona_id="vec-09", topic="压力测试", difficulty=3)
+        # Gap 2: grant_consent opens the recorder (test bypasses WS handshake).
+        state.recorder.grant_consent()
         state.recorder.write_dialogue({"role": "coach", "event": "utterance", "turn": 1, "text": "hi", "ms": 1000})
         state.recorder.write_dialogue({"role": "client", "event": "utterance", "turn": 1, "text": "hello", "ms": 3000})
         mgr.end(state.id)

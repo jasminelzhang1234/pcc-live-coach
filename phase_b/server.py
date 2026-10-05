@@ -29,11 +29,12 @@ def create_app() -> FastAPI:
     app = FastAPI(title="phase_b", version="0.1.0")
 
     # CORS: only allow the local host (refuse cross-origin browser requests).
+    # DELETE is added in Gap 2 (right-to-delete audio endpoint).
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[f"http://{s.host}:{s.port}"],
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 

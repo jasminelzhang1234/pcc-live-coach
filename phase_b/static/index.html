@@ -31,6 +31,32 @@
   </div>
 </section>
 
+<!-- Page 1.5: consent gate (Gap 2, PIPL/GDPR) -->
+<section id="page-consent" class="page">
+  <header>
+    <h1>录音同意</h1>
+    <p class="subtitle">本场对话会被本地录音</p>
+  </header>
+  <div class="form">
+    <p>开始前请阅读并同意以下条款:</p>
+    <ul style="margin: 0 0 1rem 1.2rem; color: var(--text-dim); line-height: 1.6;">
+      <li>音频保存到本地 <code>practice-logs/sessions/raw/<id>.wav</code>(gitignored)</li>
+      <li>仅本地分析,不会上传,不会外发</li>
+      <li>默认保留 <span id="consent-retention-days">30</span> 天后自动删除(可在 <code>.env</code> 改 <code>AUDIO_RETENTION_DAYS</code>)</li>
+      <li>随时可在 dashboard 删除本场录音</li>
+    </ul>
+    <label style="display: flex; align-items: center; gap: 0.5rem;">
+      <input type="checkbox" id="consent-checkbox" />
+      <span>我已阅读并同意上述条款</span>
+    </label>
+    <div class="actions">
+      <button id="btn-consent-yes" class="primary" disabled>同意并开始</button>
+      <button id="btn-consent-no" class="secondary">不同意,关闭</button>
+    </div>
+    <p class="disclaimer">不同意也能用,但录音与 dashboard 的"听录音"功能不可用。详见 <a href="PRIVACY.html">隐私策略</a>。</p>
+  </div>
+</section>
+
 <!-- Page 2: session -->
 <section id="page-session" class="page">
   <header>

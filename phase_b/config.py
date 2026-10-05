@@ -112,6 +112,13 @@ class Settings:
     llm_timeout_s: float = 90.0  # M3 with reasoning_split often runs 30-60s on persona prompts
     llm_max_tokens: int = 1000  # M3 spends ~200 tokens on reasoning; need headroom for the actual reply
     llm_temperature: float = 0.6
+    # Gap 1: LLM retry + fallback. llm_retry_max caps total attempts across both
+    # primary + fallback models (e.g. 2 = 1 primary + 1 fallback). Default to
+    # no fallback (M2 disabled — single-model setup uses MiniMax-M3 only).
+    # Set llm_fallback_model to a model name to enable fallback. See
+    # orchestrator.py run_turn.
+    llm_fallback_model: str = ""
+    llm_retry_max: int = 2
 
     # TTS (MiniMax T2A)
     tts_ws_url: str = "wss://api.minimaxi.com/ws/v1/t2a_v2"
@@ -138,6 +145,12 @@ class Settings:
     personas_dir: str = "personas"
     sessions_dir: str = "practice-logs/sessions"
     tracker_csv: str = "progress/tracker-sessions.csv"
+    # Gap 2: Audio retention — raw/<id>.wav files older than this are
+    # auto-deleted on manager startup and via POST /api/retention/set. 0
+    # disables (files live forever). Default 30 days per common PIPL/GDPR
+    # "data minimization" posture; users can also delete on demand via
+    # DELETE /api/session/{id}/audio.
+    audio_retention_days: int = 30
     # Trending chart output. Empty = default per-day file under progress/.
     # If set, may be an absolute path or relative to repo root; "{date}" is
     # substituted with YYYY-MM-DD if present.
@@ -162,6 +175,8 @@ def get_settings() -> Settings:
         llm_timeout_s=float(_env("LLM_TIMEOUT_S", "90")),
         llm_max_tokens=_env_int("LLM_MAX_TOKENS", 1000),
         llm_temperature=float(_env("LLM_TEMPERATURE", "0.6")),
+        llm_fallback_model=_env("LLM_FALLBACK_MODEL", ""),
+        llm_retry_max=_env_int("LLM_RETRY_MAX", 2),
         tts_ws_url=_env("TTS_WS_URL", "wss://api.minimaxi.com/ws/v1/t2a_v2"),
         tts_api_key=_env("TTS_API_KEY", ""),
         tts_model=_env("TTS_MODEL", "speech-2.6-hd"),
@@ -180,6 +195,7 @@ def get_settings() -> Settings:
         personas_dir=_env("PERSONAS_DIR", "personas"),
         sessions_dir=_env("SESSIONS_DIR", "practice-logs/sessions"),
         tracker_csv=_env("TRACKER_CSV", "progress/tracker-sessions.csv"),
+        audio_retention_days=_env_int("AUDIO_RETENTION_DAYS", 30),
         trending_chart_path=_env("TRENDING_CHART_PATH", ""),
     )
     # Safety: refuse 0.0.0.0 unless allow_lan

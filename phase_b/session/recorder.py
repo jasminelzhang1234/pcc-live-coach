@@ -19,6 +19,12 @@ File layout (all under <sessions_dir>/):
 Files are opened in append mode. dialogue / rhythm are opened with mode='a'
 so multiple processes can write (Step 6 has only one writer per session, so
 no contention in practice).
+
+Gap 2 (consent gate): Files are NOT opened until grant_consent() is called.
+write_audio() is a no-op before consent. Manager.create() should NOT call
+open() — the router does, after receiving {"cmd":"consent","agree":true}
+from the browser. This satisfies PIPL/GDPR explicit-consent expectations
+(README warnings alone don't satisfy the legal requirement).
 """
 
 from __future__ import annotations
@@ -47,30 +53,68 @@ class SessionRecorder:
         self._wav: Optional[wave.Wave_write] = None
         self._dlg: Optional[Any] = None
         self._bytes_written: int = 0
+        # Gap 2: gate behind explicit user consent (PIPL/GDPR).
+        self._consent_granted: bool = False
 
-    def open(self) -> None:
+    @property
+    def consent_granted(self) -> bool:
+        return self._consent_granted
+
+    def grant_consent(self) -> None:
+        """Open the WAV + dialogue files. Called by router after the browser
+        sends {"cmd":"consent","agree":true}.
+
+        Idempotent on the consent flag, but if the wave handle was closed
+        (e.g. after SessionRecorder.close()) this re-opens the file handles
+        so legacy callers (tests, future append-after-end flows) keep working.
+        """
+        first_time = not self._consent_granted
+        self._consent_granted = True
         for p in [
             Path(self.audio_path).parent,
             Path(self.dialogue_path).parent,
             Path(self.rhythm_path).parent,
         ]:
             p.mkdir(parents=True, exist_ok=True)
-        self._wav = wave.open(self.audio_path, "wb")
-        self._wav.setnchannels(self.CHANNELS)
-        self._wav.setsampwidth(self.SAMPLE_WIDTH)
-        self._wav.setframerate(self.SAMPLE_RATE)
-        self._dlg = open(self.dialogue_path, "a", encoding="utf-8")
+        if first_time or self._wav is None:
+            self._wav = wave.open(self.audio_path, "wb")
+            self._wav.setnchannels(self.CHANNELS)
+            self._wav.setsampwidth(self.SAMPLE_WIDTH)
+            self._wav.setframerate(self.SAMPLE_RATE)
+        if first_time or self._dlg is None:
+            self._dlg = open(self.dialogue_path, "a", encoding="utf-8")
+        if first_time:
+            logger.info("recorder %s: consent granted, files opened", self._id)
+
+    def open(self) -> None:
+        """Deprecated alias for grant_consent().
+
+        Kept for backward compatibility with existing tests that called
+        recorder.open() directly. New code should call grant_consent().
+        """
+        self.grant_consent()
 
     def write_audio(self, pcm_bytes: bytes) -> None:
-        """Append raw int16 mono PCM."""
+        """Append raw int16 mono PCM. No-op until consent is granted."""
+        if not self._consent_granted:
+            return
         if self._wav is None:
-            raise RuntimeError("recorder not opened")
+            raise RuntimeError("recorder not opened (consent granted but wav handle is None)")
         self._wav.writeframes(pcm_bytes)
         self._bytes_written += len(pcm_bytes)
 
     def write_dialogue(self, obj: Dict[str, Any]) -> None:
+        if not self._consent_granted:
+            # Caller should not write before consent. If they do, log loudly
+            # rather than raising — dialogue JSONL is text-derived and not
+            # subject to the same legal constraint as raw audio.
+            logger.warning(
+                "write_dialogue called before consent on %s; dropping %s",
+                self._id, obj.get("event"),
+            )
+            return
         if self._dlg is None:
-            raise RuntimeError("recorder not opened")
+            raise RuntimeError("recorder not opened (consent granted but dlg handle is None)")
         self._dlg.write(json.dumps(obj, ensure_ascii=False) + "\n")
         self._dlg.flush()
 

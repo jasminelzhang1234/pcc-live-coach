@@ -156,7 +156,9 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       activeSession = await res.json();
       $("#session-title").textContent = `对话中 · ${activeSession.persona_id}`;
-      show("page-session");
+      // Gap 2: do NOT show page-session yet — wait for the consent gate.
+      // The server sends {"event":"await_consent"} immediately after WS
+      // accept; connectWs() switches to page-consent on receipt.
       await connectWs(activeSession.id);
     } catch (e) {
       console.error("start failed", e);
@@ -185,11 +187,33 @@
       let obj;
       try { obj = JSON.parse(ev.data); } catch { return; }
       switch (obj.event) {
+        case "await_consent":
+          // Gap 2: server is waiting for the browser to send
+          // {"cmd":"consent","agree":true}. Show the consent modal.
+          $("#consent-retention-days").textContent =
+            obj.retention_days != null ? String(obj.retention_days) : "30";
+          show("page-consent");
+          break;
+        case "consent_granted":
+          setStatus("同意已收到 — 等待 ASR 就绪…");
+          break;
         case "ready":
+          $("#session-title").textContent = `对话中 · ${obj.persona_id}`;
+          show("page-session");
           setStatus(`已连接 · persona=${obj.persona_id} — 点击麦克风开始`);
           break;
         case "asr_ready":
           setStatus("ASR 就绪 — 点击麦克风开始");
+          break;
+        case "asr_restarted":
+          // Gap 1: ASR reconnect after a transient drop.
+          setStatus(`ASR 重新连接中(attempt ${obj.attempt || 1})…`);
+          break;
+        case "asr_degraded":
+          // Gap 1: ASR permanently failed — switch to text-only mode.
+          // User can still type / speak (force_turn / retry_turn).
+          setStatus(`ASR 已断开 — 改为文字模式(${obj.reason || "unknown"})`);
+          alert("ASR 失联,已切到文字模式。可继续用「说」按钮提交,或在 dashboard 查看对话。");
           break;
         case "partial": {
           // Ignore stale ASR partials during TTS playback. The server's
@@ -534,6 +558,30 @@
   }
 
   $("#btn-back").addEventListener("click", () => show("page-entry"));
+
+  // ---- Consent gate (Gap 2) -----------------------------------------------
+  $("#consent-checkbox")?.addEventListener("change", () => {
+    const yes = $("#btn-consent-yes");
+    if (yes) yes.disabled = !$("#consent-checkbox").checked;
+  });
+  $("#btn-consent-yes")?.addEventListener("click", () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      alert("连接已断开,请重新开始");
+      return;
+    }
+    if (!$("#consent-checkbox").checked) return;
+    ws.send(JSON.stringify({ cmd: "consent", agree: true }));
+    setStatus("已发送同意 — 等待 ASR 就绪…");
+  });
+  $("#btn-consent-no")?.addEventListener("click", async () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try { ws.send(JSON.stringify({ cmd: "consent", agree: false })); } catch {}
+    }
+    await teardownSession();
+    show("page-entry");
+    const status = $("#session-status");
+    if (status) status.textContent = "已取消录音同意";
+  });
 
   // ---- Dashboard rhythm loader -------------------------------------------
   async function loadRhythm(sessionId) {
