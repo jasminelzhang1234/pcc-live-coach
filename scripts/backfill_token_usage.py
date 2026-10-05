@@ -28,11 +28,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from calc_token_cost import calc_session_cost  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-PROJECTS_DIR = (
-    Path.home() / ".claude" / "projects" /
-    "-Users-<user>-l-zhang-Library-CloudStorage-云同步-Accenture-China--Coaching-PCC-Live-Coach"
-)
+PROJECTS_ROOT = Path.home() / ".claude" / "projects"
+PROJECT_DIR_SUFFIX = "PCC-Live-Coach"  # Claude 把项目路径编码成 -Users-...-PCC-Live-Coach
+
 OUT_CSV = ROOT / "progress" / f"token-usage-backfilled-{date.today().isoformat()}.csv"
+
+
+def find_projects_dir() -> Path | None:
+    """Glob 匹配 ~/.claude/projects/ 下的 PCC-Live-Coach 项目目录。
+
+    Claude Code 把项目绝对路径编码成目录名(`.`/`(`/空格 → `-`),
+    同一项目在不同机器/不同挂载点下名字会变(OneDrive vs 云同步、
+    用户名差异),硬编码整段路径不可移植。改用后缀 glob,
+    多匹配时取最近修改的。
+    """
+    if not PROJECTS_ROOT.exists():
+        return None
+    matches = sorted(
+        (p for p in PROJECTS_ROOT.iterdir()
+         if p.is_dir() and p.name.endswith(PROJECT_DIR_SUFFIX)),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return matches[0] if matches else None
 
 CSV_HEADER = [
     "timestamp", "session_id", "agent", "model",
@@ -122,9 +140,17 @@ def get_session_start(jsonl_path: Path) -> str:
     return ""
 
 
+# 模块加载时解析一次,后续 main() 直接复用
+PROJECTS_DIR = find_projects_dir()
+
+
 def main() -> int:
-    if not PROJECTS_DIR.exists():
-        print(f"❌ projects dir not found: {PROJECTS_DIR}", file=sys.stderr)
+    if PROJECTS_DIR is None:
+        print(
+            f"❌ PCC project dir not found under {PROJECTS_ROOT} "
+            f"(suffix={PROJECT_DIR_SUFFIX!r});请确认 ~/.claude/projects/ 存在且至少有一个子目录以 'PCC-Live-Coach' 结尾",
+            file=sys.stderr,
+        )
         return 1
 
     jsonl_files = sorted(PROJECTS_DIR.glob("*.jsonl"))
