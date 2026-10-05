@@ -64,6 +64,10 @@ class SessionState:
         # couldn't be recovered — the coach can keep talking via the
         # force_turn / retry_turn escape hatches even without partials.
         self.asr_degraded: bool = False
+        # Gap 3: LLM token usage accumulated across all turns in this session.
+        self.llm_input_tokens: int = 0
+        self.llm_output_tokens: int = 0
+        self.llm_model_used: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -77,6 +81,11 @@ class SessionState:
             "dialogue_path": self.recorder.dialogue_path,
             "rhythm_path": self.recorder.rhythm_path,
             "last_latency_ms": self.last_latency_ms,
+            # Gap 3: LLM cost attribution.
+            "llm_input_tokens": self.llm_input_tokens,
+            "llm_output_tokens": self.llm_output_tokens,
+            "llm_model_used": self.llm_model_used,
+            "asr_minutes": round(self.recorder.audio_duration_ms() / 60000.0, 3),
         }
 
 
@@ -238,6 +247,8 @@ class SessionManager:
                 # so the path is stable regardless of where `python -m phase_b`
                 # is launched from.
                 csv_path = Path(__file__).resolve().parents[2] / csv_path
+            # Gap 3: pass token + ASR metrics so the CSV row carries
+            # cost attribution (see phase_b/llm/cost.py for pricing).
             append_session(
                 session_id=session_id,
                 persona=state.persona_id,
@@ -246,6 +257,10 @@ class SessionManager:
                 audio_path=state.recorder.audio_path,
                 transcript_path=state.recorder.dialogue_path,
                 csv_path=csv_path,
+                llm_input_tokens=state.llm_input_tokens,
+                llm_output_tokens=state.llm_output_tokens,
+                llm_model_used=state.llm_model_used,
+                asr_minutes=state.recorder.audio_duration_ms() / 60000.0,
             )
         except FileNotFoundError:
             # CSV file absent (e.g. first run before header was written) —

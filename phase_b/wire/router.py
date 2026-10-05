@@ -783,6 +783,12 @@ async def _ws_session_impl(websocket: WebSocket, session_id: str) -> None:
                         elif kind == "reply_end":
                             await websocket.send_json({"event": "reply_end", "turn": n})
                             state.last_latency_ms = int(time.time() * 1000) - t0
+                        elif kind == "token_usage":
+                            # Gap 3: accumulate per-session LLM token counts.
+                            state.llm_input_tokens += int(ev.get("input_tokens", 0) or 0)
+                            state.llm_output_tokens += int(ev.get("output_tokens", 0) or 0)
+                            if ev.get("model"):
+                                state.llm_model_used = str(ev.get("model"))
                         elif kind == "error":
                             await websocket.send_json(
                                 {"event": "error", "stage": ev.get("stage"), "error": ev.get("error")}

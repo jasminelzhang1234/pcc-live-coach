@@ -40,9 +40,14 @@ logger = logging.getLogger(__name__)
 TurnEvent = Union[Dict[str, object], bytes]
 
 
-def _build_system_prompt(persona_id: str, user_difficulty: int = 0) -> str:
-    """Compose a system prompt from persona sections + hard rules."""
-    p = load_persona(persona_id)
+def _build_system_prompt(persona_id: str, user_difficulty: int = 0,
+                          persona: Optional[Dict[str, object]] = None) -> str:
+    """Compose a system prompt from persona sections + hard rules.
+
+    Pass `persona=...` to avoid a second disk read when the caller already
+    has the persona dict loaded (run_turn does this for Gap 6 model pin).
+    """
+    p = persona if persona is not None else load_persona(persona_id)
     rules = p.get("hard_rules") or []
     rules_block = "\n".join(f"- {r}" for r in rules) if isinstance(rules, list) else str(rules)
     persona_diff = p.get("difficulty")
@@ -85,8 +90,17 @@ async def run_turn(
         return
 
     history = history or []
-    system = _build_system_prompt(persona_id, user_difficulty=user_difficulty)
+    # Load persona once for both system-prompt building (Gap 6 — model pin)
+    # and the system-prompt string assembly.
+    _persona = load_persona(persona_id)
+    system = _build_system_prompt(persona_id, user_difficulty=user_difficulty, persona=_persona)
     messages: List[Dict[str, str]] = list(history) + [{"role": "user", "content": client_text}]
+
+    # Gap 6 (LLM upgrade drift): honor persona's pinned model if set, falling
+    # back to the env LLM_MODEL. The persona author records the model at
+    # persona-tuning time; if you upgrade the model, re-validate with anchor
+    # sessions and bump `model_pin_date` in the persona frontmatter.
+    _persona_model = (str(_persona.get("model") or "")).strip()
 
     logger.info("[%s] LLM call (persona=%s, text=%r)", session_id, persona_id, client_text[:40])
 
@@ -96,18 +110,32 @@ async def run_turn(
     # + 1 fallback). Exponential backoff between attempts.
     from phase_b.config import get_settings
     _s = get_settings()
+    _primary = _persona_model or _s.llm_model
     _candidates: List[str] = []
-    if _s.llm_model:
-        _candidates.append(_s.llm_model)
-    if _s.llm_fallback_model and _s.llm_fallback_model != _s.llm_model:
+    if _primary:
+        _candidates.append(_primary)
+    if _s.llm_fallback_model and _s.llm_fallback_model not in _candidates:
         _candidates.append(_s.llm_fallback_model)
     _max_attempts = max(1, min(_s.llm_retry_max, len(_candidates) or 1))
 
     reply: Optional[str] = None
+    last_input_tokens: int = 0
+    last_output_tokens: int = 0
     last_err: Optional[BaseException] = None
+    last_used_model: Optional[str] = None
     for attempt, model in enumerate(_candidates[:_max_attempts]):
         try:
-            reply = await chat(messages=messages, system=system, model=model)
+            # Gap 3: capture token usage from the LLM response. We use
+            # return_usage=True to get (text, input_tokens, output_tokens).
+            result = await chat(
+                messages=messages, system=system, model=model, return_usage=True,
+            )
+            # chat() with return_usage=True returns (str, int, int).
+            text, in_tok, out_tok = result
+            reply = text
+            last_input_tokens += in_tok
+            last_output_tokens += out_tok
+            last_used_model = model
             if attempt > 0:
                 logger.info("[%s] LLM recovered via fallback model=%s", session_id, model)
             break
@@ -127,6 +155,12 @@ async def run_turn(
         err_msg = str(last_err) if last_err else "unknown"
         yield {"kind": "error", "stage": "llm", "error": err_msg or (type(last_err).__name__ if last_err else "unknown")}
         return
+
+    # Gap 3: surface token usage to the caller (router forwards to tracker).
+    yield {"kind": "token_usage",
+           "input_tokens": last_input_tokens,
+           "output_tokens": last_output_tokens,
+           "model": last_used_model or ""}
 
     logger.info("[%s] LLM reply (%d chars): %r", session_id, len(reply), reply[:80])
     print(f"[orch] LLM OK: {reply[:60]!r}", flush=True)

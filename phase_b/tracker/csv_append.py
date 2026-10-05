@@ -71,14 +71,33 @@ def build_row(
     judge_main: str = "",
     judge_2: str = "",
     audio_quality_notes: str = "",
+    llm_input_tokens: int = 0,
+    llm_output_tokens: int = 0,
+    llm_model_used: str = "",
+    asr_minutes: float = 0.0,
 ) -> Dict[str, str]:
     """Construct a row dict matching the given 95-col header.
 
     Unknown header columns are filled with empty strings. The marker
     scoring columns (claude_*, deepseek_*, totals, etc.) are intentionally
     blank — v1 only registers the session.
+
+    Gap 3 additions: pass llm_* and asr_* to surface cost attribution in
+    the tracker CSV. If the canonical header doesn't include the new
+    columns yet, they're dropped silently (defensive).
     """
     now = now or datetime.now()
+    # Compute cost in USD using the canonical pricing table.
+    llm_cost_usd = ""
+    asr_cost_usd = ""
+    if "llm_cost_usd" in header:
+        try:
+            from phase_b.llm.cost import llm_cost_usd as _calc_llm, asr_cost_usd as _calc_asr
+            llm_cost_usd = f"{_calc_llm(llm_model_used, llm_input_tokens, llm_output_tokens):.6f}"
+            asr_cost_usd = f"{_calc_asr(asr_minutes):.6f}"
+        except Exception:
+            llm_cost_usd = ""
+            asr_cost_usd = ""
     # Build a map of known fields by header name.
     known: Dict[str, str] = {
         "session_id": session_id,
@@ -95,6 +114,13 @@ def build_row(
         "audio_path": audio_path,
         "transcript_path": transcript_path,
         "audio_quality_notes": audio_quality_notes,
+        # Gap 3: cost columns.
+        "llm_input_tokens": str(llm_input_tokens) if "llm_input_tokens" in header else "",
+        "llm_output_tokens": str(llm_output_tokens) if "llm_output_tokens" in header else "",
+        "llm_model_used": llm_model_used if "llm_model_used" in header else "",
+        "llm_cost_usd": llm_cost_usd,
+        "asr_minutes": f"{asr_minutes:.3f}" if "asr_minutes" in header else "",
+        "asr_cost_usd": asr_cost_usd,
     }
     row: Dict[str, str] = {}
     for col in header:
@@ -225,8 +251,16 @@ def append_session(
     csv_path: Optional[Path] = None,
     reeval_of: str = "",
     audio_quality_notes: str = "",
+    llm_input_tokens: int = 0,
+    llm_output_tokens: int = 0,
+    llm_model_used: str = "",
+    asr_minutes: float = 0.0,
 ) -> Path:
-    """Convenience: load header from CSV, build row, append, return path."""
+    """Convenience: load header from CSV, build row, append, return path.
+
+    Gap 3 additions: pass llm_* and asr_* kwargs to surface cost in the
+    tracker CSV row.
+    """
     if csv_path is None:
         try:
             settings_root = Path(get_settings().project_root)
@@ -246,6 +280,10 @@ def append_session(
         header=header,
         reeval_of=reeval_of,
         audio_quality_notes=audio_quality_notes,
+        llm_input_tokens=llm_input_tokens,
+        llm_output_tokens=llm_output_tokens,
+        llm_model_used=llm_model_used,
+        asr_minutes=asr_minutes,
     )
     append_row(csv_path=csv_path, row=row)
     return csv_path

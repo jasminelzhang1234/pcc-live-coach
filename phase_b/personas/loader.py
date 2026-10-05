@@ -73,22 +73,38 @@ def _extract_hard_rules(sections: Dict[str, str]) -> List[str]:
 def load(persona_id: str, personas_dir: str = "personas") -> Dict[str, object]:
     """Load a persona by short ID (e.g. 'vec-01').
 
-    Files searched: <personas_dir>/<id>-client.md (preferred), <id>.md (fallback).
+    File search order (Gap 5 — multi-language convention):
+      1. <personas_dir>/<id>-client.<lang>.md   (lang = env PERSONAS_LANG, default "zh")
+      2. <personas_dir>/<id>-client.md           (legacy default — Chinese)
+      3. <personas_dir>/<id>.<lang>.md           (e.g. vec-01.en.md for English coach brief)
+      4. <personas_dir>/<id>.md                  (legacy fallback)
+
+    To enable English personas in the future, set PERSONAS_LANG=en and
+    create e.g. `vec-01-client.en.md` mirroring the structure of the .zh.md
+    file. Today only the default (Chinese) variant ships.
     """
+    import os
     root = Path(personas_dir)
     if not root.is_absolute():
         root = Path.cwd() / root
 
-    client_path = root / f"{persona_id}-client.md"
-    coach_path = root / f"{persona_id}.md"
+    lang = os.environ.get("PERSONAS_LANG", "zh").strip() or "zh"
+
+    candidates: list[Path] = []
+    if lang and lang != "zh":
+        candidates.append(root / f"{persona_id}-client.{lang}.md")
+        candidates.append(root / f"{persona_id}.{lang}.md")
+    candidates.append(root / f"{persona_id}-client.md")
+    candidates.append(root / f"{persona_id}.md")
+
     chosen: Optional[Path] = None
-    if client_path.is_file():
-        chosen = client_path
-    elif coach_path.is_file():
-        chosen = coach_path
+    for p in candidates:
+        if p.is_file():
+            chosen = p
+            break
     if chosen is None:
         raise FileNotFoundError(
-            f"persona not found: {persona_id} (looked in {root})"
+            f"persona not found: {persona_id} (looked in {root} with lang={lang!r})"
         )
 
     text = chosen.read_text(encoding="utf-8")
@@ -109,6 +125,10 @@ def load(persona_id: str, personas_dir: str = "personas") -> Dict[str, object]:
         "line": fm.get("线", ""),
         "difficulty": int(fm.get("难度", "0") or 0),
         "version": fm.get("版本", ""),
+        # Gap 6: persona may pin a specific model (LLM upgrade drift mitigation).
+        # Empty string means "fall back to LLM_MODEL env default".
+        "model": fm.get("model", "").strip(),
+        "model_pin_date": fm.get("model_pin_date", "").strip(),
         "file": str(chosen),
         "opening": opening.strip(),
         "surface_topic": (sections.get("表层议题") or "").strip(),

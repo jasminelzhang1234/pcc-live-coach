@@ -50,8 +50,13 @@ async def chat(
     temperature: Optional[float] = None,
     timeout_s: Optional[float] = None,
     transport: Optional[httpx.AsyncBaseTransport] = None,
+    return_usage: bool = False,
 ) -> str:
     """Send a chat completion request. Returns the assistant text.
+
+    If ``return_usage=True``, returns ``(text, input_tokens, output_tokens)``
+    instead of just text — used by the orchestrator to surface cost info to
+    the tracker CSV (Gap 3).
 
     All config params override `phase_b.config.Settings` if provided (handy for tests).
     """
@@ -96,10 +101,13 @@ async def chat(
     text = (msg.get("content") or "").strip()
     if not text:
         raise RuntimeError(f"LLM response empty content: {data!r}")
+    usage = data.get("usage") or {}
+    in_tok = int(usage.get("prompt_tokens") or 0)
+    out_tok = int(usage.get("completion_tokens") or 0)
     logger.info(
-        "LLM reply: model=%s tokens=%s preview=%r",
-        model,
-        data.get("usage", {}).get("completion_tokens"),
-        text[:60],
+        "LLM reply: model=%s tokens_in=%s tokens_out=%s preview=%r",
+        model, in_tok, out_tok, text[:60],
     )
+    if return_usage:
+        return text, in_tok, out_tok
     return text

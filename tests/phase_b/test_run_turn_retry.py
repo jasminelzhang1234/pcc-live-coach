@@ -31,13 +31,19 @@ def _stub_chat_factory(call_log: List[str], reply_for_model: dict):
 
     `call_log` is appended with the model name on each invocation.
     `reply_for_model` maps model name → reply text or "RAISE" to raise.
+
+    Honors the Gap 3 `return_usage` kwarg: when True, returns
+    ``(text, input_tokens, output_tokens)`` matching the real chat() contract.
     """
-    async def stub(messages, system=None, *, model=None, **kwargs):
+    async def stub(messages, system=None, *, model=None, return_usage=False, **kwargs):
         call_log.append(model or "")
         spec = reply_for_model.get(model or "")
         if spec == "RAISE":
             raise httpx.ReadTimeout("simulated primary timeout")
-        return spec or f"reply from {model}"
+        text = spec or f"reply from {model}"
+        if return_usage:
+            return text, 100, 50  # arbitrary token counts for the test
+        return text
     return stub
 
 

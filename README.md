@@ -141,6 +141,23 @@ Third-party attributions:
 
 项目作者 · Individual maintainer · No organization affiliation
 
+## Bus factor
+
+**This project has a bus factor of 1.** Only the original author deeply understands the full codebase (the persona system, the WebSocket pipeline, the PCC marker scoring, and the agent contracts in `.claude/agents/`). If you are forking this:
+
+- Start with [`CLAUDE.md`](CLAUDE.md) — it describes the architecture, the
+  iron rules (e.g. the pcc-coachee agent's "don't break character" rule), and
+  the dependency surface.
+- Read `.claude/agents/pcc-coachee.md` and `.claude/agents/pcc-assessor.md`
+  before changing the persona pipeline or the marker scoring logic.
+- The `personas/vec-01.md` (and its `-client.md` companion) is the canonical
+  example of how a persona is structured; copy that shape for new ones.
+- Tagged release points: `git tag pcc-v1.0` (and onward) mark known-good
+  snapshots — start there if you want a stable base.
+
+PRs are welcome; the maintainer reviews within ~1 week. If the maintainer
+goes dark for >1 month, treat this as an unmaintained project and fork.
+
 ---
 
 <br/>

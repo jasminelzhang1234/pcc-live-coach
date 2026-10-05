@@ -4,6 +4,11 @@ id: vec-01
 难度: 2
 训练重点: 3.1 3.2 3.4
 版本: coach
+# Gap 6 (LLM upgrade drift): pin the model this persona was tuned for.
+# Orchestrator uses this model instead of LLM_MODEL env default when set.
+# Bump "model_pin_date" when you upgrade — anchor sessions may need re-record.
+model: MiniMax-M3
+model_pin_date: 2026-10-05
 ---
 # 陈锐 · 要结果、要方法、不要"聊感受"的事业部总经理
 
