@@ -9,3 +9,6 @@ the maintainer <noreply@invalid.invalid> <noreply@invalid.invalid>
 
 # 把"小写 maintainer"形式归一为标准 "the maintainer"
 the maintainer <noreply@invalid.invalid> <maintainer@users.noreply.github.com>
+
+# 把 GitHub noreply email(<userid>+<username>@users.noreply.github.com)作者归一为 maintainer
+the maintainer <noreply@invalid.invalid> Jasmine-Zhang <247927691+jasminelzhang1234@users.noreply.github.com>

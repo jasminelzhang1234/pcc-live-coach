@@ -47,6 +47,9 @@ notes/
 # 设计 spec / dashboard mockup / 历史 commit 痕迹(开发轨迹文档,入版本控制意义不大)
 docs/
 
+# 本地渲染工具脚本(answer-me-with-html skill 的本地 wrapper,非产品一部分)
+bin/
+
 # 真人案例评估报告(对应 knowledge/校准案例/ 已屏蔽,但产物散落)
 calibration-reports/
 
@@ -78,6 +81,9 @@ observability/token-usage.csv
 # observability 报告 HTML/MD(只 csv 屏蔽不够;dashboard/report 含 token 用量 + 元数据)
 observability/*.html
 observability/*.md
+
+# observability 兜底:任何 glob 未覆盖的新文件类型都不会泄漏
+observability/
 
 # 测试子目录的 __pycache__(根级 __pycache__/ 已被顶层规则覆盖,子目录需显式列出)
 tests/**/__pycache__/
