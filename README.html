@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PCC Live Coach — PCC Marker Practice (text mode now, voice mode in preparation)</title>
+<style>
+:root {
+  --fg: #1f2328;
+  --fg-muted: #59636e;
+  --fg-subtle: #818d96;
+  --bg: #ffffff;
+  --bg-soft: #f6f8fa;
+  --bg-muted: #eaeef2;
+  --border: #d1d9e0;
+  --border-muted: #d1d9e0b3;
+  --accent: #0969da;
+  --accent-bg: #ddf4ff;
+  --warning-bg: #fff8c5;
+  --warning-border: #d4a72c;
+  --warning-fg: #4d3800;
+  --code-bg: #afb8c133;
+  --code-fg: #1f2328;
+  --shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
+  --link-fg: #0969da;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6edf3;
+    --fg-muted: #9198a1;
+    --fg-subtle: #6e7681;
+    --bg: #0d1117;
+    --bg-soft: #161b22;
+    --bg-muted: #21262d;
+    --border: #30363d;
+    --border-muted: #30363d80;
+    --accent: #2f81f7;
+    --accent-bg: #0c2d6b;
+    --warning-bg: #3a2d00;
+    --warning-border: #9d6307;
+    --warning-fg: #e3b300;
+    --code-bg: #6e768166;
+    --code-fg: #e6edf3;
+    --shadow: 0 0 transparent;
+    --link-fg: #2f81f7;
+  }
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.markdown-body {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+.markdown-body h1 {
+  font-size: 2em;
+  border-bottom: 1px solid var(--border-muted);
+  padding-bottom: 0.3em;
+  margin-top: 0;
+}
+.markdown-body h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid var(--border-muted);
+  padding-bottom: 0.3em;
+}
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+.markdown-body a {
+  color: var(--link-fg);
+  text-decoration: none;
+}
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+.markdown-body strong {
+  font-weight: 600;
+}
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+.markdown-body li {
+  margin-bottom: 4px;
+}
+.markdown-body li > p {
+  margin-bottom: 4px;
+}
+.markdown-body blockquote {
+  margin: 0 0 16px 0;
+  padding: 8px 16px;
+  color: var(--fg-muted);
+  border-left: 4px solid var(--border);
+  background: var(--bg-soft);
+  border-radius: 0 4px 4px 0;
+}
+.markdown-body blockquote.warning {
+  border-left-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+.markdown-body hr {
+  height: 0.5px;
+  border: 0;
+  background: var(--border);
+  margin: 24px 0;
+}
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  padding: 0.2em 0.4em;
+  background: var(--code-bg);
+  border-radius: 6px;
+  color: var(--code-fg);
+}
+.markdown-body pre {
+  margin: 0 0 16px 0;
+  padding: 16px;
+  background: var(--bg-soft);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.92em;
+  line-height: 1.45;
+}
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 1em;
+  color: var(--fg);
+}
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 0 0 16px 0;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.markdown-body table th,
+.markdown-body table td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body table th {
+  background: var(--bg-soft);
+  font-weight: 600;
+}
+.markdown-body table tr:nth-child(2n) {
+  background: var(--bg-soft);
+}
+.lang-badge {
+  display: inline-block;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-right: 8px;
+  vertical-align: 2px;
+  letter-spacing: 0.04em;
+}
+</style>
+</head>
+<body>
+<article class="markdown-body">
+
+<h1>PCC Live Coach — PCC Marker Practice <span class="lang-badge">EN</span> (text mode on by default, voice mode requires setup)</h1>
+
+<blockquote class="warning">⚠️ <strong>Pre-alpha / Experimental.</strong> This project is under active development and has not been released publicly yet. Functionality is incomplete and may change without notice.</blockquote>
+
+<blockquote class="warning">⚠️ <strong>NOT an ICF-certified tool.</strong> The evaluation criteria are derived from a single real PCC supervision transcript and are not officially sanctioned by the International Coaching Federation (ICF). Do not use outputs for ICF credentialing applications. See <a href="DISCLAIMER.md">DISCLAIMER.md</a>.</blockquote>
+
+<hr>
+
+<h2>What is this?</h2>
+
+<p><strong>PCC Live Coach</strong> is a PCC exam prep practice tool for coaches preparing for the ICF Professional Certified Coach (PCC) credential. It supports <strong>two complementary modes</strong> — text mode is available now and covers most of the training, voice mode adds the audio-only dimensions.</p>
+
+<table>
+<thead><tr><th></th><th>Text mode (default)</th><th>Voice mode (Phase B, in preparation)</th></tr></thead>
+<tbody>
+<tr><td><strong>Status</strong></td><td>✅ Available now</td><td>⚠️ Code shipped, awaiting trigger conditions (≥10 real-coach sessions + structural issues resolved + remaining gaps in 5.5/6.6/7.6)</td></tr>
+<tr><td><strong>How you practice</strong></td><td>Type messages in VS Code Claude Code, switching to the <code>pcc-coachee</code> agent</td><td>Speak into your mic in a browser; STT/LLM/TTS pipeline runs on your machine</td></tr>
+<tr><td><strong>Time to first session</strong></td><td>~30 seconds (if VS Code + Claude Code are already installed)</td><td>~30 minutes (Python venv + Aliyun NLS account + <code>.env</code> + microphone)</td></tr>
+<tr><td><strong>PCC markers covered</strong></td><td>34 of 37 (everything except 5.5, 6.6, 7.6)</td><td>All 37 (adds the 3 audio-only markers)</td></tr>
+<tr><td><strong>Privacy</strong></td><td>Text only; swap to local LLM (Ollama / LM Studio / vLLM) for fully offline</td><td>Default cloud (Aliyun NLS + MiniMax); any of STT/LLM/TTS can be swapped to local</td></tr>
+</tbody>
+</table>
+
+<h3>30-second text-mode quickstart</h3>
+
+<ol>
+<li>Open VS Code with the Claude Code extension.</li>
+<li>Switch to the <code>pcc-coachee</code> agent (full SOP: <a href="personas/README.md">personas/README.md § 配套练习 SOP</a>).</li>
+<li>Type: <code>开始陪练,选 vec-08</code> (or pick your own; see <a href="personas/README.md">personas/README.md</a> — easy difficulty-1 starters: vec-06 / vec-08 / voc-05).</li>
+</ol>
+
+<p>No Python, no <code>.env</code>, no Aliyun account, no microphone. The <code>pcc-coachee</code> agent reads its persona file and starts the roleplay. When the coach ends the session, type <code>全评</code> to hand off to the <code>pcc-assessor</code> agent for a 37-marker HTML report.</p>
+
+<p>For voice mode setup, see <a href="INSTALL.md">INSTALL.md</a>.</p>
+
+<p>It is <strong>not</strong> a substitute for real client practice hours. ICF requires submitted recordings from real clients, not AI personas. See <a href="DISCLAIMER.md">DISCLAIMER.md</a>.</p>
+
+<hr>
+
+<h2>Highlights</h2>
+
+<ul>
+<li>💬 <strong>Text-mode coaching available now</strong> — switch to the <code>pcc-coachee</code> agent in VS Code Claude Code and start a 45-min roleplay in 30 seconds (covers 34/37 PCC markers, zero install)</li>
+<li>🎙️ <strong>Voice mode opt-in</strong> — <code>phase_b/</code> WebSocket pipeline ready; always opt-in (requires Aliyun account + <code>.env</code> + microphone). Docs frame it as "experimental" until ≥10 real-coach sessions are logged (see <a href="#status">Status</a>)</li>
+<li>📊 <strong>Objective rhythm metrics</strong> — silence duration, CPM (characters per minute), barge-in detection, question length, inter-question pause (voice mode only)</li>
+<li>🔒 <strong>Privacy by configuration</strong> — STT / LLM / TTS are independently switchable endpoints; self-host any of them to keep data on your machine. Default STT (Aliyun NLS) and LLM/TTS (MiniMax) are cloud-hosted — see <a href="PRIVACY.md">PRIVACY.md</a>.</li>
+<li>🧠 <strong>Aligned with existing pcc-assessor</strong> — both text and voice sessions feed into the same 37-marker evaluation pipeline (text-mode SOP: <a href="personas/README.md">personas/README.md</a>)</li>
+<li>🌐 <strong>Browser-based voice UI</strong> — Chrome / Safari for voice mode; text mode needs only VS Code + Claude Code (no Python required)</li>
+</ul>
+
+<hr>
+
+<h2>5 分钟入门路径(小白先看)</h2>
+
+<blockquote>如果你不确定从哪儿开始,按你的画像走下面 5 条路径之一:</blockquote>
+
+<table>
+<thead><tr><th>你是谁</th><th>先看</th><th>然后</th></tr></thead>
+<tbody>
+<tr><td><strong>我现在就要练,什么都不想装</strong></td><td>(无需阅读其他文档) — VS Code + Claude Code → 切到 <code>pcc-coachee</code> agent → 输入 <code>开始陪练,选 vec-08</code>。30 秒上场,覆盖 34/37 个 markers</td><td>完整 SOP 见 <a href="personas/README.md">personas/README.md § 30 秒上手</a></td></tr>
+<tr><td><strong>PCC 备考教练(领域熟、技术小白)</strong></td><td><a href="FAQ.md#pcc-概念速通领域小白">FAQ.md § PCC 概念速通</a> — 5 分钟搞懂 37 markers / 5.5-6.6-7.6 是什么</td><td>文字版先跑(见上方↑),再考虑语音版 → <a href="INSTALL.md">INSTALL.md § 1-7</a></td></tr>
+<tr><td><strong>开发者(技术熟、领域小白)</strong></td><td><a href="FAQ.md#pcc-概念速通领域小白">FAQ.md § PCC 概念速通</a> — 看 ICF PCC 评估口径</td><td>文字版先跑(见上方↑),再换本地 LLM 全离线(<a href="INSTALL.md#self-hosted-llm-optional-for-full-privacy">INSTALL.md § Self-hosted LLM</a>)</td></tr>
+<tr><td><strong>完全小白(技术 + 领域都不熟)</strong></td><td><a href="FAQ.md">FAQ.md</a> 通读一遍(~10 分钟)</td><td>文字版先跑(无需任何 install) → 唤 <code>pcc-assessor</code> 看评估 → 再考虑语音版</td></tr>
+<tr><td><strong>只想看现状 / 不准备上手</strong></td><td><a href="#status">Status § Two modes: text now / voice in preparation</a></td><td>文字版立即可用,语音版等 3 个 trigger condition</td></tr>
+</tbody>
+</table>
+
+<h3>真实使用流程</h3>
+
+<blockquote>💡 <strong>文字版(今天就能用,推荐路径)</strong>:VS Code + Claude Code → 切到 <code>pcc-coachee</code> agent → 输入 <code>开始陪练,选 vec-08</code>。详见 <a href="#what-is-this">What is this? § 30-second text-mode quickstart</a>。</blockquote>
+
+<p>语音版流程(代码已写、默认未启用):</p>
+
+<pre><code>① 装环境 (INSTALL § 1-4)        ~10 分钟
+② 拿 Aliyun NLS 三件套          ~15 分钟 (要去阿里云控制台开项目 + 子账号)
+③ 填 .env 跑 ./start.sh          ~1 分钟
+④ 浏览器选 persona 开练          45 分钟一场
+⑤ 收场后唤 pcc-assessor 评估     ~5 分钟 (出 HTML 报告 + tracker CSV 追加)
+</code></pre>
+
+<blockquote class="warning">⚠️ <strong>Pre-alpha 提醒</strong>:项目自我定位未公开发布。文字版(Phase A)今天就能用,语音版(Phase B)代码已提交但默认未启用 —— 别把语音版当生产工具用。</blockquote>
+
+<hr>
+
+<h2>LLM provider flexibility</h2>
+
+<p>The default LLM endpoint (<code>https://api.minimaxi.com/v1</code>, model <code>MiniMax-M3</code>) is a <strong>placeholder</strong> — the code uses the standard OpenAI Chat Completions API, so any OpenAI-compatible endpoint works. Switch by editing <code>.env</code>:</p>
+
+<table>
+<thead><tr><th>Provider</th><th><code>LLM_BASE_URL</code></th><th>Privacy</th></tr></thead>
+<tbody>
+<tr><td><strong>MiniMax API</strong> (default)</td><td><code>https://api.minimaxi.com/v1</code></td><td>Cloud — text sent to MiniMax</td></tr>
+<tr><td><strong>OpenAI</strong></td><td><code>https://api.openai.com/v1</code></td><td>Cloud — text sent to OpenAI</td></tr>
+<tr><td><strong>DeepSeek</strong></td><td><code>https://api.deepseek.com/v1</code></td><td>Cloud — text sent to DeepSeek</td></tr>
+<tr><td><strong>Azure OpenAI</strong></td><td><code>https://&lt;resource&gt;.openai.azure.com/openai/deployments/&lt;dep&gt;</code></td><td>Cloud — text sent to Azure</td></tr>
+<tr><td><strong>Ollama</strong> (local)</td><td><code>http://127.0.0.1:11434/v1</code></td><td><strong>Fully offline</strong></td></tr>
+<tr><td><strong>LM Studio</strong> (local)</td><td><code>http://127.0.0.1:1234/v1</code></td><td><strong>Fully offline</strong></td></tr>
+<tr><td><strong>vLLM</strong> (local)</td><td><code>http://127.0.0.1:8000/v1</code></td><td><strong>Fully offline</strong>, GPU-accelerated</td></tr>
+<tr><td><strong>OpenRouter / OneAPI</strong></td><td><code>https://openrouter.ai/api/v1</code></td><td>Cloud — aggregates many providers</td></tr>
+</tbody>
+</table>
+
+<p>For <strong>fully offline</strong> operation, choose a local provider (Ollama / LM Studio / vLLM). No conversation text leaves your machine. See <a href="INSTALL.md#self-hosted-llm-optional-for-full-privacy">INSTALL.md § Self-hosted LLM</a> and <a href="PRIVACY.md#supported-llm-providers">PRIVACY.md § Supported LLM providers</a>.</p>
+
+<hr>
+
+<h2>Architecture (planned)</h2>
+
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  Browser (Chrome / Safari)                                │
+│  ├─ Web Audio API: 16kHz PCM microphone capture           │
+│  ├─ WebSocket client: bidirectional stream to backend    │
+│  └─ Web Audio playback: TTS audio stream                  │
+└────────────────────┬─────────────────────────────────────┘
+                     │ WebSocket (wss://)
+┌────────────────────▼─────────────────────────────────────┐
+│  FastAPI / WebSocket server (single process, ~600 LoC)    │
+│  ├─ Audio ingest → Aliyun NLS WS (configurable STT)       │
+│  ├─ STT partial → LLM (HTTP streaming, MiniMax M3)        │
+│  ├─ LLM stream → TTS (MiniMax T2A WS, streaming PCM)      │
+│  ├─ Auto-submit on utterance_end + barge-in (cancel turn) │
+│  └─ Rhythm extraction (silence / CPM / barge-in)          │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+┌────────────────────▼─────────────────────────────────────┐
+│  Persistence (files, no traditional database)              │
+│  ├─ Practice audio: practice-logs/sessions/*.mp3          │
+│  ├─ Per-session artifacts: practice-logs/sessions/&lt;YYYY-MM-DD&gt;-session-NN/ │
+│  └─ Append to existing progress/tracker-sessions.csv │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+
+<hr>
+
+<h2 id="status">Status</h2>
+
+<blockquote class="warning">⚠️ <strong>Voice mode always requires per-user setup</strong> — Aliyun account + <code>.env</code> + microphone — so it cannot be auto-enabled for new users. Backend (<code>phase_b/</code>, 3546 LoC) and frontend (<code>phase_b/static/</code>, 1067 LoC) are committed and runnable via <code>./start.sh</code>, but voice mode is <strong>opt-in for everyone, always</strong>. Text mode is the default path.</blockquote>
+
+<ul>
+<li>✅ STT swap landed — FunASR → Aliyun NLS streaming WebSocket (2026-09-06). Real-time partial + sentence-end trigger now drives auto-submit. See <a href="phase_b/_reports/phase-b-data-flow-2026-09-06.md">data-flow report</a>.</li>
+<li>✅ End-to-end voice pipeline — first real session <code>real-2026-09-06-08</code> produced dialogue JSONL + raw wav + rhythm features (no transcript placeholders).</li>
+<li>✅ Dashboard v2 — three pages (entry / session / dashboard) with KPI tiles, inline audio playback, transcript table, trending-chart regen, and PCC 37-marker assessment button (2026-10-04).</li>
+<li>✅ XSS hardening — <code>textContent</code> replaces <code>innerHTML</code> in transcript render (2026-10-04).</li>
+<li>⚠️ Backend code — <code>phase_b/</code> (28 .py files, 3546 LoC) + 18 test files under <code>tests/phase_b/</code>. <strong>Shipped, opt-in only.</strong></li>
+<li>⚠️ Frontend code — <code>phase_b/static/</code> (index.html + app.js + audio_state.js + styles.css, 1067 LoC). <strong>Shipped, opt-in only.</strong></li>
+</ul>
+
+<p><strong>Why text mode first?</strong> Two reasons.</p>
+
+<p><strong>1. Per-user setup cost.</strong> Voice mode requires Aliyun account + 3 cloud keys in <code>.env</code> + a microphone. That is per-user configuration that cannot be done by the project on someone's behalf. So voice mode will always be opt-in — even after the project itself considers it mature.</p>
+
+<p><strong>2. Maturity milestone.</strong> Independent of (1), the project tracks a separate milestone: <strong>after ≥10 real-coach practice sessions</strong> are logged, voice mode graduates from "experimental opt-in (for the brave)" to "recommended opt-in (for most users)" in user-facing docs. This is a documentation/messaging milestone — it does <strong>not</strong> change the per-user setup requirement. Currently at <strong>1 of 10</strong> (2026-08-31). Until the threshold is crossed, voice mode is framed as experimental.</p>
+
+<p>In summary — text mode is the default. Voice mode is always opt-in, and is currently framed as experimental until the 10-session milestone is reached.</p>
+
+<hr>
+
+<h2 id="quick-start">Quick start</h2>
+
+<pre><code class="language-bash"># One-shot launcher (activates venv, checks .env, opens browser):
+./start.sh
+# or, on Mac, double-click start.command in Finder.
+</code></pre>
+
+<p>For full instructions, see <a href="INSTALL.md">INSTALL.md</a> and <a href="DEPLOY.md">DEPLOY.md</a>.</p>
+
+<hr>
+
+<h2>Documentation</h2>
+
+<ul>
+<li><a href="INSTALL.md">INSTALL.md</a> — environment setup, venv, Aliyun NLS credentials (default STT)</li>
+<li><a href="DEPLOY.md">DEPLOY.md</a> — local deployment, ports, firewall, model cache</li>
+<li><a href="PRIVACY.md">PRIVACY.md</a> — privacy guarantees, configurable LLM endpoint</li>
+<li><a href="DISCLAIMER.md">DISCLAIMER.md</a> — ICF boundary, no warranty, no liability</li>
+<li><a href="FAQ.md">FAQ.md</a> — common questions</li>
+<li><a href="TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> — common errors and workarounds</li>
+<li><a href="CONTRIBUTING.md">CONTRIBUTING.md</a> — how to contribute</li>
+<li><a href="CODE_OF_CONDUCT.md">CODE_OF_CONDUCT.md</a> — community norms</li>
+<li><a href="LICENSE">LICENSE</a> — Apache-2.0</li>
+</ul>
+
+<hr>
+
+<h2>License</h2>
+
+<p>Apache License 2.0. See <a href="LICENSE">LICENSE</a>.</p>
+
+<p>Third-party attributions:</p>
+
+<ul>
+<li>Aliyun NLS Python SDK (<code>aliyun-nls</code>) — Apache-2.0 (default STT endpoint)</li>
+<li>PyTorch — BSD-3-Clause</li>
+<li>FastAPI — MIT</li>
+</ul>
+
+<hr>
+
+<h2>Maintainer</h2>
+
+<p>项目作者 · Individual maintainer · No organization affiliation</p>
+
+<h2>Bus factor</h2>
+
+<p><strong>This project has a bus factor of 1.</strong> Only the original author deeply understands the full codebase (the persona system, the WebSocket pipeline, the PCC marker scoring, and the agent contracts in <code>.claude/agents/</code>). If you are forking this:</p>
+
+<ul>
+<li>Start with <a href="CLAUDE.md"><code>CLAUDE.md</code></a> — it describes the architecture, the iron rules (e.g. the pcc-coachee agent's "don't break character" rule), and the dependency surface.</li>
+<li>Read <code>.claude/agents/pcc-coachee.md</code> and <code>.claude/agents/pcc-assessor.md</code> before changing the persona pipeline or the marker scoring logic.</li>
+<li>The <code>personas/vec-01.md</code> (and its <code>-client.md</code> companion) is the canonical example of how a persona is structured; copy that shape for new ones.</li>
+<li>Tagged release points: <code>git tag pcc-v1.0</code> (and onward) mark known-good snapshots — start there if you want a stable base.</li>
+</ul>
+
+<p>PRs are welcome; the maintainer reviews within ~1 week. If the maintainer goes dark for &gt;1 month, treat this as an unmaintained project and fork.</p>
+
+<hr>
+<hr>
+
+<h1>PCC Live Coach — PCC 标记训练工具(文字版默认可用,语音版需要配置) <span class="lang-badge">CN</span></h1>
+
+<blockquote class="warning">⚠️ <strong>预发布 / 实验性。</strong> 本项目处于活跃开发阶段,尚未公开发布。功能不完整,可能随时变更。</blockquote>
+
+<blockquote class="warning">⚠️ <strong>不是 ICF 认证工具。</strong> 评估标准来自一份真实 PCC 督导录音的本地校准,未经国际教练联合会(ICF)官方批准。<strong>不得</strong>用于 ICF 认证申请。详见 <a href="DISCLAIMER.md">DISCLAIMER.md</a>。</blockquote>
+
+<hr>
+
+<h2>这是什么?</h2>
+
+<p><strong>PCC Live Coach</strong> 是给备考国际认证教练(ICF PCC)的陪练工具。它提供<strong>两种互补模式</strong> —— 文字版今天就能用、覆盖大部分训练维度,语音版补上仅靠音频才能评估的 3 个 markers。</p>
+
+<table>
+<thead><tr><th></th><th>文字陪练(默认模式)</th><th>语音陪练(Phase B,筹备中)</th></tr></thead>
+<tbody>
+<tr><td><strong>状态</strong></td><td>✅ 立即可用</td><td>⚠️ 代码已写,等待触发条件(≥10 场真人陪练 + 结构性问题已稳定解决 + 剩余差距集中在 5.5/6.6/7.6)</td></tr>
+<tr><td><strong>怎么练</strong></td><td>在 VS Code Claude Code 里切到 <code>pcc-coachee</code> agent,打字对话</td><td>浏览器 + 麦克风,本机起 STT/LLM/TTS 管线</td></tr>
+<tr><td><strong>首次上手时间</strong></td><td>~30 秒(假设 VS Code + Claude Code 已经装好)</td><td>~30 分钟(Python venv + Aliyun NLS 账号 + <code>.env</code> + 麦克风)</td></tr>
+<tr><td><strong>覆盖 markers</strong></td><td>34/37 个(除 5.5、6.6、7.6 外全部)</td><td>37/37 全部(多出 3 个音频专属 markers)</td></tr>
+<tr><td><strong>隐私</strong></td><td>只走文字;换本地 LLM(Ollama / LM Studio / vLLM)可完全离线</td><td>默认云端(Aliyun NLS + MiniMax);三件套可独立切换到本地</td></tr>
+</tbody>
+</table>
+
+<h3>30 秒文字版试玩</h3>
+
+<ol>
+<li>打开 VS Code + Claude Code 扩展</li>
+<li>切到 <code>pcc-coachee</code> agent(完整 SOP 见 <a href="personas/README.md">personas/README.md § 配套练习 SOP</a>)</li>
+<li>输入:<code>开始陪练,选 vec-08</code>(或自选,推荐难度 1 起点:vec-06 / vec-08 / voc-05,详见 <a href="personas/README.md">personas/README.md</a>)</li>
+</ol>
+
+<p>零 Python、零 <code>.env</code>、零阿里云账号、零麦克风。<code>pcc-coachee</code> agent 读 persona 文件开始扮演。教练结束会话后,输入 <code>全评</code> 自动转 <code>pcc-assessor</code> agent 出 37 marker HTML 报告。</p>
+
+<p>要装语音版见 <a href="INSTALL.md">INSTALL.md</a>。</p>
+
+<p><strong>它不能替代真实客户的练习时长。</strong> ICF 要求提交的录音来自真实客户,而不是 AI 人格。详见 <a href="DISCLAIMER.md">DISCLAIMER.md</a>。</p>
+
+<hr>
+
+<h2>核心特性</h2>
+
+<ul>
+<li>💬 <strong>文字版陪练今天就能用</strong> —— 在 VS Code Claude Code 里切到 <code>pcc-coachee</code> agent,30 秒开 45 分钟一场(覆盖 34/37 个 PCC markers,零安装)</li>
+<li>🎙️ <strong>语音版 opt-in</strong> —— <code>phase_b/</code> WebSocket 管线已写好,始终 opt-in(需阿里云账号 + <code>.env</code> + 麦克风);累计 ≥10 场真人陪练前定位为"实验性"(见 <a href="#当前状态">当前状态</a>)</li>
+<li>📊 <strong>客观节奏指标</strong> —— 沉默时长、CPM(每分钟字数)、打断检测、问题长度、问题间隔(仅语音版)</li>
+<li>🔒 <strong>按配置保隐私</strong> —— STT / LLM / TTS 端点可独立切换;自托管任一端点即可让数据留在本地。默认 STT(Aliyun NLS)与 LLM/TTS(MiniMax)均为云端 —— 详见 <a href="PRIVACY.md">PRIVACY.md</a>。</li>
+<li>🧠 <strong>与现有 pcc-assessor 对齐</strong> —— 文字版和语音版都会进入同一套 37 marker 评估流水线(文字版 SOP 见 <a href="personas/README.md">personas/README.md</a>)</li>
+<li>🌐 <strong>基于浏览器的语音版前端</strong> —— Chrome / Safari 支持;文字版只需 VS Code + Claude Code,无需 Python</li>
+</ul>
+
+<hr>
+
+<h2>LLM provider 灵活性</h2>
+
+<p>默认 LLM 端点(<code>https://api.minimaxi.com/v1</code>,模型 <code>MiniMax-M3</code>)是<strong>占位符</strong> —— 代码使用标准 OpenAI Chat Completions API,因此任何 OpenAI 兼容端点都可以工作。通过编辑 <code>.env</code> 切换:</p>
+
+<table>
+<thead><tr><th>Provider</th><th><code>LLM_BASE_URL</code></th><th>隐私</th></tr></thead>
+<tbody>
+<tr><td><strong>MiniMax API</strong>(默认)</td><td><code>https://api.minimaxi.com/v1</code></td><td>云端 —— 文本发往 MiniMax</td></tr>
+<tr><td><strong>OpenAI</strong></td><td><code>https://api.openai.com/v1</code></td><td>云端 —— 文本发往 OpenAI</td></tr>
+<tr><td><strong>DeepSeek</strong></td><td><code>https://api.deepseek.com/v1</code></td><td>云端 —— 文本发往 DeepSeek</td></tr>
+<tr><td><strong>Azure OpenAI</strong></td><td><code>https://&lt;resource&gt;.openai.azure.com/openai/deployments/&lt;dep&gt;</code></td><td>云端 —— 文本发往 Azure</td></tr>
+<tr><td><strong>Ollama</strong>(本地)</td><td><code>http://127.0.0.1:11434/v1</code></td><td><strong>完全离线</strong></td></tr>
+<tr><td><strong>LM Studio</strong>(本地)</td><td><code>http://127.0.0.1:1234/v1</code></td><td><strong>完全离线</strong></td></tr>
+<tr><td><strong>vLLM</strong>(本地)</td><td><code>http://127.0.0.1:8000/v1</code></td><td><strong>完全离线</strong>,GPU 加速</td></tr>
+<tr><td><strong>OpenRouter / OneAPI</strong></td><td><code>https://openrouter.ai/api/v1</code></td><td>云端 —— 聚合多家 provider</td></tr>
+</tbody>
+</table>
+
+<p>要实现<strong>完全离线</strong>运行,选择本地 provider(Ollama / LM Studio / vLLM)。对话文本不会离开你的机器。详见 <a href="INSTALL.md#自托管-llm可选完全隐私">INSTALL.md § 自托管 LLM</a> 和 <a href="PRIVACY.md#支持的-llm-providers">PRIVACY.md § 支持的 LLM providers</a>。</p>
+
+<hr>
+
+<h2>架构(计划中)</h2>
+
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│  浏览器 (Chrome / Safari)                                 │
+│  ├─ Web Audio API: 16kHz PCM 麦克风采集                  │
+│  ├─ WebSocket 客户端:与后端双向流                        │
+│  └─ Web Audio 播放:TTS 音频流                            │
+└────────────────────┬─────────────────────────────────────┘
+                     │ WebSocket (wss://)
+┌────────────────────▼─────────────────────────────────────┐
+│  FastAPI / WebSocket server (单进程,~600 行 Python)       │
+│  ├─ 音频接收 → Aliyun NLS WS (可配置 STT)                │
+│  ├─ STT partial → LLM (HTTP 流式,MiniMax M3)            │
+│  ├─ LLM 流 → TTS (MiniMax T2A WS,流式 PCM)              │
+│  ├─ utterance_end 自动提交 + barge-in(取消当前轮次)      │
+│  └─ 节奏特征提取 (沉默 / CPM / 打断)                     │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+┌────────────────────▼─────────────────────────────────────┐
+│  持久化层 (文件,无传统数据库)                             │
+│  ├─ 练习音频: practice-logs/sessions/*.mp3                │
+│  ├─ 逐场派生产物: practice-logs/sessions/&lt;YYYY-MM-DD&gt;-session-NN/          │
+│  └─ 追加到现有 progress/tracker-sessions.csv         │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+
+<hr>
+
+<h2>当前状态</h2>
+
+<blockquote class="warning">⚠️ <strong>语音版始终需要用户配置</strong> —— 阿里云账号 + <code>.env</code> + 麦克风 —— 所以没法为新用户自动开。后端(<code>phase_b/</code>,3546 行)+ 前端(<code>phase_b/static/</code>,1067 行)已提交且可通过 <code>./start.sh</code> 启动,但<strong>语音版对所有人始终是 opt-in</strong>。文字版是默认路径。</blockquote>
+
+<ul>
+<li>✅ STT 切换落地 —— FunASR → Aliyun NLS 流式 WebSocket(2026-09-06)。实时 partial + 句尾触发自动提交。详见 <a href="phase_b/_reports/phase-b-data-flow-2026-09-06.md">data-flow 报告</a>。</li>
+<li>✅ 端到端语音管线 —— 首场真人对话 <code>real-2026-09-06-08</code> 完整产出 dialogue JSONL + raw wav + rhythm 特征(非占位 transcript)。</li>
+<li>✅ Dashboard v2 —— 三页面(entry / session / dashboard),含 KPI 卡、内嵌音频播放、transcript 表、trending chart 重生成、PCC 37-marker 评估按钮(2026-10-04)。</li>
+<li>✅ XSS 加固 —— transcript 渲染 <code>innerHTML</code> 换 <code>textContent</code>(2026-10-04)。</li>
+<li>⚠️ 后端代码 —— <code>phase_b/</code>(28 个 .py 文件,3546 行)+ <code>tests/phase_b/</code> 下 18 个测试文件。<strong>已写,仅 opt-in。</strong></li>
+<li>⚠️ 前端代码 —— <code>phase_b/static/</code>(index.html + app.js + audio_state.js + styles.css,1067 行)。<strong>已写,仅 opt-in。</strong></li>
+</ul>
+
+<p><strong>为什么先文字版?</strong> 两个原因。</p>
+
+<p><strong>1. 用户配置成本。</strong> 语音版需要阿里云账号 + <code>.env</code> 里 3 个云端 key + 麦克风。这部分是项目没法替每个用户做的。所以<strong>语音版永远需要用户配置</strong>,即使项目自身认为它成熟了。</p>
+
+<p><strong>2. 成熟度里程碑。</strong> 与(1)无关,项目另外追踪一个:<strong>累计 ≥10 场真人陪练后</strong>,语音版在用户文档里的定位从"实验性 opt-in(给勇者)"升级为"推荐性 opt-in(给多数用户)"。这是文档/说法的里程碑 —— <strong>不</strong>改变用户配置要求。当前 1 / 10 场(2026-08-31),在那之前语音版被定位为实验性。</p>
+
+<p>总结 —— 文字版是默认;语音版始终 opt-in,在 10 场里程碑达成前定位为实验性。</p>
+
+<hr>
+
+<h2>快速开始(代码已写、暂未启用)</h2>
+
+<p>代码发布后,本节将包含:</p>
+
+<pre><code class="language-bash">git clone &lt;你的私有仓库&gt;
+cd pcc-live-coach
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+./start.sh                       # 或 python -m phase_b
+# 浏览器打开 http://127.0.0.1:8765
+</code></pre>
+
+<p>完整说明见 <a href="INSTALL.md">INSTALL.md</a> 和 <a href="DEPLOY.md">DEPLOY.md</a>。</p>
+
+<hr>
+
+<h2>文档</h2>
+
+<ul>
+<li><a href="INSTALL.md">INSTALL.md</a> —— 环境设置、venv、Aliyun NLS 凭证(默认 STT)</li>
+<li><a href="DEPLOY.md">DEPLOY.md</a> —— 本地部署、端口、防火墙、模型缓存</li>
+<li><a href="PRIVACY.md">PRIVACY.md</a> —— 隐私保证、可配置的 LLM 端点</li>
+<li><a href="DISCLAIMER.md">DISCLAIMER.md</a> —— ICF 边界、不作担保、责任限制</li>
+<li><a href="FAQ.md">FAQ.md</a> —— 常见问题</li>
+<li><a href="TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> —— 常见错误与解决方案</li>
+<li><a href="CONTRIBUTING.md">CONTRIBUTING.md</a> —— 如何贡献</li>
+<li><a href="CODE_OF_CONDUCT.md">CODE_OF_CONDUCT.md</a> —— 社区规范</li>
+<li><a href="LICENSE">LICENSE</a> —— Apache-2.0</li>
+</ul>
+
+<hr>
+
+<h2>许可证</h2>
+
+<p>Apache License 2.0。详见 <a href="LICENSE">LICENSE</a>。</p>
+
+<p>第三方致谢:</p>
+
+<ul>
+<li>Aliyun NLS Python SDK(<code>aliyun-nls</code>)—— Apache-2.0(默认 STT 端点)</li>
+<li>PyTorch —— BSD-3-Clause</li>
+<li>FastAPI —— MIT</li>
+</ul>
+
+<hr>
+
+<h2>维护者</h2>
+
+<p>项目作者 · 个人维护者 · 无组织关联</p>
+
+<p style="margin-top: 48px; font-size: 0.85em; color: var(--fg-subtle); text-align: center;">本 HTML 由 Claude 渲染,镜像自 <a href="README.md">README.md</a>(2026-10-12)。如有出入以 README.md 为准。</p>
+
+</article>
+</body>
+</html>

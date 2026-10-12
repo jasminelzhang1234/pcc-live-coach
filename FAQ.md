@@ -39,6 +39,10 @@
 - **Q:怎么评估一场 session?** — 文本逐字稿准备好后,在 Claude Code 里唤起 `pcc-assessor` agent,它会按 37 markers 逐条判定并出 HTML 报告。命令见 [`.claude/agents/pcc-assessor.md`](.claude/agents/pcc-assessor.md)。
 - **Q:真人练习 vs AI persona 区别?** — 真人录音单独走 `progress/tracker-sessions.csv` + 暖橙配色趋势图(`progress/trending-chart-*.html`),AI persona 走标准 tracker。路径重命名缘由:避免真人标识泄漏到云同步/错误日志/stack trace —— 详见 [PRIVACY.md](PRIVACY.md)。
 - **Q:练了一场但 tracker CSV 没新增?** — 检查 session 是否真的有 audio bytes;0 audio + 0 turn 的 probe session 会被 `phase_b/session/manager.py` fast-path 跳过,不落盘。
+- **Q:我不想装任何东西,能现在就练吗?** — 能,用文字版:VS Code + Claude Code → 切到 `pcc-coachee` agent → 输入 `开始陪练,选 vec-08`。零 Python、零 `.env`、零阿里云账号、零麦克风,30 秒上场。覆盖 34/37 个 PCC markers(除 5.5 / 6.6 / 7.6 这 3 个音频专属)。完整 SOP 见 [personas/README.md § 配套练习 SOP](personas/README.md)。
+- **Q:文字版能练到哪些?** — 议程澄清(3.x)、同理(4.x)、开放式提问(5.x 除 5.5)、情绪调频(6.x 除 6.6)、身份层探问(7.x 除 7.6)、会话闭环(8.x),共 **34/37 个 markers**。失分重灾区都在这里。完整 persona 训练对照见 [personas/README.md](personas/README.md) "按训练能力找 persona" 表。
+- **Q:文字版和语音版是什么关系?** — 不是替代,是互补。文字版覆盖结构与情绪层(34/37),语音版额外加 3 个只能靠音频评估的维度:留白节奏(5.5)、不打断(6.6)、口语问题节奏(7.6)。建议:文字版稳定通过后再考虑语音版。
+- **Q:语音版是默认启用的吗?** — **不是。** 语音版需要每个用户自己配置(阿里云账号 + `.env` 里 3 个 key + 麦克风),项目没法替你做,所以**永远 opt-in**。项目内部有一个独立的"实验性 → 推荐性"过渡:**≥10 场真人陪练**达成后,文档里把语音版从"实验性 opt-in"升级为"推荐性 opt-in"。当前 1/10,所以现在文档里还是"实验性"。详见 [README.md § Status](README.md#status)。
 
 ## 进度追踪(领域小白)
 

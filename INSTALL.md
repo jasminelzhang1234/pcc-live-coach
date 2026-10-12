@@ -2,6 +2,8 @@
 
 Last updated: 2026-10-05
 
+> 💡 **This guide is for voice mode, which is always opt-in.** Voice mode requires per-user setup that the project cannot do for you — Aliyun account + 3 cloud keys in `.env` + a microphone. Even after the project considers voice mode mature (≥10 real-coach sessions logged, see [README § Status](./README.md#status)), it will stay opt-in because of this per-user setup cost. If you don't want to do that setup, use text mode instead: open VS Code Claude Code, switch to the `pcc-coachee` agent, and type `开始陪练,选 vec-08`. Zero install, zero credentials, zero microphone. See [README § 30-second text-mode quickstart](./README.md#what-is-this).
+
 > ✅ **Phase B end-to-end works as of 2026-09-06** (browser → Aliyun NLS ASR → MiniMax LLM → MiniMax TTS → browser). Code is shipped but **not enabled** by default — see [README § Status](./README.md#status) for the activation trigger conditions.
 >
 > 🆕 **ASR is Aliyun NLS** (Alibaba Cloud 智能语音交互, project type **实时语音识别**). Before installing, register an Aliyun account, create a NLS project, and obtain AppKey + AccessKey ID/Secret. Full guide: [`phase_b/_reports/aliyun-asr-setup-2026-09-06.md`](./phase_b/_reports/aliyun-asr-setup-2026-09-06.md).
@@ -327,6 +329,8 @@ Aliyun NLS is a managed cloud endpoint — no local model to upgrade. To roll cr
 # 安装指南
 
 最后更新:2026-10-05
+
+> 💡 **本指南用于语音版,语音版始终是 opt-in。** 语音版需要项目无法替你做的用户配置 —— 阿里云账号 + `.env` 里 3 个云端 key + 麦克风。即使项目认为语音版成熟了(累计 ≥10 场真人陪练,见 [README § 当前状态](./README.md#当前状态)),它仍然是 opt-in,因为这份用户配置无法省。如果不想做配置,用文字版:打开 VS Code Claude Code,切到 `pcc-coachee` agent,输入 `开始陪练,选 vec-08`。详见 [README § 30 秒文字版试玩](./README.md#这是什么)。
 
 > ✅ **Phase B 端到端已可用(2026-09-06 起)**(浏览器 → Aliyun NLS ASR → MiniMax LLM → MiniMax TTS → 浏览器)。代码已提交但**默认未启用** —— 激活触发条件见 [README § Status](./README.md#status)。
 >

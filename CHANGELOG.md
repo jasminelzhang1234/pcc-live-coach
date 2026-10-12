@@ -9,6 +9,14 @@
 
 ## 当前重要事件(临时登记)
 
+- **2026-10-12** — 项目定位重构:文字版默认可用,语音版**始终 opt-in**(需用户配置 Aliyun 账号 + `.env` + 麦克风);原 3 个 trigger condition 简化为 1 条独立的成熟度里程碑(≥10 场真人陪练,仅影响文档对语音版的定位,从"实验性"升级为"推荐性",**不**改变 opt-in 性质)。用户文档全部对齐:
+  - `README.md` (EN+CN): 标题(语音版 = opt-in / 需要配置)、`What is this?`(对比表 + 30 秒文字版试玩)、Highlights / 核心特性(text-mode-first 重排)、`5 分钟入门路径`(加"我现在就要练"行)、Status / 当前状态(讲清"per-user 配置成本"+"成熟度里程碑"两件事)
+  - `README.html`: 镜像 README.md 所有变化
+  - `FAQ.md`: 加 3 条文字版 Q&A + 1 条"语音版是默认启用的吗"(明确不是,永远 opt-in)
+  - `INSTALL.md` (EN+CN): banner 改为"用于语音版,语音版始终 opt-in"
+  - `personas/README.md`: 加"## 30 秒上手"为首屏章节;语音版措辞改为"始终 opt-in"
+  - 触发原因:外部 reviewer 首次下载后误判为"语音项目,代码未启用",错过文字版立即可用的现实
+  - **不做**:代码层硬拦截(用户决策,无需)
 - **2026-10-05** — 小白用户文档扩充(回应"是否需要用户手册"诉求): `FAQ.md` 从 3 题扩到 22 题,新增 6 章节(快速上手 / 环境配置 / 训练流程 / 进度追踪 / PCC 概念速通 / 隐私合规 / 性能费用),两类小白(技术小白 + 领域小白)都覆盖; `README.md` 新增 §"5 分钟入门路径(小白先看)",按用户画像 4 分流(领域熟/技术熟/完全小白/只看不练)+ 端到端 5 步流程图; `TROUBLESHOOTING.md` 从 10 条扩到 25 条,新增浏览器/前端、LLM、ASR 三章节(关键纠正: FunASR 已于 2026-09-06 迁到 Aliyun NLS,旧 FunASR 条目替换为 Aliyun NLS 项目类型 / Token / 录音保留策略三条);本次**未新增独立 USER_GUIDE.md**,理由: Pre-alpha 阶段 + README/INSTALL 已覆盖入门,过早投资独立手册会变 3 份互引文档无人维护;触发条件达成(README § Status 3 个 trigger)+ 准备公开发布时再抽 USER_GUIDE.md
 - **2026-10-05** — `phase_b/tracker/csv_append.py` `upsert_session_row` 加模块级 dict cache(`Path → (header, rows, index_by_session_id)`),首次按 csv_path 加载一次,后续 upsert O(1) 查找 + O(n) 写盘;n 次 upsert 总成本 O(n) 而非原 O(n²);同时干掉原实现的两次完整读(第二次纯为 `replaced` 标志,白扫);新增公开 `flush_cache(csv_path=None)` 给 tests / 外部写盘场景;契约 `inserted` / `replaced` / `no_csv` 不变,`tests/phase_b/test_track_endpoint.py` 3 个 unit test + 4 个 endpoint test 不破
 - **2026-10-05** — install + config + UI 收尾:`requirements.txt` + `INSTALL.md` § 4 改为两步安装(`pip install -r requirements.txt` + `pip install --no-deps --force-reinstall aliyun-nls==0.0.1`),跳过 aliyun-nls 0.0.1 列出的 matplotlib / pillow / fonttools / pycryptodome(~54MB)未使用 transitive deps,附 smoke test 命令验证;`_chart_output_path` 新增 `TRENDING_CHART_PATH` env var 支持(空 = 现有默认,绝对路径直接使用,相对路径相对仓库根,字面量 `{date}` 替换为当天日期);`.env.example` + `INSTALL.md` § 6 同步;`phase_b/config.py` Settings 新增 `trending_chart_path` 字段;`phase_b/wire/router.py` 加一行注释指向 `phase_b/rhythm/cpm.py` docstring 的 LLM think-time caveat;`phase_b/static/index.html` 标签 "平均 CPM" → "平均 CPM(含 LLM)",kpi 容器加 `title` 提示完整口径;`tests/phase_b/test_track_endpoint.py` 仍以 `monkeypatch` 覆盖,无破坏

@@ -1,4 +1,4 @@
-# PCC Live Coach — Real-time Voice Practice for PCC Marker Training
+# PCC Live Coach — PCC Marker Practice (text mode on by default, voice mode requires setup)
 
 > ⚠️ **Pre-alpha / Experimental.** This project is under active development and has not been released publicly yet. Functionality is incomplete and may change without notice.
 
@@ -8,13 +8,25 @@
 
 ## What is this?
 
-**PCC Live Coach** is a local, privacy-first, browser-based practice tool for coaches preparing for the ICF Professional Certified Coach (PCC) credential. It runs on your machine, speaks with you in real time, and gives you objective measurements of three PCC markers that are difficult to assess from text alone:
+**PCC Live Coach** is a PCC exam prep practice tool for coaches preparing for the ICF Professional Certified Coach (PCC) credential. It supports **two complementary modes** — text mode is available now and covers most of the training, voice mode adds the audio-only dimensions.
 
-- **5.5** — Coach allows for silence, pause, or reflection
-- **6.6** — Coach allows client to finish without interrupting
-- **7.6** — Coach asks clear, direct, primarily open-ended questions, one at a time, with rhythm
+| | Text mode (default) | Voice mode (Phase B, in preparation) |
+|---|---|---|
+| **Status** | ✅ Available now | ⚠️ Code shipped, awaiting trigger conditions (≥10 real-coach sessions + structural issues resolved + remaining gaps in 5.5/6.6/7.6) |
+| **How you practice** | Type messages in VS Code Claude Code, switching to the `pcc-coachee` agent | Speak into your mic in a browser; STT/LLM/TTS pipeline runs on your machine |
+| **Time to first session** | ~30 seconds (if VS Code + Claude Code are already installed) | ~30 minutes (Python venv + Aliyun NLS account + `.env` + microphone) |
+| **PCC markers covered** | 34 of 37 (everything except 5.5, 6.6, 7.6) | All 37 (adds the 3 audio-only markers) |
+| **Privacy** | Text only; swap to local LLM (Ollama / LM Studio / vLLM) for fully offline | Default cloud (Aliyun NLS + MiniMax); any of STT/LLM/TTS can be swapped to local |
 
-These three markers share a property: **they require audio**. Text-based practice (Phase A of the parent project) cannot tell you whether you let a 4-second silence breathe, or whether you interrupted your client at second 22 of their story. This tool exists to fill that gap.
+### 30-second text-mode quickstart
+
+1. Open VS Code with the Claude Code extension.
+2. Switch to the `pcc-coachee` agent (full SOP: [personas/README.md § 配套练习 SOP](personas/README.md)).
+3. Type: `开始陪练,选 vec-08` (or pick your own; see [personas/README.md](personas/README.md) — easy difficulty-1 starters: vec-06 / vec-08 / voc-05).
+
+No Python, no `.env`, no Aliyun account, no microphone. The `pcc-coachee` agent reads its persona file and starts the roleplay. When the coach ends the session, type `全评` to hand off to the `pcc-assessor` agent for a 37-marker HTML report.
+
+For voice mode setup, see [INSTALL.md](INSTALL.md).
 
 It is **not** a substitute for real client practice hours. ICF requires submitted recordings from real clients, not AI personas. See [DISCLAIMER.md](DISCLAIMER.md).
 
@@ -22,26 +34,32 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 
 ## Highlights
 
-- 🎙️ **Real-time voice conversation** with AI persona clients (built from your existing persona library)
-- 📊 **Objective rhythm metrics** — silence duration, CPM (characters per minute), barge-in detection, question length, inter-question pause
+- 💬 **Text-mode coaching available now** — switch to the `pcc-coachee` agent in VS Code Claude Code and start a 45-min roleplay in 30 seconds (covers 34/37 PCC markers, zero install)
+- 🎙️ **Voice mode opt-in** — `phase_b/` WebSocket pipeline ready; always opt-in (requires Aliyun account + `.env` + microphone). Docs frame it as "experimental" until ≥10 real-coach sessions are logged (see [Status](#status))
+- 📊 **Objective rhythm metrics** — silence duration, CPM (characters per minute), barge-in detection, question length, inter-question pause (voice mode only)
 - 🔒 **Privacy by configuration** — STT / LLM / TTS are independently switchable endpoints; self-host any of them to keep data on your machine. Default STT (Aliyun NLS) and LLM/TTS (MiniMax) are cloud-hosted — see [PRIVACY.md](PRIVACY.md).
-- 🧠 **Aligned with existing pcc-assessor** — rhythm features feed back into your existing 37-marker evaluation pipeline
-- 🌐 **Browser-based** — works in Chrome / Safari, no installation beyond Python
+- 🧠 **Aligned with existing pcc-assessor** — both text and voice sessions feed into the same 37-marker evaluation pipeline (text-mode SOP: [personas/README.md](personas/README.md))
+- 🌐 **Browser-based voice UI** — Chrome / Safari for voice mode; text mode needs only VS Code + Claude Code (no Python required)
 
 ---
 
 ## 5 分钟入门路径(小白先看)
 
-> 如果你不确定从哪儿开始,按你的画像走下面 4 条路径之一:
+> 如果你不确定从哪儿开始,按你的画像走下面 5 条路径之一:
 
 | 你是谁 | 先看 | 然后 |
 |---|---|---|
-| **PCC 备考教练(领域熟、技术小白)** | [FAQ.md § PCC 概念速通](FAQ.md#pcc-概念速通领域小白) — 5 分钟搞懂 37 markers / 5.5-6.6-7.6 是什么 | [INSTALL.md § 1-7](INSTALL.md) 装环境 → [Quick start](#quick-start) |
-| **开发者(技术熟、领域小白)** | [FAQ.md § PCC 概念速通](FAQ.md#pcc-概念速通领域小白) — 看 ICF PCC 评估口径 | [INSTALL.md](INSTALL.md) 装环境 → [LLM provider flexibility](#llm-provider-flexibility) 换端点 |
-| **完全小白(技术 + 领域都不熟)** | [FAQ.md](FAQ.md) 通读一遍(~10 分钟) | [INSTALL.md](INSTALL.md) 逐步跟 → 跑通一场 session → 唤起 `pcc-assessor` agent 看评估 |
-| **只想看现状 / 不准备上手** | [Status § Phase B shipped but not enabled](#status) — 理解为什么代码在但产品未启用 | 等 [README.md:94-98](#status) 的 3 个 trigger condition 达成 |
+| **我现在就要练,什么都不想装** | （无需阅读其他文档）— VS Code + Claude Code → 切到 `pcc-coachee` agent → 输入 `开始陪练,选 vec-08`。30 秒上场,覆盖 34/37 个 markers | 完整 SOP 见 [personas/README.md § 30 秒上手](personas/README.md) |
+| **PCC 备考教练(领域熟、技术小白)** | [FAQ.md § PCC 概念速通](FAQ.md#pcc-概念速通领域小白) — 5 分钟搞懂 37 markers / 5.5-6.6-7.6 是什么 | 文字版先跑(见上方↑),再考虑语音版 → [INSTALL.md § 1-7](INSTALL.md) |
+| **开发者(技术熟、领域小白)** | [FAQ.md § PCC 概念速通](FAQ.md#pcc-概念速通领域小白) — 看 ICF PCC 评估口径 | 文字版先跑(见上方↑),再换本地 LLM 全离线([INSTALL.md § Self-hosted LLM](INSTALL.md#self-hosted-llm-optional-for-full-privacy)) |
+| **完全小白(技术 + 领域都不熟)** | [FAQ.md](FAQ.md) 通读一遍(~10 分钟) | 文字版先跑(无需任何 install) → 唤 `pcc-assessor` 看评估 → 再考虑语音版 |
+| **只想看现状 / 不准备上手** | [Status § Two modes: text now / voice in preparation](#status) | 文字版立即可用,语音版等 3 个 trigger condition |
 
-### 真实使用流程(端到端 5 步)
+### 真实使用流程
+
+> 💡 **文字版(今天就能用,推荐路径)**:VS Code + Claude Code → 切到 `pcc-coachee` agent → 输入 `开始陪练,选 vec-08`。详见 [What is this? § 30-second text-mode quickstart](#what-is-this)。
+
+语音版流程(代码已写、默认未启用):
 
 ```
 ① 装环境 (INSTALL § 1-4)        ~10 分钟
@@ -51,7 +69,7 @@ It is **not** a substitute for real client practice hours. ICF requires submitte
 ⑤ 收场后唤 pcc-assessor 评估     ~5 分钟 (出 HTML 报告 + tracker CSV 追加)
 ```
 
-> ⚠️ **Pre-alpha 提醒**:项目自我定位未公开发布(见 [Status](#status)),Phase B 代码已提交但默认未启用 —— 你跑得通,但别当生产工具用。
+> ⚠️ **Pre-alpha 提醒**:项目自我定位未公开发布。文字版(Phase A)今天就能用,语音版(Phase B)代码已提交但默认未启用 —— 别把语音版当生产工具用。
 
 ---
 
@@ -105,22 +123,22 @@ For **fully offline** operation, choose a local provider (Ollama / LM Studio / v
 
 ## Status
 
-> ⚠️ **Phase B code is shipped but not enabled.** Backend (`phase_b/`, 3546 LoC) and frontend (`phase_b/static/`, 1067 LoC) are committed and runnable via `./start.sh`, but product stability has not been validated against the parent project's trigger conditions (see below). Expect rough edges if you try it today.
+> ⚠️ **Voice mode always requires per-user setup** — Aliyun account + `.env` + microphone — so it cannot be auto-enabled for new users. Backend (`phase_b/`, 3546 LoC) and frontend (`phase_b/static/`, 1067 LoC) are committed and runnable via `./start.sh`, but voice mode is **opt-in for everyone, always**. Text mode is the default path.
 
 - ✅ STT swap landed — FunASR → Aliyun NLS streaming WebSocket (2026-09-06). Real-time partial + sentence-end trigger now drives auto-submit. See [data-flow report](./phase_b/_reports/phase-b-data-flow-2026-09-06.md).
 - ✅ End-to-end voice pipeline — first real session `real-2026-09-06-08` produced dialogue JSONL + raw wav + rhythm features (no transcript placeholders).
 - ✅ Dashboard v2 — three pages (entry / session / dashboard) with KPI tiles, inline audio playback, transcript table, trending-chart regen, and PCC 37-marker assessment button (2026-10-04).
 - ✅ XSS hardening — `textContent` replaces `innerHTML` in transcript render (2026-10-04).
-- ⚠️ Backend code — `phase_b/` (28 .py files, 3546 LoC) + 18 test files under `tests/phase_b/`. **Shipped, not enabled.**
-- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + audio_state.js + styles.css, 1067 LoC). **Shipped, not enabled.**
+- ⚠️ Backend code — `phase_b/` (28 .py files, 3546 LoC) + 18 test files under `tests/phase_b/`. **Shipped, opt-in only.**
+- ⚠️ Frontend code — `phase_b/static/` (index.html + app.js + audio_state.js + styles.css, 1067 LoC). **Shipped, opt-in only.**
 
-**Why "shipped but not enabled"?** The parent project spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) defines trigger conditions for activating Phase B:
+**Why text mode first?** Two reasons.
 
-1. ≥10 complete real-coach practice sessions
-2. Structural problems (issue clarification, closing design, cognitive breakthrough) consistently resolved
-3. Remaining weaknesses concentrated in 5.5 / 6.6 / 7.6
+**1. Per-user setup cost.** Voice mode requires Aliyun account + 3 cloud keys in `.env` + a microphone. That is per-user configuration that cannot be done by the project on someone's behalf. So voice mode will always be opt-in — even after the project itself considers it mature.
 
-We are at 1 real session. Conditions are not yet met — the code is committed so the launch process stays well-understood, but it should not be treated as a production-ready product.
+**2. Maturity milestone.** Independent of (1), the project tracks a separate milestone: **after ≥10 real-coach practice sessions** are logged, voice mode graduates from "experimental opt-in (for the brave)" to "recommended opt-in (for most users)" in user-facing docs. This is a documentation/messaging milestone — it does **not** change the per-user setup requirement. Currently at **1 of 10** (2026-08-31). Until the threshold is crossed, voice mode is framed as experimental.
+
+In summary — text mode is the default. Voice mode is always opt-in, and is currently framed as experimental until the 10-session milestone is reached.
 
 ---
 
@@ -188,7 +206,7 @@ goes dark for >1 month, treat this as an unmaintained project and fork.
 <br/>
 <br/>
 
-# PCC Live Coach — ICF PCC 标记训练的实时语音练习工具
+# PCC Live Coach — PCC 标记训练工具(文字版默认可用,语音版需要配置)
 
 > ⚠️ **预发布 / 实验性。** 本项目处于活跃开发阶段,尚未公开发布。功能不完整,可能随时变更。
 
@@ -198,13 +216,25 @@ goes dark for >1 month, treat this as an unmaintained project and fork.
 
 ## 这是什么?
 
-**PCC Live Coach** 是一个本地化、隐私优先、基于浏览器的练习工具,服务于备考 ICF 专业认证教练(PCC)的人群。它在你的机器上运行,与你说实时语音对话,并给出三项目前很难仅凭文本来评估的 PCC 标记的客观测量:
+**PCC Live Coach** 是给备考国际认证教练(ICF PCC)的陪练工具。它提供**两种互补模式** —— 文字版今天就能用、覆盖大部分训练维度,语音版补上仅靠音频才能评估的 3 个 markers。
 
-- **5.5** — 教练允许沉默、停顿或反思
-- **6.6** — 教练让客户把话说完而不打断
-- **7.6** — 教练提问清晰、直接、以开放式为主、一次一个、有节奏
+| | 文字陪练(默认模式) | 语音陪练(Phase B,筹备中) |
+|---|---|---|
+| **状态** | ✅ 立即可用 | ⚠️ 代码已写,等待触发条件(≥10 场真人陪练 + 结构性问题已稳定解决 + 剩余差距集中在 5.5/6.6/7.6) |
+| **怎么练** | 在 VS Code Claude Code 里切到 `pcc-coachee` agent,打字对话 | 浏览器 + 麦克风,本机起 STT/LLM/TTS 管线 |
+| **首次上手时间** | ~30 秒(假设 VS Code + Claude Code 已经装好) | ~30 分钟(Python venv + Aliyun NLS 账号 + `.env` + 麦克风) |
+| **覆盖 markers** | 34/37 个(除 5.5、6.6、7.6 外全部) | 37/37 全部(多出 3 个音频专属 markers) |
+| **隐私** | 只走文字;换本地 LLM(Ollama / LM Studio / vLLM)可完全离线 | 默认云端(Aliyun NLS + MiniMax);三件套可独立切换到本地 |
 
-这三项标记有一个共同点:**它们需要音频**。仅凭文字练习(母项目的 Phase A)无法告诉你是否给一段 4 秒的沉默留了呼吸空间,也无法告诉你是否在客户说话第 22 秒时打断。本工具的存在就是为了填补这个空白。
+### 30 秒文字版试玩
+
+1. 打开 VS Code + Claude Code 扩展
+2. 切到 `pcc-coachee` agent(完整 SOP 见 [personas/README.md § 配套练习 SOP](personas/README.md))
+3. 输入:`开始陪练,选 vec-08`(或自选,推荐难度 1 起点:vec-06 / vec-08 / voc-05,详见 [personas/README.md](personas/README.md))
+
+零 Python、零 `.env`、零阿里云账号、零麦克风。`pcc-coachee` agent 读 persona 文件开始扮演。教练结束会话后,输入 `全评` 自动转 `pcc-assessor` agent 出 37 marker HTML 报告。
+
+要装语音版见 [INSTALL.md](INSTALL.md)。
 
 **它不能替代真实客户的练习时长。** ICF 要求提交的录音来自真实客户,而不是 AI 人格。详见 [DISCLAIMER.md](DISCLAIMER.md)。
 
@@ -212,11 +242,12 @@ goes dark for >1 month, treat this as an unmaintained project and fork.
 
 ## 核心特性
 
-- 🎙️ **实时语音对话** —— 与 AI 人格客户对话(基于你现有的人格库)
-- 📊 **客观节奏指标** —— 沉默时长、CPM(每分钟字数)、打断检测、问题长度、问题间隔
+- 💬 **文字版陪练今天就能用** —— 在 VS Code Claude Code 里切到 `pcc-coachee` agent,30 秒开 45 分钟一场(覆盖 34/37 个 PCC markers,零安装)
+- 🎙️ **语音版 opt-in** —— `phase_b/` WebSocket 管线已写好,始终 opt-in(需阿里云账号 + `.env` + 麦克风);累计 ≥10 场真人陪练前定位为"实验性"(见 [当前状态](#当前状态))
+- 📊 **客观节奏指标** —— 沉默时长、CPM(每分钟字数)、打断检测、问题长度、问题间隔(仅语音版)
 - 🔒 **按配置保隐私** —— STT / LLM / TTS 端点可独立切换;自托管任一端点即可让数据留在本地。默认 STT(Aliyun NLS)与 LLM/TTS(MiniMax)均为云端 —— 详见 [PRIVACY.md](PRIVACY.md)。
-- 🧠 **与现有 pcc-assessor 对齐** —— 节奏特征反馈到现有的 37 标记评估流水线
-- 🌐 **基于浏览器** —— Chrome / Safari 直接使用,只需装 Python
+- 🧠 **与现有 pcc-assessor 对齐** —— 文字版和语音版都会进入同一套 37 marker 评估流水线(文字版 SOP 见 [personas/README.md](personas/README.md))
+- 🌐 **基于浏览器的语音版前端** —— Chrome / Safari 支持;文字版只需 VS Code + Claude Code,无需 Python
 
 ---
 
@@ -270,22 +301,22 @@ goes dark for >1 month, treat this as an unmaintained project and fork.
 
 ## 当前状态
 
-> ⚠️ **Phase B 代码已写但暂未启用。** 后端(`phase_b/`,3546 行)+ 前端(`phase_b/static/`,1067 行)已提交且可通过 `./start.sh` 启动,但产品稳定性未根据母项目触发条件(见下)验证。如果你现在试用,预计会遇到边缘情况。
+> ⚠️ **语音版始终需要用户配置** —— 阿里云账号 + `.env` + 麦克风 —— 所以没法为新用户自动开。后端(`phase_b/`,3546 行)+ 前端(`phase_b/static/`,1067 行)已提交且可通过 `./start.sh` 启动,但**语音版对所有人始终是 opt-in**。文字版是默认路径。
 
 - ✅ STT 切换落地 —— FunASR → Aliyun NLS 流式 WebSocket(2026-09-06)。实时 partial + 句尾触发自动提交。详见 [data-flow 报告](./phase_b/_reports/phase-b-data-flow-2026-09-06.md)。
 - ✅ 端到端语音管线 —— 首场真人对话 `real-2026-09-06-08` 完整产出 dialogue JSONL + raw wav + rhythm 特征(非占位 transcript)。
 - ✅ Dashboard v2 —— 三页面(entry / session / dashboard),含 KPI 卡、内嵌音频播放、transcript 表、trending chart 重生成、PCC 37-marker 评估按钮(2026-10-04)。
 - ✅ XSS 加固 —— transcript 渲染 `innerHTML` 换 `textContent`(2026-10-04)。
-- ⚠️ 后端代码 —— `phase_b/`(28 个 .py 文件,3546 行)+ `tests/phase_b/` 下 18 个测试文件。**已写、未启用。**
-- ⚠️ 前端代码 —— `phase_b/static/`(index.html + app.js + audio_state.js + styles.css,1067 行)。**已写、未启用。**
+- ⚠️ 后端代码 —— `phase_b/`(28 个 .py 文件,3546 行)+ `tests/phase_b/` 下 18 个测试文件。**已写,仅 opt-in。**
+- ⚠️ 前端代码 —— `phase_b/static/`(index.html + app.js + audio_state.js + styles.css,1067 行)。**已写,仅 opt-in。**
 
-**为什么"已写但未启用"?** 母项目 spec ([`PCC-陪练与评估-Agent-设计方案.html`](./PCC-陪练与评估-Agent-设计方案.html)) 定义了 Phase B 启动的触发条件:
+**为什么先文字版?** 两个原因。
 
-1. Phase A 已完成 ≥10 场完整真人陪练
-2. tracker 显示结构性问题(议题澄清、结尾设计、认知突破)已稳定解决
-3. 剩余差距集中在 5.5 / 6.6 / 7.6(只有实时语音才能练的维度)
+**1. 用户配置成本。** 语音版需要阿里云账号 + `.env` 里 3 个云端 key + 麦克风。这部分是项目没法替每个用户做的。所以**语音版永远需要用户配置**,即使项目自身认为它成熟了。
 
-当前状态:**1 场真人陪练**(2026-08-31)。条件未满足。代码已提交是为了发布流程清晰可控,但**不应视为生产就绪产品**。
+**2. 成熟度里程碑。** 与(1)无关,项目另外追踪一个:**累计 ≥10 场真人陪练后**,语音版在用户文档里的定位从"实验性 opt-in(给勇者)"升级为"推荐性 opt-in(给多数用户)"。这是文档/说法的里程碑 —— **不**改变用户配置要求。当前 1 / 10 场(2026-08-31),在那之前语音版被定位为实验性。
+
+总结 —— 文字版是默认;语音版始终 opt-in,在 10 场里程碑达成前定位为实验性。
 
 ---
 
